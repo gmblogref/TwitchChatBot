@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RepositoryUrl>https://github.com/gmblogref/TwitchChatBot</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\TwitchChatBot.Core\TwitchChatBot.Core.csproj" />
+	  <ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
+	</ItemGroup>
+
+</Project>
