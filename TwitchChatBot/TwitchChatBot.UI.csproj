@@ -29,6 +29,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Update="appsettings.Development.json.json">
+		  <DependentUpon>appsettings.json</DependentUpon>
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	  <None Update="appSettings.json">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
