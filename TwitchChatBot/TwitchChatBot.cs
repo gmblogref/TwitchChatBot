@@ -1,8 +1,8 @@
 namespace TwitchChatBot
 {
-    public partial class Form1 : Form
+    public partial class TwitchChatBot : Form
     {
-        public Form1()
+        public TwitchChatBot()
         {
             InitializeComponent();
         }

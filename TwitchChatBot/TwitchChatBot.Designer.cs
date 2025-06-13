@@ -1,6 +1,6 @@
 ﻿namespace TwitchChatBot
 {
-    partial class Form1
+    partial class TwitchChatBot
     {
         /// <summary>
         ///  Required designer variable.

@@ -1,17 +1,54 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Models;
+
 namespace TwitchChatBot
 {
-    internal static class Program
+    public static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+            var config = BuildConfiguration();
+            var services = ConfigureServices(config);
+
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+
+            var serviceProvider = services.BuildServiceProvider();
+
+            var mainForm = serviceProvider.GetRequiredService<TwitchChatBot>();
+            Application.Run(mainForm);
+        }
+
+        private static IConfiguration BuildConfiguration()
+        {
+            return new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .Build();
+        }
+
+        private static IServiceCollection ConfigureServices(IConfiguration config)
+        {
+            var services = new ServiceCollection();
+
+            // App settings
+            services.Configure<AppSettings>(config);
+
+            // Logging
+            services.AddLogging(builder =>
+            {
+                builder.AddConsole();
+                builder.AddDebug();
+            });
+
+            // Core services
+            services.AddSingleton<ITwitchClient, TwitchClientWrapper>();
+            services.AddSingleton<TwitchChatBot>(); // Your WinForms entry form
+
+            return services;
         }
     }
 }
