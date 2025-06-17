@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TwitchChatBot.Core.Services.Contracts
 {
-    public interface ITwitchClient
+    public interface ITwitchClientWrapper : IDisposable
     {
         void Connect();
+        void Disconnect();
         void SendMessage(string channel, string message);
         event EventHandler<TwitchMessageEventArgs> OnMessageReceived;
     }

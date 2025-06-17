@@ -5,8 +5,7 @@ namespace TwitchChatBot.Core.Controller
 {
     public class ChatBotController
     {
-        private readonly ITwitchClient _twitchClient;
-        private readonly IWebHost _webHost;
+        private readonly ITwitchClientWrapper _twitchClient;
         private readonly IWebSocketServer _webSocketServer;
         private readonly IAlertService _alertService;
         private readonly IStreamlabsService _streamlabsService;
@@ -14,8 +13,7 @@ namespace TwitchChatBot.Core.Controller
         private readonly ILogger<ChatBotController> _logger;
 
         public ChatBotController(
-        ITwitchClient twitchClient,
-        IWebHost webHost,
+        ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
         IAlertService alertService,
         IStreamlabsService streamlabsService,
@@ -23,7 +21,6 @@ namespace TwitchChatBot.Core.Controller
         ILogger<ChatBotController> logger)
         {
             _twitchClient = twitchClient;
-            _webHost = webHost;
             _webSocketServer = webSocketServer;
             _alertService = alertService;
             _streamlabsService = streamlabsService;
@@ -38,10 +35,6 @@ namespace TwitchChatBot.Core.Controller
             {
                 _logger.LogInformation("🚀 Starting ChatBotController...");
 
-                // Start the web host (for public/index.html and WebSocket)
-                await _webHost.StartAsync(cancellationToken);
-                _logger.LogInformation("🌐 Web server started.");
-
                 // Start WebSocket server to communicate with front end
                 _webSocketServer.Start();
 
@@ -50,7 +43,7 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogInformation("✅ Connected to Twitch.");
 
                 // Connect to Streamlabs
-                _streamlabsService.StartAsync(_alertService.EnqueueAlert);
+                _streamlabsService.Start(_alertService.EnqueueAlert);
                 _logger.LogInformation("✅ Streamlabs WebSocket started.");
 
                 // Connect to Twitch EventSub
@@ -72,12 +65,34 @@ namespace TwitchChatBot.Core.Controller
         {
             try
             {
-                // Add Stop stuff here
+                _logger.LogInformation("🛑 Stopping ChatBotController...");
+
+                // Stop periodic tasks
+                _alertService.StopAdTimer();
+
+                // Stop EventSub WebSocket
+                await _eventSubService.StopAsync(cancellationToken);
+                _logger.LogInformation("❎ EventSub WebSocket stopped.");
+
+                // Stop Streamlabs WebSocket
+                _streamlabsService.Stop();
+                _logger.LogInformation("❎ Streamlabs WebSocket stopped.");
+
+                // Disconnect from Twitch
+                _twitchClient.Disconnect();
+                _logger.LogInformation("❎ Disconnected from Twitch.");
+
+                // Stop WebSocket server
+                _webSocketServer.Stop();
+                _logger.LogInformation("🌐 WebSocket server stopped.");
+
+                _logger.LogInformation("✅ ChatBotController stopped cleanly.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Failed to Stop something.");
+                _logger.LogError(ex, "❌ Error during ChatBotController shutdown.");
             }
         }
+
     }
 }

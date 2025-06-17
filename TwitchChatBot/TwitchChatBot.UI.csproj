@@ -24,12 +24,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <ProjectReference Include="..\TwitchChatBot.Core\TwitchChatBot.Core.csproj" />
 	  <ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="appsettings.Development.json.json">
+	  <None Update="appsettings.Development.json">
 		  <DependentUpon>appsettings.json</DependentUpon>
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
