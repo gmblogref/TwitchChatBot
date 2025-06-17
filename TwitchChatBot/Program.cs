@@ -1,8 +1,13 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Models;
+using TwitchChatBot.UI.Services;
+using TwitchLib.Client.Interfaces;
 
 namespace TwitchChatBot
 {
@@ -12,6 +17,8 @@ namespace TwitchChatBot
         static void Main()
         {
             var config = BuildConfiguration();
+            AppSettings.Configuration = config;
+
             var services = ConfigureServices(config);
 
             ApplicationConfiguration.Initialize();
@@ -35,9 +42,6 @@ namespace TwitchChatBot
         {
             var services = new ServiceCollection();
 
-            // App settings
-            services.Configure<AppSettings>(config);
-
             // Logging
             services.AddLogging(builder =>
             {
@@ -46,8 +50,17 @@ namespace TwitchChatBot
             });
 
             // Core services
-            services.AddSingleton<ITwitchClient, TwitchClientWrapper>();
-            services.AddSingleton<TwitchChatBot>(); // Your WinForms entry form
+            services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
+            services.TryAddSingleton<TwitchChatBot>(); // Your WinForms entry form
+            services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
+            services.TryAddSingleton<IEventSubService, EventSubSocketService>();
+            services.TryAddSingleton<IAlertService, AlertService>();
+
+            // Add WebHostWrapper
+            services.TryAddSingleton<IWebHostWrapper>(sp =>
+                new WebHostWrapper(
+                    baseUrl: AppSettings.WebHost.BaseUrl!,
+                    webRoot: AppSettings.WebHost.WebRoot!));
 
             return services;
         }

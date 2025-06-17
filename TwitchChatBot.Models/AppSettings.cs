@@ -1,22 +1,52 @@
-﻿namespace TwitchChatBot.Models
-{
-    public class AppSettings
-    {
-        public string? TWITCH_BOT_USERNAME { get; set; }
-        public string? TWITCH_OAUTH_TOKEN { get; set; }
-        public string? TWITCH_CHANNEL { get; set; }
-        public string? STREAMLABS_SOCKET_TOKEN { get; set; }
-        public string? BOT_CLIENT_ID { get; set; }
-        public string? BOT_CLIENT_SECRET { get; set; }
-        public string? TWITCH_ACCESS_TOKEN { get; set; }
-        public string? TWITCH_CLIENT_ID { get; set; }
-        public string? REFRESH_TOKEN { get; set; }
-        public string? TWITCH_USER_ID { get; set; }
-        public string? EVENTSUB_SECRET { get; set; }
-        public string? EVENTSUB_CALLBACK_URL { get; set; }
-        public string? TWITCH_APP_ACCESS_TOKEN { get; set; }
+﻿using Microsoft.Extensions.Configuration;
 
-        // Optional: Timing
-        public int AdIntervalMinutes { get; set; } = 60;
+namespace TwitchChatBot.Models
+{
+    public static class AppSettings
+    {
+        public static IConfiguration Configuration { get; set; }
+
+        public static string? TWITCH_BOT_USERNAME => GetSetting("AppSettings:TWITCH_BOT_USERNAME");
+        public static string? TWITCH_OAUTH_TOKEN => GetSetting("AppSettings:TWITCH_OAUTH_TOKEN");
+        public static string? TWITCH_CHANNEL => GetSetting("AppSettings:TWITCH_CHANNEL");
+        public static string? STREAMLABS_SOCKET_TOKEN => GetSetting("AppSettings:STREAMLABS_SOCKET_TOKEN");
+        public static string? BOT_CLIENT_ID => GetSetting("AppSettings:BOT_CLIENT_ID");
+        public static string? BOT_CLIENT_SECRET => GetSetting("AppSettings:BOT_CLIENT_SECRET");
+        public static string? TWITCH_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_ACCESS_TOKEN");
+        public static string? TWITCH_CLIENT_ID => GetSetting("AppSettings:TWITCH_CLIENT_ID");
+        public static string? REFRESH_TOKEN => GetSetting("AppSettings:REFRESH_TOKEN");
+        public static string? TWITCH_USER_ID => GetSetting("AppSettings:TWITCH_USER_ID");
+        public static string? EVENTSUB_SECRET => GetSetting("AppSettings:EVENTSUB_SECRET");
+        public static string? EVENTSUB_CALLBACK_URL => GetSetting("AppSettings:EVENTSUB_CALLBACK_URL");
+        public static string? TWITCH_APP_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
+        public static string? AdIntervalMinutes => GetSetting("AppSettings:AdIntervalMinutes");
+
+        public static class WebHost
+        {
+            public static string? BaseUrl => GetSetting("Webhost:BaseUrl");
+            public static string? WebRoot => GetSetting("Webhost:WebRoot");
+        }
+
+        public static class Streamlabs
+        {
+            public static string? Url => GetSetting("Streamlabs:Url");
+        }
+
+        public static class EventSub
+        {
+            public static string? Uri => GetSetting("EventSub:Uri");
+        }
+
+        public static string GetSetting(string key)
+        {
+            var value = Configuration[key];
+
+            if(value == null)
+            {
+                throw new ArgumentOutOfRangeException($"Couldn't locate an applicatoin setting with key of: '{key}'");
+            }
+
+            return value;
+        }
     }
 }
