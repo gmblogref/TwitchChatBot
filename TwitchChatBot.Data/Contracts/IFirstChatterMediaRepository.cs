@@ -4,7 +4,8 @@
     {
         void ClearFirstChatters();
         bool HasAlreadyChatted(string username);
-        Task<bool> IsEligibleForFirstChatAsync(string username);
-        Task<string?> GetFirstChatterMediaAsync(string username);
+        void MarkAsChatted(string username);
+        Task<bool> IsEligibleForFirstChatAsync(string username, CancellationToken cancellationToken = default);
+        Task<string?> GetFirstChatterMediaAsync(string username, CancellationToken cancellationToken = default);
     }
 }

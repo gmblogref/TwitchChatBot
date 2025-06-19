@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using TwitchChatBot.Data.Contracts;
+using TwitchChatBot.Data.Utilities;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Data
@@ -9,7 +9,7 @@ namespace TwitchChatBot.Data
     {
         private readonly ILogger<FirstChatterMediaRepository> _logger;
         private readonly string _filePath;
-        private List<FirstChatterMediaMap>? _firstChattersMediaMap;
+        private FirstChatterMediaMap? _firstChattersMediaMap;
         private HashSet<string> _firstChatters = [];
 
         public FirstChatterMediaRepository(ILogger<FirstChatterMediaRepository> logger)
@@ -18,30 +18,33 @@ namespace TwitchChatBot.Data
             _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaFiles.FirstChattersMedia);
         }
 
-        public bool HasAlreadyChatted(string username)
-        {
-            return _firstChatters?.Contains(username) ?? false;
-        }
-
         public void ClearFirstChatters()
         {
             _firstChatters?.Clear();
         }
 
-        public async Task<bool> IsEligibleForFirstChatAsync(string username)
+        public bool HasAlreadyChatted(string username)
         {
-            await GetFirstChattersAsync();
-
-            return _firstChattersMediaMap!.Exists(x => x.Username == username);
+            return _firstChatters?.Contains(username) ?? false;
         }
 
-        public async Task<string?> GetFirstChatterMediaAsync(string username)
+        public void MarkAsChatted(string username)
         {
-            await GetFirstChattersAsync();
-
             _firstChatters.Add(username);
+        }
 
-            return _firstChattersMediaMap!.FirstOrDefault(x => x.Username == username)?.Media ?? null;
+        public async Task<bool> IsEligibleForFirstChatAsync(string username, CancellationToken cancellationToken = default)
+        {
+            await GetFirstChattersAsync(cancellationToken);
+
+            return _firstChattersMediaMap!.FirstChatterMediaItems.Exists(x => x.Username == username);
+        }
+
+        public async Task<string?> GetFirstChatterMediaAsync(string username, CancellationToken cancellationToken = default)
+        {
+            await GetFirstChattersAsync(cancellationToken);
+
+            return _firstChattersMediaMap!.FirstChatterMediaItems.FirstOrDefault(x => x.Username == username)?.Media ?? null;
         }
 
         private async Task GetFirstChattersAsync(CancellationToken cancellationToken = default)
@@ -49,27 +52,11 @@ namespace TwitchChatBot.Data
             if (_firstChattersMediaMap != null)
                 return;
 
-            try
-            {
-                if (!File.Exists(_filePath))
-                    throw new FileNotFoundException($"Could not find {AppSettings.MediaFiles.FirstChattersMedia} at path: {_filePath}");
-
-                var json = await File.ReadAllTextAsync(_filePath, cancellationToken);
-                var _firstChattersMediaMap = JsonSerializer.Deserialize<List<FirstChatterMediaMap>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (_firstChattersMediaMap == null)
-                    throw new InvalidOperationException($"Failed to deserialize {AppSettings.MediaFiles.FirstChattersMedia}.");
-
-                _logger.LogInformation("📂 Excluded users loaded successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Failed to load excluded users.");
-                throw;
-            }
+            _firstChattersMediaMap = await DataHelperMethods.LoadAsync<FirstChatterMediaMap>(
+                _filePath,
+                _logger,
+                AppSettings.MediaFiles.FirstChattersMedia,
+                cancellationToken);
         }
     }
 }

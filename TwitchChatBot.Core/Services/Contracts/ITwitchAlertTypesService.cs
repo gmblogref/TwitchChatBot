@@ -1,4 +1,4 @@
-﻿public interface IHandleAlertTypesService
+﻿public interface ITwitchAlertTypesService
 {
     Task HandleChannelPointRedemptionAsync(string username, string rewardTitle, IAlertService alertService); 
     Task HandleCheerAsync(string username, int bits, string message, IAlertService alertService);

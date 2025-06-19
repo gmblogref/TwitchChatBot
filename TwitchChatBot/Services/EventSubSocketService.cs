@@ -13,7 +13,7 @@ namespace TwitchChatBot.UI.Services
 
         private readonly ILogger<EventSubSocketService> _logger;
         private readonly IAlertService _alertService;
-        private readonly IHandleAlertTypesService _handleAlertTypesService;
+        private readonly ITwitchAlertTypesService _handleAlertTypesService;
         private ClientWebSocket _socket;
         private CancellationTokenSource _cts;
         private Task? _listenerTask;
@@ -23,7 +23,7 @@ namespace TwitchChatBot.UI.Services
         public EventSubSocketService(
             ILogger<EventSubSocketService> logger,
             IAlertService alertService,
-            IHandleAlertTypesService handleAlertTypesService)
+            ITwitchAlertTypesService handleAlertTypesService)
         {
             _logger = logger;
             _alertService = alertService;

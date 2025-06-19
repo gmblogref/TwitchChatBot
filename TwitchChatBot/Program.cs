@@ -51,19 +51,21 @@ namespace TwitchChatBot
             });
 
             // Repositories
-            services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
+            services.TryAddSingleton<ICommandMediaRepository, CommandMediaRepository>();
             services.TryAddSingleton<IExcludedUsersRepository, ExcludedUsersRepository>();
             services.TryAddSingleton<IFirstChatterMediaRepository, FirstChatterMediaRepository>();
+            services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
 
             // Core services
-            services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
-            services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IAlertService, AlertService>();
-            services.TryAddSingleton<IHandleAlertTypesService, HandleAlertTypesService>();
-            
+            services.TryAddSingleton<IEventSubService, EventSubSocketService>();
+            services.TryAddSingleton<IFirstChatterAlertService, FirstChatterAlertService>();
+            services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
+            services.TryAddSingleton<ITwitchAlertTypesService, TwitchAlertTypesService>();
+
             // Controllers
-            services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
             services.TryAddSingleton<TwitchChatBot>(); // Your WinForms entry form
+            services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
             services.TryAddSingleton<IWebSocketServer, WebSocketServer>();
 
             // Add WebHostWrapper

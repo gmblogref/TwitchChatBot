@@ -1,10 +1,11 @@
-﻿using TwitchChatBot.Core.Utilities.Contracts;
+﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace TwitchChatBot.Core.Utilities
 {
-    public class CoreHelperMethods : ICoreHelperMethods
+    public static class CoreHelperMethods
     {
-        public int GetRandomNumberForMediaSelection(int listLength)
+        public static int GetRandomNumberForMediaSelection(int listLength)
         {
             Random random = new Random();
 

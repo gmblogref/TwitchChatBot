@@ -1,24 +1,21 @@
 using Microsoft.Extensions.Logging;
-using TwitchChatBot.Core.Utilities.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data;
 using TwitchChatBot.Data.Contracts;
 
 namespace TwitchChatBot.Core.Services
 {
-    public class HandleAlertTypesService : IHandleAlertTypesService
+    public class TwitchAlertTypesService : ITwitchAlertTypesService
     {
-        private readonly ILogger<HandleAlertTypesService> _logger;
+        private readonly ILogger<TwitchAlertTypesService> _logger;
         private readonly ITwitchAlertMediaRepository _twitchAlertMediaRepository;
-        private ICoreHelperMethods _coreHelperMethods;
-
-        public HandleAlertTypesService(
-            ILogger<HandleAlertTypesService> logger, 
-            TwitchAlertMediaRepository twitchAlertMediaRepository, 
-            ICoreHelperMethods coreHelperMethods)
+        
+        public TwitchAlertTypesService(
+            ILogger<TwitchAlertTypesService> logger, 
+            TwitchAlertMediaRepository twitchAlertMediaRepository)
         {
             _logger = logger;
             _twitchAlertMediaRepository = twitchAlertMediaRepository;
-            _coreHelperMethods = coreHelperMethods;
         }
 
         public async Task HandleCheerAsync(string username, int bits, string message, IAlertService alertService)
@@ -40,7 +37,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetHypeTrainMediaAsync();
             var msg = $"🚂 All aboard the Hype Train! Let's keep it going!";
 
-            alertService.EnqueueAlert(msg, media![_coreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleRaidAsync(string username, int viewers, IAlertService alertService)
@@ -50,7 +47,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetRaidMediaAsync();
             var msg = $"🚨 {username} is raiding with {viewers} viewers!";
 
-            alertService.EnqueueAlert(msg, media![_coreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubscriptionAsync(string username, IAlertService alertService)
@@ -60,7 +57,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetSubscriptionMediaAsync();
             var msg = $"💜 {username} just subscribed!";
 
-            alertService.EnqueueAlert(msg, media![_coreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubGiftAsync(string username, string recipient, IAlertService alertService)
@@ -70,7 +67,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetSubgiftMediaAsync();
             var msg = $"🎁 {username} gifted a sub to {recipient}!";
 
-            alertService.EnqueueAlert(msg, media![_coreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleResubAsync(string username, int months, string userMessage, IAlertService alertService)
@@ -80,7 +77,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetResubMediaAsync();
             var msg = $"💜 {username} resubscribed for {months} months! {userMessage}";
 
-            alertService.EnqueueAlert(msg, media![_coreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubMysteryGiftAsync(string username, int numOfSubs, IAlertService alertService)
