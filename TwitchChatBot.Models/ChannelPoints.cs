@@ -10,10 +10,10 @@ namespace TwitchChatBot.Models
     public class ChannelPoints
     {
         [JsonPropertyName("tiers")]
-        public List<Tier>? Tiers { get; set; }
+        public List<Tier> Tiers { get; set; } = new();
 
 
         [JsonPropertyName("default")]
-        public string? Default { get; set; }
+        public string Default { get; set; } = string.Empty;
     }
 }

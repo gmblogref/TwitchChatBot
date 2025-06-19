@@ -8,5 +8,6 @@ namespace TwitchChatBot.Core.Utilities.Contracts
 {
     public interface ICoreHelperMethods
     {
+        int GetRandomNumberForMediaSelection(int listLength);
     }
 }

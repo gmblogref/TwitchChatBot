@@ -29,6 +29,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\TwitchChatBot.Core\TwitchChatBot.Core.csproj" />
+	  <ProjectReference Include="..\TwitchChatBot.Data\TwitchChatBot.Data.csproj" />
 	  <ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
 	</ItemGroup>
 

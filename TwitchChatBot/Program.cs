@@ -5,9 +5,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Data;
+using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
 using TwitchChatBot.UI.Services;
-using TwitchLib.Client.Interfaces;
 
 namespace TwitchChatBot
 {
@@ -49,18 +50,28 @@ namespace TwitchChatBot
                 builder.AddDebug();
             });
 
+            // Repositories
+            services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
+            services.TryAddSingleton<IExcludedUsersRepository, ExcludedUsersRepository>();
+            services.TryAddSingleton<IFirstChatterMediaRepository, FirstChatterMediaRepository>();
+
             // Core services
-            services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
-            services.TryAddSingleton<TwitchChatBot>(); // Your WinForms entry form
             services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
             services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IAlertService, AlertService>();
+            services.TryAddSingleton<IHandleAlertTypesService, HandleAlertTypesService>();
+            
+            // Controllers
+            services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
+            services.TryAddSingleton<TwitchChatBot>(); // Your WinForms entry form
+            services.TryAddSingleton<IWebSocketServer, WebSocketServer>();
 
             // Add WebHostWrapper
             services.TryAddSingleton<IWebHostWrapper>(sp =>
                 new WebHostWrapper(
                     baseUrl: AppSettings.WebHost.BaseUrl!,
-                    webRoot: AppSettings.WebHost.WebRoot!));
+                    webRoot: AppSettings.WebHost.WebRoot!,
+                    webSocketServer: sp.GetRequiredService<IWebSocketServer>()));
 
             return services;
         }

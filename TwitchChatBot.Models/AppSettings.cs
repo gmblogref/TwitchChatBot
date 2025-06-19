@@ -4,7 +4,7 @@ namespace TwitchChatBot.Models
 {
     public static class AppSettings
     {
-        public static IConfiguration Configuration { get; set; }
+        public static IConfiguration? Configuration { get; set; }
 
         public static string? TWITCH_BOT_USERNAME => GetSetting("AppSettings:TWITCH_BOT_USERNAME");
         public static string? TWITCH_OAUTH_TOKEN => GetSetting("AppSettings:TWITCH_OAUTH_TOKEN");
@@ -16,9 +16,8 @@ namespace TwitchChatBot.Models
         public static string? TWITCH_CLIENT_ID => GetSetting("AppSettings:TWITCH_CLIENT_ID");
         public static string? REFRESH_TOKEN => GetSetting("AppSettings:REFRESH_TOKEN");
         public static string? TWITCH_USER_ID => GetSetting("AppSettings:TWITCH_USER_ID");
-        public static string? EVENTSUB_SECRET => GetSetting("AppSettings:EVENTSUB_SECRET");
-        public static string? EVENTSUB_CALLBACK_URL => GetSetting("AppSettings:EVENTSUB_CALLBACK_URL");
         public static string? TWITCH_APP_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
+        
         public static string? AdIntervalMinutes => GetSetting("AppSettings:AdIntervalMinutes");
 
         public static class WebHost
@@ -35,6 +34,16 @@ namespace TwitchChatBot.Models
         public static class EventSub
         {
             public static string? Uri => GetSetting("EventSub:Uri");
+            public static string? EVENTSUB_SECRET => GetSetting("AppSettings:EVENTSUB_SECRET");
+            public static string? EVENTSUB_CALLBACK_URL => GetSetting("AppSettings:EVENTSUB_CALLBACK_URL");
+        }
+
+        public static class MediaFiles
+        {
+            public static string TwitchAlertMedia => GetSetting("MediaFiles:TwitchAlertMedia");
+            public static string ExcludedUsersMedia => GetSetting("MediaFiles:ExcludedUsersMedia");
+            public static string FirstChattersMedia => GetSetting("MediaFiles:FirstChattersMedia");
+            public static string CommandAlertMedia => GetSetting("MediaFiles:CommandAlertMedia");
         }
 
         public static string GetSetting(string key)
