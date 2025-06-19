@@ -10,20 +10,32 @@ namespace TwitchChatBot.UI.Services
 {
     public class EventSubSocketService : IEventSubService
     {
-        private readonly IAlertService _alertService;
+
         private readonly ILogger<EventSubSocketService> _logger;
+        private readonly IAlertService _alertService;
+        private readonly IHandleAlertTypesService _handleAlertTypesService;
         private ClientWebSocket _socket;
         private CancellationTokenSource _cts;
         private Task? _listenerTask;
-        private int _reconnectAttempts = 0;
         private System.Threading.Timer? _heartbeatTimer;
+        private int _reconnectAttempts = 0;
 
-        public EventSubSocketService(IAlertService alertService, ILogger<EventSubSocketService> logger)
+        public EventSubSocketService(
+            ILogger<EventSubSocketService> logger,
+            IAlertService alertService,
+            IHandleAlertTypesService handleAlertTypesService)
         {
-            _alertService = alertService;
             _logger = logger;
+            _alertService = alertService;
+            _handleAlertTypesService = handleAlertTypesService;
             _socket = new ClientWebSocket();
             _cts = new CancellationTokenSource();
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            _listenerTask = Task.Run(() => ConnectAsync(cancellationToken));
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
@@ -31,12 +43,6 @@ namespace TwitchChatBot.UI.Services
             _logger.LogInformation("🛑 Stopping EventSub WebSocket...");
             _cts.Cancel();
             _heartbeatTimer?.Dispose();
-            return Task.CompletedTask;
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken = default)
-        {
-            _listenerTask = Task.Run(() => ConnectAsync(cancellationToken));
             return Task.CompletedTask;
         }
 
@@ -96,48 +102,43 @@ namespace TwitchChatBot.UI.Services
                     {
                         var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                         var eventPayload = root.GetProperty("payload").GetProperty("event");
-
-                        var username = eventPayload.GetProperty("user_name").GetString() ??
-                                       eventPayload.GetProperty("broadcaster_user_name").GetString() ??
-                                       eventPayload.GetProperty("from_broadcaster_user_name").GetString() ??
-                                       "someone";
+                        var username = eventPayload.GetProperty("user_name").GetString() ?? "someone";
 
                         switch (subscriptionType)
                         {
                             case TwitchEventTypes.ChannelCheer:
                                 var bits = eventPayload.GetProperty("bits").GetInt32();
-                                var cheerMessage = eventPayload.TryGetProperty("message", out var msgVal) ? msgVal.GetString() ?? "" : "";
-                                _alertService.HandleCheerAlert(username, bits, cheerMessage);
+                                var message = eventPayload.GetProperty("message").GetString() ?? "";
+                                await _handleAlertTypesService.HandleCheerAsync(username, bits, message, _alertService);
                                 break;
 
                             case TwitchEventTypes.ChannelPointsRedemption:
                                 var rewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? "";
-                                var userInput = eventPayload.TryGetProperty("user_input", out var inputVal) ? inputVal.GetString() ?? "" : "";
-                                _alertService.HandleChannelPointAlert(username, rewardTitle, userInput);
-                                break;
-
-                            case TwitchEventTypes.HypeTrainBegin:
-                                _alertService.HandleHypeTrainAlert();
+                                await _handleAlertTypesService.HandleChannelPointRedemptionAsync(username, rewardTitle, _alertService);
                                 break;
 
                             case TwitchEventTypes.ChannelRaid:
                                 var viewers = eventPayload.GetProperty("viewers").GetInt32();
-                                _alertService.HandleRaidAlert(username, viewers);
+                                await _handleAlertTypesService.HandleRaidAsync(username, viewers, _alertService);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscribe:
-                                _alertService.HandleSubAlert(username);
+                                await _handleAlertTypesService.HandleSubscriptionAsync(username, _alertService);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionGift:
                                 var recipient = eventPayload.GetProperty("recipient_user_name").GetString() ?? "someone";
-                                _alertService.HandleGiftSubAlert(username, recipient);
+                                await _handleAlertTypesService.HandleSubGiftAsync(username, recipient, _alertService);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionMessage:
                                 var months = eventPayload.GetProperty("cumulative_months").GetInt32();
-                                var message = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
-                                _alertService.HandleResubAlert(username, months, message);
+                                var resubMessage = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
+                                await _handleAlertTypesService.HandleResubAsync(username, months, resubMessage, _alertService);
+                                break;
+
+                            case TwitchEventTypes.HypeTrainBegin:
+                                await _handleAlertTypesService.HandleHypeTrainAsync(_alertService);
                                 break;
 
                             default:
@@ -149,10 +150,9 @@ namespace TwitchChatBot.UI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️ Failed to parse EventSub payload.");
+                _logger.LogWarning(ex, "⚠️ Failed to parse or handle EventSub payload.");
             }
         }
-
 
         private async Task SubscribeToEvents(string? sessionId)
         {
@@ -183,9 +183,8 @@ namespace TwitchChatBot.UI.Services
                 TwitchEventTypes.ChannelSubscriptionMessage
             };
 
-            using var http = new HttpClient();
-
-            http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var http = new HttpClient();
+            http.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
             http.DefaultRequestHeaders.Add("Client-ID", clientId);
 
             foreach (var type in eventTypes)
@@ -204,11 +203,17 @@ namespace TwitchChatBot.UI.Services
 
                 var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-                var response = await http.PostAsync("https://api.twitch.tv/helix/eventsub/subscriptions", content);
-
-                _logger.LogInformation(response.IsSuccessStatusCode
-                    ? $"✅ Subscribed to {type}"
-                    : $"❌ Failed to subscribe to {type}: {response.StatusCode}");
+                try
+                {
+                    var response = await http.PostAsync("https://api.twitch.tv/helix/eventsub/subscriptions", content);
+                    _logger.LogInformation(response.IsSuccessStatusCode
+                        ? $"✅ Subscribed to {type}"
+                        : $"❌ Failed to subscribe to {type}: {response.StatusCode}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"❌ Exception while subscribing to {type}");
+                }
             }
         }
 

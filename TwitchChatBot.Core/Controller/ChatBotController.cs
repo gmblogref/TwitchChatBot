@@ -47,7 +47,7 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogInformation("✅ Streamlabs WebSocket started.");
 
                 // Connect to Twitch EventSub
-                await _eventSubService.StartAsync(_alertService.EnqueueAlert, cancellationToken);
+                await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
 
                 // Optional: Start any periodic timers like !ads

@@ -5,9 +5,9 @@ namespace TwitchChatBot.Models
     public class SubMysteryGift
     {
         [JsonPropertyName("tiers")]
-        public List<Tier>? tiers { get; set; }
+        public List<Tier> tiers { get; set; } = new();
 
         [JsonPropertyName("default")]
-        public string? Default { get; set; }
+        public string Default { get; set; } = string.Empty; 
     }
 }

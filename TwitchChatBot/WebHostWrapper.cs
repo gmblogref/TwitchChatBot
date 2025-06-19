@@ -10,7 +10,7 @@ namespace TwitchChatBot
     {
         private readonly IHost _host;
 
-        public WebHostWrapper(string baseUrl, string webRoot)
+        public WebHostWrapper(string baseUrl, string webRoot, IWebSocketServer webSocketServer)
         {
             _host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -19,6 +19,21 @@ namespace TwitchChatBot
                     webBuilder.UseWebRoot(webRoot);
                     webBuilder.Configure(app =>
                     {
+                        app.UseWebSockets();
+
+                        app.Use(async (context, next) =>
+                        {
+                            if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest)
+                            {
+                                var socket = await context.WebSockets.AcceptWebSocketAsync();
+                                await webSocketServer.HandleConnectionAsync(context, socket);
+                            }
+                            else
+                            {
+                                await next();
+                            }
+                        }); 
+                        
                         app.UseStaticFiles();
                     });
                 })
