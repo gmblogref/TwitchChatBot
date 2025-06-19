@@ -48,7 +48,7 @@ namespace TwitchChatBot.Models
 
         public static string GetSetting(string key)
         {
-            var value = Configuration[key];
+            var value = Configuration![key];
 
             if(value == null)
             {

@@ -4,8 +4,6 @@ namespace TwitchChatBot.Data.Contracts
 {
     public interface ITwitchAlertMediaRepository
     {
-        Task<TwitchAlertMediaMap> GetMediaMapAsync(CancellationToken cancellationToken = default);
-
         Task<ChannelPoints?> GetChannelPointsMapAsync(CancellationToken cancellationToken = default);
         Task<ChannelPointsText?> GetChannelPointsTextMapAsync(CancellationToken cancellationToken = default);
         Task<Cheer?> GetCheerMapAsync(CancellationToken cancellationToken = default);
