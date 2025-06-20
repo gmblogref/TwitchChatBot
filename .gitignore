@@ -12,8 +12,8 @@
 appsettings.Development.json
 
 # Ignore JSON media maps
-MediaMaps/*.json
-!MediaMaps/*.example.json
+TwitchChatBot/MediaMaps/*.json
+!TwitchChatBot/MediaMaps/*.example.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
