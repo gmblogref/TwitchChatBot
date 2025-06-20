@@ -15,6 +15,16 @@ appsettings.Development.json
 TwitchChatBot/MediaMaps/*.json
 !TwitchChatBot/MediaMaps/*.example.json
 
+# Ignore all files in wwwroot media folders
+TwitchChatBot/wwwroot/channel_points/*
+TwitchChatBot/wwwroot/commands/*
+TwitchChatBot/wwwroot/first_chat_vods/*
+TwitchChatBot/wwwroot/twitch_alerts/*
+!TwitchChatBot/wwwroot/channel_points/.gitkeep
+!TwitchChatBot/wwwroot/commands/.gitkeep
+!TwitchChatBot/wwwroot/first_chat_vods/.gitkeep
+!TwitchChatBot/wwwroot/twitch_alerts/.gitkeep
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

@@ -45,6 +45,11 @@
 
 	<ItemGroup>
 	  <Folder Include="MediaMaps\" />
+	  <Folder Include="wwwroot\commands\" />
+	  <Folder Include="wwwroot\channel_points\" />
+	  <Folder Include="wwwroot\first_chat_vods\" />
+	  <Folder Include="wwwroot\" />
+	  <Folder Include="wwwroot\twitch_alerts\" />
 	</ItemGroup>
 
 </Project>
