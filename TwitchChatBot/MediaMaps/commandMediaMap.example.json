@@ -1,0 +1,15 @@
+[
+  {
+    "command": "!example",
+    "text": "This is a sample response.",
+    "media": "commands/example.mp3"
+  },
+  {
+    "command": "!textonly",
+    "text": "Text-only command"
+  },
+  {
+    "command": "!mediaonly",
+    "media": "commands/mediaonly.mp3"
+  }
+]
