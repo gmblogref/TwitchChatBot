@@ -10,10 +10,9 @@
 *.userosscache
 *.sln.docstates
 appsettings.Development.json
-commandsMediaMap.json
-excludedUsers.json
-firstChatMediaMap.json
-twitchAlertsMediaMap.json
+
+# Ignore JSON media maps
+MediaMaps/*.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
