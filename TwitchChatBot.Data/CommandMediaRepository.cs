@@ -14,7 +14,7 @@ namespace TwitchChatBot.Data
         public CommandMediaRepository(ILogger<CommandMediaRepository> logger)
         {
             _logger = logger;
-            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaFiles.FirstChattersMedia);
+            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaFiles.CommandAlertMedia);
         }
 
         public async Task<CommandMediaItem?> GetCommandMediaItemAsync(string command, CancellationToken cancellationToken = default)
@@ -26,7 +26,7 @@ namespace TwitchChatBot.Data
 
         private async Task GetCommandsAsync(CancellationToken cancellationToken = default)
         {
-            if (_commandMediaMap != null)
+            if (_commandMediaMap != null && _commandMediaMap.CommandMediaItems.Count > 0)
                 return;
 
             _commandMediaMap = await DataHelperMethods.LoadAsync<CommandMediaMap>(

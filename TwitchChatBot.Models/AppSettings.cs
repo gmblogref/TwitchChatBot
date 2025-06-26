@@ -9,7 +9,6 @@ namespace TwitchChatBot.Models
         public static string? TWITCH_BOT_USERNAME => GetSetting("AppSettings:TWITCH_BOT_USERNAME");
         public static string? TWITCH_OAUTH_TOKEN => GetSetting("AppSettings:TWITCH_OAUTH_TOKEN");
         public static string? TWITCH_CHANNEL => GetSetting("AppSettings:TWITCH_CHANNEL");
-        public static string? STREAMLABS_SOCKET_TOKEN => GetSetting("AppSettings:STREAMLABS_SOCKET_TOKEN");
         public static string? BOT_CLIENT_ID => GetSetting("AppSettings:BOT_CLIENT_ID");
         public static string? BOT_CLIENT_SECRET => GetSetting("AppSettings:BOT_CLIENT_SECRET");
         public static string? TWITCH_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_ACCESS_TOKEN");
@@ -28,6 +27,7 @@ namespace TwitchChatBot.Models
 
         public static class Streamlabs
         {
+            public static string? STREAMLABS_SOCKET_TOKEN => GetSetting("Streamlabs:STREAMLABS_SOCKET_TOKEN");
             public static string? Url => GetSetting("Streamlabs:Url");
         }
 

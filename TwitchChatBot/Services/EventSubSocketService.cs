@@ -61,22 +61,49 @@ namespace TwitchChatBot.UI.Services
 
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    var result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    try
                     {
-                        _logger.LogWarning("⚠️ EventSub WebSocket closed.");
+                        var result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                        if (result.MessageType == WebSocketMessageType.Close)
+                        {
+                            _logger.LogWarning("⚠️ EventSub WebSocket closed.");
+                            _heartbeatTimer?.Dispose();
+                            await AttemptReconnectAsync(cancellationToken);
+                            return;
+                        }
+
+                        var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        await HandleMessageAsync(json);
+                    }
+                    catch (WebSocketException ex)
+                    {
+                        _logger.LogError(ex, "❌ WebSocket exception caught.");
+                        _heartbeatTimer?.Dispose();
                         await AttemptReconnectAsync(cancellationToken);
                         return;
                     }
-
-                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    await HandleMessageAsync(json);
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "❌ Unexpected error in receive loop.");
+                        _heartbeatTimer?.Dispose();
+                        await AttemptReconnectAsync(cancellationToken);
+                        return;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error in EventSub WebSocket connection.");
                 await AttemptReconnectAsync(cancellationToken);
+            }
+            finally
+            {
+                if (_socket.State != WebSocketState.Open)
+                {
+                    _logger.LogWarning("🔌 WebSocket no longer open. Attempting reconnect...");
+                    _heartbeatTimer?.Dispose();
+                    await AttemptReconnectAsync(cancellationToken);
+                }
             }
         }
 
@@ -221,13 +248,26 @@ namespace TwitchChatBot.UI.Services
         private void StartHeartbeat(int timeoutSeconds)
         {
             var interval = TimeSpan.FromSeconds(timeoutSeconds - 5);
-            _heartbeatTimer = new System.Threading.Timer(_ =>
+            _heartbeatTimer = new System.Threading.Timer(async _ =>
             {
-                var ping = Encoding.UTF8.GetBytes("{\"type\":\"ping\"}");
-                _socket.SendAsync(new ArraySegment<byte>(ping), WebSocketMessageType.Text, true, CancellationToken.None);
+                if (_socket?.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        var ping = Encoding.UTF8.GetBytes("{\"type\":\"ping\"}");
+                        await _socket.SendAsync(new ArraySegment<byte>(ping), WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug("💓 Sent heartbeat ping.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "⚠️ Heartbeat failed.");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Skipped heartbeat: WebSocket is not open.");
+                }
             }, null, interval, interval);
-
-            _logger.LogDebug("💓 Heartbeat started.");
         }
 
         private async Task AttemptReconnectAsync(CancellationToken cancellationToken)
@@ -235,8 +275,15 @@ namespace TwitchChatBot.UI.Services
             _reconnectAttempts++;
             var delay = Math.Min(10000, 1000 * (int)Math.Pow(2, _reconnectAttempts));
             _logger.LogInformation($"🔁 Reconnecting EventSub WebSocket in {delay / 1000}s...");
-            await Task.Delay(delay, cancellationToken);
-            await ConnectAsync(cancellationToken);
+            try
+            {
+                await Task.Delay(delay, cancellationToken);
+                await ConnectAsync(cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                _logger.LogInformation("Reconnect canceled.");
+            }
         }
     }
 }

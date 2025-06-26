@@ -12,7 +12,7 @@ namespace TwitchChatBot.Core.Services
         
         public TwitchAlertTypesService(
             ILogger<TwitchAlertTypesService> logger, 
-            TwitchAlertMediaRepository twitchAlertMediaRepository)
+            ITwitchAlertMediaRepository twitchAlertMediaRepository)
         {
             _logger = logger;
             _twitchAlertMediaRepository = twitchAlertMediaRepository;
