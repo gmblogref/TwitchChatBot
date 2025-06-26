@@ -46,7 +46,7 @@ namespace TwitchChatBot.Core.Services
             var json = JsonSerializer.Serialize(payload);
             var bytes = System.Text.Encoding.UTF8.GetBytes(json);
 
-            foreach (var socket in _sockets)
+            foreach (var socket in _sockets.ToList())
             {
                 if (socket.State == WebSocketState.Open)
                 {
@@ -58,6 +58,10 @@ namespace TwitchChatBot.Core.Services
                     {
                         _logger.LogError(ex, "❌ Failed to send WebSocket message.");
                     }
+                }
+                else
+                {
+                    _sockets.TryTake(out _); // Clean up closed sockets
                 }
             }
         }

@@ -25,7 +25,7 @@ namespace TwitchChatBot.UI.Services
         {
             _alertHandler = onFollowAlert;
 
-            var token = Models.AppSettings.STREAMLABS_SOCKET_TOKEN;
+            var token = AppSettings.Streamlabs.STREAMLABS_SOCKET_TOKEN;
             if (string.IsNullOrWhiteSpace(token))
             {
                 _logger.LogError("STREAMLABS_SOCKET_TOKEN is missing.");

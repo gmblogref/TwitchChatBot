@@ -10,27 +10,11 @@ namespace TwitchChatBot.Data
         private readonly ILogger<FirstChatterMediaRepository> _logger;
         private readonly string _filePath;
         private FirstChatterMediaMap? _firstChattersMediaMap;
-        private HashSet<string> _firstChatters = [];
 
         public FirstChatterMediaRepository(ILogger<FirstChatterMediaRepository> logger)
         {
             _logger = logger;
             _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaFiles.FirstChattersMedia);
-        }
-
-        public void ClearFirstChatters()
-        {
-            _firstChatters?.Clear();
-        }
-
-        public bool HasAlreadyChatted(string username)
-        {
-            return _firstChatters?.Contains(username) ?? false;
-        }
-
-        public void MarkAsChatted(string username)
-        {
-            _firstChatters.Add(username);
         }
 
         public async Task<bool> IsEligibleForFirstChatAsync(string username, CancellationToken cancellationToken = default)
@@ -49,7 +33,7 @@ namespace TwitchChatBot.Data
 
         private async Task GetFirstChattersAsync(CancellationToken cancellationToken = default)
         {
-            if (_firstChattersMediaMap != null)
+            if (_firstChattersMediaMap != null && _firstChattersMediaMap.FirstChatterMediaItems.Count > 0)
                 return;
 
             _firstChattersMediaMap = await DataHelperMethods.LoadAsync<FirstChatterMediaMap>(

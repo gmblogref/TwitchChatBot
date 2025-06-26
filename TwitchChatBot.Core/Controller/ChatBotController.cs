@@ -5,29 +5,35 @@ namespace TwitchChatBot.Core.Controller
 {
     public class ChatBotController
     {
-        private readonly ITwitchClientWrapper _twitchClient;
-        private readonly IWebSocketServer _webSocketServer;
         private readonly IAlertService _alertService;
-        private readonly IStreamlabsService _streamlabsService;
         private readonly IEventSubService _eventSubService;
         private readonly ILogger<ChatBotController> _logger;
+        private readonly IStreamlabsService _streamlabsService;
+        private readonly ITwitchClientWrapper _twitchClient;
+        private readonly IWebSocketServer _webSocketServer;
+
+        private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
 
         public ChatBotController(
-        ITwitchClientWrapper twitchClient,
-        IWebSocketServer webSocketServer,
         IAlertService alertService,
-        IStreamlabsService streamlabsService,
         IEventSubService eventSubService,
-        ILogger<ChatBotController> logger)
+        ILogger<ChatBotController> logger,
+        IStreamlabsService streamlabsService,
+        ITwitchClientWrapper twitchClient,
+        IWebSocketServer webSocketServer)
         {
-            _twitchClient = twitchClient;
-            _webSocketServer = webSocketServer;
             _alertService = alertService;
-            _streamlabsService = streamlabsService;
             _eventSubService = eventSubService;
             _logger = logger;
+            _streamlabsService = streamlabsService;
+            _twitchClient = twitchClient;
+            _webSocketServer = webSocketServer;
         }
 
+        public void SetUiBridge(IUiBridge bridge)
+        {
+            _uiBridge = bridge;
+        }
 
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
@@ -41,6 +47,13 @@ namespace TwitchChatBot.Core.Controller
                 // Connect to Twitch
                 _twitchClient.Connect();
                 _logger.LogInformation("✅ Connected to Twitch.");
+
+                _twitchClient.OnMessageReceived += (s, e) =>
+                {
+                    var formatted = $"[{e.Channel}] {e.Username}: {e.Message}";
+                    _uiBridge!.AppendChat(formatted);
+                    _logger.LogInformation("💬 {Chat}", formatted);
+                };
 
                 // Connect to Streamlabs
                 _streamlabsService.Start(_alertService.EnqueueAlert);
@@ -60,39 +73,5 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogError(ex, "❌ Failed to start ChatBotController.");
             }
         }
-
-        public async Task StopAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                _logger.LogInformation("🛑 Stopping ChatBotController...");
-
-                // Stop periodic tasks
-                _alertService.StopAdTimer();
-
-                // Stop EventSub WebSocket
-                await _eventSubService.StopAsync(cancellationToken);
-                _logger.LogInformation("❎ EventSub WebSocket stopped.");
-
-                // Stop Streamlabs WebSocket
-                _streamlabsService.Stop();
-                _logger.LogInformation("❎ Streamlabs WebSocket stopped.");
-
-                // Disconnect from Twitch
-                _twitchClient.Disconnect();
-                _logger.LogInformation("❎ Disconnected from Twitch.");
-
-                // Stop WebSocket server
-                _webSocketServer.Stop();
-                _logger.LogInformation("🌐 WebSocket server stopped.");
-
-                _logger.LogInformation("✅ ChatBotController stopped cleanly.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error during ChatBotController shutdown.");
-            }
-        }
-
     }
 }

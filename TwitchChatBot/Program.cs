@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Data;
@@ -27,6 +28,9 @@ namespace TwitchChatBot
             var serviceProvider = services.BuildServiceProvider();
 
             var mainForm = serviceProvider.GetRequiredService<TwitchChatBot>();
+            var controller = serviceProvider.GetRequiredService<ChatBotController>();
+            controller.SetUiBridge(mainForm); // 🔁 This breaks the circular dependency
+
             Application.Run(mainForm);
         }
 
@@ -43,37 +47,54 @@ namespace TwitchChatBot
         {
             var services = new ServiceCollection();
 
-            // Logging
+            // 🔧 Logging
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
                 builder.AddDebug();
             });
 
-            // Repositories
+            // 📦 Repositories
             services.TryAddSingleton<ICommandMediaRepository, CommandMediaRepository>();
             services.TryAddSingleton<IExcludedUsersRepository, ExcludedUsersRepository>();
             services.TryAddSingleton<IFirstChatterMediaRepository, FirstChatterMediaRepository>();
             services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
 
-            // Core services
+            // ⚙️ Core Services
             services.TryAddSingleton<IAlertService, AlertService>();
+            services.TryAddSingleton<ICommandAlertService, CommandAlertService>();
             services.TryAddSingleton<IEventSubService, EventSubSocketService>();
-            services.TryAddSingleton<IFirstChatterAlertService, FirstChatterAlertService>();
+            services.TryAddSingleton<IExcludedUsersService, ExcludedUsersService>();
             services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
             services.TryAddSingleton<ITwitchAlertTypesService, TwitchAlertTypesService>();
-
-            // Controllers
-            services.TryAddSingleton<TwitchChatBot>(); // Your WinForms entry form
             services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
             services.TryAddSingleton<IWebSocketServer, WebSocketServer>();
 
-            // Add WebHostWrapper
+            services.TryAddSingleton<IFirstChatterAlertService>(sp =>
+            new FirstChatterAlertService(
+                sp.GetRequiredService<ILogger<FirstChatterAlertService>>(),
+                sp.GetRequiredService<IFirstChatterMediaRepository>(),
+                sp.GetRequiredService<IExcludedUsersService>(),
+                sp.GetRequiredService<IAlertService>(),
+                (channel, message) =>
+                {
+                    var twitchClient = sp.GetRequiredService<ITwitchClientWrapper>();
+                    twitchClient.SendMessage(channel, message);
+                }
+                ));
+
+            // 💡 WebHost
             services.TryAddSingleton<IWebHostWrapper>(sp =>
                 new WebHostWrapper(
                     baseUrl: AppSettings.WebHost.BaseUrl!,
                     webRoot: AppSettings.WebHost.WebRoot!,
                     webSocketServer: sp.GetRequiredService<IWebSocketServer>()));
+
+            // 🧠 Register the UI Form and bridge
+            services.AddSingleton<TwitchChatBot>();
+
+            // 🧠 Register ChatBotController (depends on IUiBridge)
+            services.AddSingleton<ChatBotController>();
 
             return services;
         }

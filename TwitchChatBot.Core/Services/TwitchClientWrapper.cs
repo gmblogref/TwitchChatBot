@@ -1,46 +1,47 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace TwitchChatBot.Core.Services
 {
     public class TwitchClientWrapper : ITwitchClientWrapper, IDisposable
     {
-        private readonly TwitchClient _client;
+        private readonly TwitchClient _twitchClient;
         private readonly ILogger<TwitchClientWrapper> _logger;
-        private IExcludedUsersRepository _excludedUsersRepository;
-        private IFirstChatterMediaRepository _firstChatterMediaRepository;
+        private ICommandAlertService _commandAlertService;
+        private IExcludedUsersService _excludedUsersService;
+        private IFirstChatterAlertService _firstChatterAlertService;
         private bool _disposed = false;
-        private List<string> _firstChatters = [];
 
         public event EventHandler<TwitchMessageEventArgs>? OnMessageReceived;
 
         public TwitchClientWrapper(
-                string username, 
-                string accessToken, 
-                string channel, 
                 ILogger<TwitchClientWrapper> logger,
-                IExcludedUsersRepository excludedUsersRepository,
-                IFirstChatterMediaRepository firstChatterMediaRepository)
+                ICommandAlertService commandAlertService,
+                IExcludedUsersService excludedUsersService,
+                IFirstChatterAlertService firstChatterAlertService)
         {
             _logger = logger;
-            _excludedUsersRepository = excludedUsersRepository;
-            _firstChatterMediaRepository = firstChatterMediaRepository;
-
+            _commandAlertService = commandAlertService;
+            _excludedUsersService = excludedUsersService;
+            _firstChatterAlertService = firstChatterAlertService;
+            
             try
             {
-                var credentials = new ConnectionCredentials(username, accessToken);
-                _client = new TwitchClient();
-                _client.Initialize(credentials, channel);
+                var credentials = new ConnectionCredentials(AppSettings.TWITCH_BOT_USERNAME!, AppSettings.TWITCH_OAUTH_TOKEN!);
+                _twitchClient = new TwitchClient();
+                _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL!);
 
-                _client.OnMessageReceived += async (s, e) => await HandleMessageReceivedAsync(e);
-                _client.OnConnected += (s, e) => _logger.LogInformation("✅ Twitch connected.");
-                _client.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
-                _client.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
+                _twitchClient.OnMessageReceived += async (s, e) => await HandleMessageReceivedAsync(e);
+                _twitchClient.OnConnected += (s, e) => _logger.LogInformation("✅ Twitch connected.");
+                _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
+                _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
             }
             catch (Exception ex)
             {
@@ -49,22 +50,22 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        public void Connect() => _client.Connect();
+        public void Connect() => _twitchClient.Connect();
 
         public void Disconnect()
         {
-            if (_client.IsConnected)
+            if (_twitchClient.IsConnected)
             {
-                _client.Disconnect();
+                _twitchClient.Disconnect();
                 _logger.LogInformation("🛑 Twitch client disconnected.");
             }
         }
 
         public void SendMessage(string channel, string message)
         {
-            if (_client.IsConnected)
+            if (_twitchClient.IsConnected)
             {
-                _client.SendMessage(channel, message);
+                _twitchClient.SendMessage(channel, message);
             }
             else
             {
@@ -82,28 +83,38 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
         {
             var username = e.ChatMessage.Username.ToLower();
+            var channel = e.ChatMessage.Channel;
 
             // If excluded user we skip handeling the message
-            if (await _excludedUsersRepository.IsUserExcludedAsync(username))
+            if (await _excludedUsersService.IsUserExcludedAsync(username))
             {
                 _logger.LogInformation("🙈 Ignoring message from excluded user: {Username}", username);
                 return;
             }
 
-            var message = e.ChatMessage.Message.Trim().ToLower();
+            var trimmedMessage = e.ChatMessage.Message.Trim().ToLower();
 
             // Check if it's the clear command and from the broadcaster
-            if (message == "!clearfirst" && username == AppSettings.TWITCH_CHANNEL!.ToLower())
+            if (trimmedMessage == "!clearfirst" && username == AppSettings.TWITCH_CHANNEL!.ToLower())
             {
-                _firstChatterMediaRepository.ClearFirstChatters();
+                _firstChatterAlertService.ClearFirstChatters();
                 _logger.LogInformation("✅ First chatters list cleared by {User}", username);
                 SendMessage(e.ChatMessage.Channel, "✅ First chatters list has been cleared.");
                 return;
             }
 
+            // Do First Chat Message
+            await _firstChatterAlertService.HandleFirstChatAsync(username, e.ChatMessage.Username);
+
+
+            if (trimmedMessage.StartsWith("!"))
+            {
+                await _commandAlertService.HandleCommandAsync(trimmedMessage, username, channel, SendMessage);
+            }
+
             OnMessageReceived?.Invoke(this, new TwitchMessageEventArgs
             {
-                Channel = e.ChatMessage.Channel,
+                Channel = channel,
                 Username = username,
                 Message = e.ChatMessage.Message
             });

@@ -1,7 +1,10 @@
-﻿namespace TwitchChatBot.Models
+﻿using System.Text.Json.Serialization;
+
+namespace TwitchChatBot.Models
 {
     public class CommandMediaMap
     {
+        [JsonPropertyName("commandMediaItems")]
         public List<CommandMediaItem> CommandMediaItems { get; set; } = new();
     }
 
