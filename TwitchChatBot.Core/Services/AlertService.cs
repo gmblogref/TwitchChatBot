@@ -12,10 +12,17 @@ namespace TwitchChatBot.Core.Services
         private bool _isProcessing = false;
         private System.Threading.Timer? _adTimer;
 
+        private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
+
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
         {
             _logger = logger;
             _webSocketServer = webSocketServer;
+        }
+
+        public void SetUiBridge(IUiBridge bridge)
+        {
+            _uiBridge = bridge;
         }
 
         public void EnqueueAlert(string message, string? mediaPath = null)
@@ -43,7 +50,7 @@ namespace TwitchChatBot.Core.Services
             _adTimer?.Dispose();
             _adTimer = null;
         }
-        
+
         private void ProcessQueue()
         {
             if (_isProcessing || _alertQueue.Count == 0)

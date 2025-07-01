@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchLib.Communication.Interfaces;
 
 namespace TwitchChatBot.Core.Controller
 {
@@ -11,6 +12,7 @@ namespace TwitchChatBot.Core.Controller
         private readonly IStreamlabsService _streamlabsService;
         private readonly ITwitchClientWrapper _twitchClient;
         private readonly IWebSocketServer _webSocketServer;
+        private readonly IWebHostWrapper _webHostWrapper;
 
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
 
@@ -20,7 +22,8 @@ namespace TwitchChatBot.Core.Controller
         ILogger<ChatBotController> logger,
         IStreamlabsService streamlabsService,
         ITwitchClientWrapper twitchClient,
-        IWebSocketServer webSocketServer)
+        IWebSocketServer webSocketServer,
+        IWebHostWrapper webHostWrapper)
         {
             _alertService = alertService;
             _eventSubService = eventSubService;
@@ -28,6 +31,7 @@ namespace TwitchChatBot.Core.Controller
             _streamlabsService = streamlabsService;
             _twitchClient = twitchClient;
             _webSocketServer = webSocketServer;
+            _webHostWrapper = webHostWrapper;
         }
 
         public void SetUiBridge(IUiBridge bridge)
@@ -44,15 +48,15 @@ namespace TwitchChatBot.Core.Controller
                 // Start WebSocket server to communicate with front end
                 _webSocketServer.Start();
 
+                await _webHostWrapper.StartAsync(cancellationToken);
+
                 // Connect to Twitch
                 _twitchClient.Connect();
                 _logger.LogInformation("✅ Connected to Twitch.");
 
                 _twitchClient.OnMessageReceived += (s, e) =>
                 {
-                    var formatted = $"[{e.Channel}] {e.Username}: {e.Message}";
-                    _uiBridge!.AppendChat(formatted);
-                    _logger.LogInformation("💬 {Chat}", formatted);
+                    _uiBridge!.AppendChat(e.Username, e.Message, e.Color);
                 };
 
                 // Connect to Streamlabs

@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#alert {
+    font-size: 36px;
+    font-weight: bold;
+    color: black;
+    text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+    position: absolute;
+    top: 10%;
+    width: 100%;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+#media {
+    position: absolute;
+    top: 30%;
+    width: 100%;
+    text-align: center;
+}
+
+video, img {
+    max-width: 625px;
+    max-height: 425px;
+}

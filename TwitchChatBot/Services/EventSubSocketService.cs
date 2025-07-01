@@ -12,8 +12,7 @@ namespace TwitchChatBot.UI.Services
     {
 
         private readonly ILogger<EventSubSocketService> _logger;
-        private readonly IAlertService _alertService;
-        private readonly ITwitchAlertTypesService _handleAlertTypesService;
+        private readonly ITwitchAlertTypesService _twitchAlertTypesService;
         private ClientWebSocket _socket;
         private CancellationTokenSource _cts;
         private Task? _listenerTask;
@@ -22,12 +21,10 @@ namespace TwitchChatBot.UI.Services
 
         public EventSubSocketService(
             ILogger<EventSubSocketService> logger,
-            IAlertService alertService,
-            ITwitchAlertTypesService handleAlertTypesService)
+            ITwitchAlertTypesService twitchAlertTypesService)
         {
             _logger = logger;
-            _alertService = alertService;
-            _handleAlertTypesService = handleAlertTypesService;
+            _twitchAlertTypesService = twitchAlertTypesService;
             _socket = new ClientWebSocket();
             _cts = new CancellationTokenSource();
         }
@@ -136,36 +133,36 @@ namespace TwitchChatBot.UI.Services
                             case TwitchEventTypes.ChannelCheer:
                                 var bits = eventPayload.GetProperty("bits").GetInt32();
                                 var message = eventPayload.GetProperty("message").GetString() ?? "";
-                                await _handleAlertTypesService.HandleCheerAsync(username, bits, message, _alertService);
+                                await _twitchAlertTypesService.HandleCheerAsync(username, bits, message);
                                 break;
 
                             case TwitchEventTypes.ChannelPointsRedemption:
                                 var rewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? "";
-                                await _handleAlertTypesService.HandleChannelPointRedemptionAsync(username, rewardTitle, _alertService);
+                                await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(username, rewardTitle);
                                 break;
 
                             case TwitchEventTypes.ChannelRaid:
                                 var viewers = eventPayload.GetProperty("viewers").GetInt32();
-                                await _handleAlertTypesService.HandleRaidAsync(username, viewers, _alertService);
+                                await _twitchAlertTypesService.HandleRaidAsync(username, viewers);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscribe:
-                                await _handleAlertTypesService.HandleSubscriptionAsync(username, _alertService);
+                                await _twitchAlertTypesService.HandleSubscriptionAsync(username);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionGift:
                                 var recipient = eventPayload.GetProperty("recipient_user_name").GetString() ?? "someone";
-                                await _handleAlertTypesService.HandleSubGiftAsync(username, recipient, _alertService);
+                                await _twitchAlertTypesService.HandleSubGiftAsync(username, recipient);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionMessage:
                                 var months = eventPayload.GetProperty("cumulative_months").GetInt32();
                                 var resubMessage = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
-                                await _handleAlertTypesService.HandleResubAsync(username, months, resubMessage, _alertService);
+                                await _twitchAlertTypesService.HandleResubAsync(username, months, resubMessage);
                                 break;
 
                             case TwitchEventTypes.HypeTrainBegin:
-                                await _handleAlertTypesService.HandleHypeTrainAsync(_alertService);
+                                await _twitchAlertTypesService.HandleHypeTrainAsync();
                                 break;
 
                             default:
@@ -216,11 +213,15 @@ namespace TwitchChatBot.UI.Services
 
             foreach (var type in eventTypes)
             {
+                object condition = type == TwitchEventTypes.ChannelRaid
+                    ? new { to_broadcaster_user_id = broadcasterId } // 👈 required now
+                    : new { broadcaster_user_id = broadcasterId };
+
                 var body = new
                 {
                     type,
                     version = "1",
-                    condition = new { broadcaster_user_id = broadcasterId },
+                    condition,
                     transport = new
                     {
                         method = "websocket",

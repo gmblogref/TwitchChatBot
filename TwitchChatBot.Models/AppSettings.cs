@@ -46,6 +46,11 @@ namespace TwitchChatBot.Models
             public static string CommandAlertMedia => GetSetting("MediaFiles:CommandAlertMedia");
         }
 
+        public static class Chatters
+        {
+            public static string BaseUrl => GetSetting("Chatters:BaseUrl");
+        }
+
         public static string GetSetting(string key)
         {
             var value = Configuration![key];

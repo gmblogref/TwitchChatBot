@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Drawing;
 using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Data.Contracts;
@@ -18,7 +20,9 @@ namespace TwitchChatBot.Core.Services
         private IExcludedUsersService _excludedUsersService;
         private IFirstChatterAlertService _firstChatterAlertService;
         private bool _disposed = false;
+        private readonly ConcurrentDictionary<string, byte> _connectedUsers = new();
 
+        public event Action<List<string>>? OnViewerListChanged;
         public event EventHandler<TwitchMessageEventArgs>? OnMessageReceived;
 
         public TwitchClientWrapper(
@@ -42,6 +46,16 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.OnConnected += (s, e) => _logger.LogInformation("✅ Twitch connected.");
                 _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
                 _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
+                _twitchClient.OnUserJoined += (s, e) =>
+                {
+                    if (_connectedUsers.TryAdd(e.Username.ToLower(), 0))
+                        OnViewerListChanged?.Invoke(GetCurrentSortedViewers());
+                };
+                _twitchClient.OnUserLeft += (s, e) =>
+                {
+                    if (_connectedUsers.TryRemove(e.Username.ToLower(), out _))
+                        OnViewerListChanged?.Invoke(GetCurrentSortedViewers());
+                };
             }
             catch (Exception ex)
             {
@@ -59,6 +73,14 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.Disconnect();
                 _logger.LogInformation("🛑 Twitch client disconnected.");
             }
+        }
+
+        public List<string> GetCurrentSortedViewers()
+        {
+            return _connectedUsers.Keys
+                .Where(u => !string.Equals(u, AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(u => u)
+                .ToList();
         }
 
         public void SendMessage(string channel, string message)
@@ -116,7 +138,8 @@ namespace TwitchChatBot.Core.Services
             {
                 Channel = channel,
                 Username = username,
-                Message = e.ChatMessage.Message
+                Message = e.ChatMessage.Message,
+                Color = ColorTranslator.FromHtml(e.ChatMessage.ColorHex ?? "#FFFFFF")
             });
         }
     }

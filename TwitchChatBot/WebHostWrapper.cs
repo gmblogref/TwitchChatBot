@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot
 {
@@ -10,13 +11,13 @@ namespace TwitchChatBot
     {
         private readonly IHost _host;
 
-        public WebHostWrapper(string baseUrl, string webRoot, IWebSocketServer webSocketServer)
+        public WebHostWrapper(IWebSocketServer webSocketServer)
         {
             _host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls(baseUrl);
-                    webBuilder.UseWebRoot(webRoot);
+                    webBuilder.UseUrls(AppSettings.WebHost.BaseUrl!);
+                    webBuilder.UseWebRoot(AppSettings.WebHost.WebRoot!);
                     webBuilder.Configure(app =>
                     {
                         app.UseWebSockets();
