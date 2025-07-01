@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchChatBot.Models", "Twi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchChatBot.Data", "TwitchChatBot.Data\TwitchChatBot.Data.csproj", "{60FC4F3E-A10E-44DF-8EAD-F2E9C40EC8A9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchChatBot.Testing", "TwitchChatBot.Testing\TwitchChatBot.Testing.csproj", "{9B1DC3A0-7084-42D3-8C81-3507875AFB8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{60FC4F3E-A10E-44DF-8EAD-F2E9C40EC8A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60FC4F3E-A10E-44DF-8EAD-F2E9C40EC8A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60FC4F3E-A10E-44DF-8EAD-F2E9C40EC8A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B1DC3A0-7084-42D3-8C81-3507875AFB8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B1DC3A0-7084-42D3-8C81-3507875AFB8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B1DC3A0-7084-42D3-8C81-3507875AFB8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B1DC3A0-7084-42D3-8C81-3507875AFB8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

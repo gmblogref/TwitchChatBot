@@ -31,6 +31,7 @@
 		<ProjectReference Include="..\TwitchChatBot.Core\TwitchChatBot.Core.csproj" />
 		<ProjectReference Include="..\TwitchChatBot.Data\TwitchChatBot.Data.csproj" />
 		<ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
+		<ProjectReference Include="..\TwitchChatBot.Testing\TwitchChatBot.Testing.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -47,7 +48,6 @@
 		<Folder Include="wwwroot\commands\" />
 		<Folder Include="wwwroot\channel_points\" />
 		<Folder Include="wwwroot\first_chat_vods\" />
-		<Folder Include="wwwroot\" />
 		<Folder Include="wwwroot\twitch_alerts\" />
 	</ItemGroup>
 	<ItemGroup>
@@ -55,154 +55,8 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>mediaMaps\%(Filename)%(Extension)</Link>
 		</Content>
-		<Content Include="wwwroot\**">
+		<Content Include="wwwroot\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>mediaMaps\%(Filename)%(Extension)</Link>
 		</Content>
 	</ItemGroup>
-	<ItemGroup>
-		<Content Remove="wwwroot\channel_points\Derail.mp4" />
-		<Content Remove="wwwroot\channel_points\Flag.mp4" />
-		<Content Remove="wwwroot\channel_points\JustGotWicked.mp4" />
-		<Content Remove="wwwroot\channel_points\PuppyTreats.mp4" />
-		<Content Remove="wwwroot\channel_points\sacksWinded.mp4" />
-		<Content Remove="wwwroot\channel_points\ShotTime.mp4" />
-		<Content Remove="wwwroot\channel_points\ShowBelly.mp4" />
-		<Content Remove="wwwroot\channel_points\SoFluffy.mp4" />
-		<Content Remove="wwwroot\channel_points\ThisIsWendys.mp4" />
-		<Content Remove="wwwroot\channel_points\YourDensity.mp4" />
-		<Content Remove="wwwroot\commands\almostHadIt.mp3" />
-		<Content Remove="wwwroot\commands\babysacks.mp3" />
-		<Content Remove="wwwroot\commands\balls.mp3" />
-		<Content Remove="wwwroot\commands\Be_Afraid.mp3" />
-		<Content Remove="wwwroot\commands\BitesTheDust.mp3" />
-		<Content Remove="wwwroot\commands\doggyTreat.mp3" />
-		<Content Remove="wwwroot\commands\fail.mp3" />
-		<Content Remove="wwwroot\commands\FlagOnThePlay.mp3" />
-		<Content Remove="wwwroot\commands\ForThePuppies.mp3" />
-		<Content Remove="wwwroot\commands\full_of_excuses.mp3" />
-		<Content Remove="wwwroot\commands\gamerAlert.mp3" />
-		<Content Remove="wwwroot\commands\GameScreen.mp3" />
-		<Content Remove="wwwroot\commands\Gotham.mp3" />
-		<Content Remove="wwwroot\commands\Go_Ninja_Go.mp3" />
-		<Content Remove="wwwroot\commands\ISH Together.mp3" />
-		<Content Remove="wwwroot\commands\JinRayLove.mp3" />
-		<Content Remove="wwwroot\commands\KC.mp3" />
-		<Content Remove="wwwroot\commands\LegendOfSacks.mp3" />
-		<Content Remove="wwwroot\commands\Meow.mp3" />
-		<Content Remove="wwwroot\commands\MoveIt_MoveIt.mp3" />
-		<Content Remove="wwwroot\commands\party_like_a_rockstar.mp3" />
-		<Content Remove="wwwroot\commands\phrasing.mp3" />
-		<Content Remove="wwwroot\commands\SacksWin.mp3" />
-		<Content Remove="wwwroot\commands\Scherbie_Love.mp3" />
-		<Content Remove="wwwroot\commands\sonic_extra_life.mp3" />
-		<Content Remove="wwwroot\commands\Sonic_Game_Over_Sound_Effect.mp3" />
-		<Content Remove="wwwroot\commands\SpikesAreBad.mp3" />
-		<Content Remove="wwwroot\commands\squeek.mp3" />
-		<Content Remove="wwwroot\commands\ThatIsALie.mp3" />
-		<Content Remove="wwwroot\commands\whipped.mp3" />
-		<Content Remove="wwwroot\commands\WhoaRelax.mp3" />
-		<Content Remove="wwwroot\commands\windblowing.mp3" />
-		<Content Remove="wwwroot\commands\YouWereClose.mp3" />
-		<Content Remove="wwwroot\first_chat_vods\Ben324324324_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\DOOG_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\Flana_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\Jilly_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\KneeKap_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\Lopez_FirstChat.mp4" />
-		<Content Remove="wwwroot\first_chat_vods\Major_FirstChat.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer-WhoIsOnFirst.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_2HomeRuns.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_AnyAmount.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_BigMan.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_HotGummy.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_Over9000.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\cheer_TreeFiddy.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\follow_Homer.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\hypeTrain_AnyAmount.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\hypeTrain_ScamTrian.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\raid_300.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\raid_JoeHendry.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\resub_HomerResub.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\subgift_LisaBart.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\submysterygift_DropsBombs.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\submysterygift_RickAndMortyBuy.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\submysterygift_ToTheHouse.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\subscribe_EverthingIsAwesome.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\subscribe_Morty.mp4" />
-		<Content Remove="wwwroot\twitch_alerts\subscribe_PrimeGaming.mp4" />
-	</ItemGroup>
-	<ItemGroup>
-		<None Remove="wwwroot\channel_points\Derail.mp4" />
-		<None Remove="wwwroot\channel_points\Flag.mp4" />
-		<None Remove="wwwroot\channel_points\JustGotWicked.mp4" />
-		<None Remove="wwwroot\channel_points\PuppyTreats.mp4" />
-		<None Remove="wwwroot\channel_points\sacksWinded.mp4" />
-		<None Remove="wwwroot\channel_points\ShotTime.mp4" />
-		<None Remove="wwwroot\channel_points\ShowBelly.mp4" />
-		<None Remove="wwwroot\channel_points\SoFluffy.mp4" />
-		<None Remove="wwwroot\channel_points\ThisIsWendys.mp4" />
-		<None Remove="wwwroot\channel_points\YourDensity.mp4" />
-		<None Remove="wwwroot\commands\almostHadIt.mp3" />
-		<None Remove="wwwroot\commands\babysacks.mp3" />
-		<None Remove="wwwroot\commands\balls.mp3" />
-		<None Remove="wwwroot\commands\Be_Afraid.mp3" />
-		<None Remove="wwwroot\commands\BitesTheDust.mp3" />
-		<None Remove="wwwroot\commands\doggyTreat.mp3" />
-		<None Remove="wwwroot\commands\fail.mp3" />
-		<None Remove="wwwroot\commands\FlagOnThePlay.mp3" />
-		<None Remove="wwwroot\commands\ForThePuppies.mp3" />
-		<None Remove="wwwroot\commands\full_of_excuses.mp3" />
-		<None Remove="wwwroot\commands\gamerAlert.mp3" />
-		<None Remove="wwwroot\commands\GameScreen.mp3" />
-		<None Remove="wwwroot\commands\Gotham.mp3" />
-		<None Remove="wwwroot\commands\Go_Ninja_Go.mp3" />
-		<None Remove="wwwroot\commands\ISH Together.mp3" />
-		<None Remove="wwwroot\commands\JinRayLove.mp3" />
-		<None Remove="wwwroot\commands\KC.mp3" />
-		<None Remove="wwwroot\commands\LegendOfSacks.mp3" />
-		<None Remove="wwwroot\commands\Meow.mp3" />
-		<None Remove="wwwroot\commands\MoveIt_MoveIt.mp3" />
-		<None Remove="wwwroot\commands\party_like_a_rockstar.mp3" />
-		<None Remove="wwwroot\commands\phrasing.mp3" />
-		<None Remove="wwwroot\commands\SacksWin.mp3" />
-		<None Remove="wwwroot\commands\Scherbie_Love.mp3" />
-		<None Remove="wwwroot\commands\sonic_extra_life.mp3" />
-		<None Remove="wwwroot\commands\Sonic_Game_Over_Sound_Effect.mp3" />
-		<None Remove="wwwroot\commands\SpikesAreBad.mp3" />
-		<None Remove="wwwroot\commands\squeek.mp3" />
-		<None Remove="wwwroot\commands\ThatIsALie.mp3" />
-		<None Remove="wwwroot\commands\whipped.mp3" />
-		<None Remove="wwwroot\commands\WhoaRelax.mp3" />
-		<None Remove="wwwroot\commands\windblowing.mp3" />
-		<None Remove="wwwroot\commands\YouWereClose.mp3" />
-		<None Remove="wwwroot\first_chat_vods\Ben324324324_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\DOOG_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\Flana_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\Jilly_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\KneeKap_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\Lopez_FirstChat.mp4" />
-		<None Remove="wwwroot\first_chat_vods\Major_FirstChat.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer-WhoIsOnFirst.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_2HomeRuns.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_AnyAmount.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_BigMan.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_HotGummy.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_Over9000.mp4" />
-		<None Remove="wwwroot\twitch_alerts\cheer_TreeFiddy.mp4" />
-		<None Remove="wwwroot\twitch_alerts\follow_Homer.mp4" />
-		<None Remove="wwwroot\twitch_alerts\hypeTrain_AnyAmount.mp4" />
-		<None Remove="wwwroot\twitch_alerts\hypeTrain_ScamTrian.mp4" />
-		<None Remove="wwwroot\twitch_alerts\raid_300.mp4" />
-		<None Remove="wwwroot\twitch_alerts\raid_JoeHendry.mp4" />
-		<None Remove="wwwroot\twitch_alerts\resub_HomerResub.mp4" />
-		<None Remove="wwwroot\twitch_alerts\subgift_LisaBart.mp4" />
-		<None Remove="wwwroot\twitch_alerts\submysterygift_DropsBombs.mp4" />
-		<None Remove="wwwroot\twitch_alerts\submysterygift_RickAndMortyBuy.mp4" />
-		<None Remove="wwwroot\twitch_alerts\submysterygift_ToTheHouse.mp4" />
-		<None Remove="wwwroot\twitch_alerts\subscribe_EverthingIsAwesome.mp4" />
-		<None Remove="wwwroot\twitch_alerts\subscribe_Morty.mp4" />
-		<None Remove="wwwroot\twitch_alerts\subscribe_PrimeGaming.mp4" />
-	</ItemGroup>
-
 </Project>

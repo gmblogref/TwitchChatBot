@@ -11,5 +11,10 @@ namespace TwitchChatBot.Core.Utilities
 
             return random.Next(listLength);
         }
+
+        public static string ReplacePlaceholders(string text, string username)
+        {
+            return text.Replace("[userName]", username);
+        }
     }
 }

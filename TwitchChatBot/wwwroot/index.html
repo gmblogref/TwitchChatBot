@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Twitch Alert Overlay</title>
+    <link rel="stylesheet" href="style.css?v=1" />
+</head>
+<body>
+    <div id="alert"></div>
+    <div id="media"></div>
+
+    <script>
+        const alertBox = document.getElementById("alert");
+        const mediaBox = document.getElementById("media");
+        const queue = [];
+        let playing = false;
+
+        let ws;
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${location.hostname}:3000/ws`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                queue.push(data);
+                processQueue();
+            };
+            ws.onclose = () => setTimeout(connectWebSocket, 3000); // reconnect on close
+        }
+        connectWebSocket();
+
+        async function processQueue() {
+            if (playing || queue.length === 0) return;
+
+            playing = true;
+            const { message, media } = queue.shift();
+
+            // Show alert text
+            alertBox.textContent = message || "";
+            alertBox.style.opacity = 1;
+
+            mediaBox.innerHTML = "";
+
+            if (media?.endsWith(".mp4")) {
+                const video = document.createElement("video");
+                video.src = media;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.muted = false; // try false first, OBS should allow it
+                video.volume = 1.0;
+                mediaBox.appendChild(video);
+
+                await video.play().catch(() => null);
+                await new Promise(resolve => video.onended = resolve);
+                await sleep(1000);
+
+            } else if (media?.endsWith(".gif")) {
+                const img = document.createElement("img");
+                img.src = media;
+                mediaBox.appendChild(img);
+
+                await sleep(5000);
+                await sleep(1000);
+
+            } else if (media?.endsWith(".mp3")) {
+                const audio = new Audio(media);
+                audio.volume = 1.0;
+                await audio.play().catch(() => null);
+                await new Promise(resolve => audio.onended = resolve);
+                await sleep(1000);
+
+            } else {
+                await sleep(5000);
+                await sleep(1000);
+            }
+
+            alertBox.style.opacity = 0;
+            mediaBox.innerHTML = "";
+            playing = false;
+            processQueue();
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

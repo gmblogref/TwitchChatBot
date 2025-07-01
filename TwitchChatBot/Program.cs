@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Controller;
+using TwitchChatBot.Core.Logging;
 using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Data;
@@ -30,6 +31,10 @@ namespace TwitchChatBot
             var mainForm = serviceProvider.GetRequiredService<TwitchChatBot>();
             var controller = serviceProvider.GetRequiredService<ChatBotController>();
             controller.SetUiBridge(mainForm); // 🔁 This breaks the circular dependency
+            
+            // Register the logger provider after mainForm is available
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            loggerFactory.AddProvider(new TextBoxLoggerProvider(mainForm));
 
             Application.Run(mainForm);
         }
@@ -62,6 +67,7 @@ namespace TwitchChatBot
 
             // ⚙️ Core Services
             services.TryAddSingleton<IAlertService, AlertService>();
+            services.AddHttpClient<IChattersService, ChattersService>();
             services.TryAddSingleton<ICommandAlertService, CommandAlertService>();
             services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IExcludedUsersService, ExcludedUsersService>();
@@ -69,7 +75,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<ITwitchAlertTypesService, TwitchAlertTypesService>();
             services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
             services.TryAddSingleton<IWebSocketServer, WebSocketServer>();
-
+            
             services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(
                 sp.GetRequiredService<ILogger<FirstChatterAlertService>>(),
@@ -84,17 +90,16 @@ namespace TwitchChatBot
                 ));
 
             // 💡 WebHost
-            services.TryAddSingleton<IWebHostWrapper>(sp =>
-                new WebHostWrapper(
-                    baseUrl: AppSettings.WebHost.BaseUrl!,
-                    webRoot: AppSettings.WebHost.WebRoot!,
-                    webSocketServer: sp.GetRequiredService<IWebSocketServer>()));
+            services.TryAddSingleton<IWebHostWrapper, WebHostWrapper>();
 
             // 🧠 Register the UI Form and bridge
             services.AddSingleton<TwitchChatBot>();
 
             // 🧠 Register ChatBotController (depends on IUiBridge)
             services.AddSingleton<ChatBotController>();
+
+            // 🧠 Register Tests
+            services.TryAddSingleton<ITestUtilityService, TestUtilityService>();
 
             return services;
         }

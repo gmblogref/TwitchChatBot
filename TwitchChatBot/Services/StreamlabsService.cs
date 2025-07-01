@@ -10,15 +10,17 @@ namespace TwitchChatBot.UI.Services
     public class StreamlabsSocketService : IStreamlabsService
     {
         private readonly ILogger<StreamlabsSocketService> _logger;
+        private readonly ITwitchAlertTypesService _twitchAlertTypesService;
         private readonly ClientWebSocket _socket = new();
         private readonly CancellationTokenSource _cts = new();
         private Task? _listenTask;
         private Action<string, string?>? _alertHandler;
         private int _reconnectAttempts = 0;
 
-        public StreamlabsSocketService(ILogger<StreamlabsSocketService> logger)
+        public StreamlabsSocketService(ILogger<StreamlabsSocketService> logger, ITwitchAlertTypesService twitchAlertTypesService)
         {
             _logger = logger;
+            _twitchAlertTypesService = twitchAlertTypesService;
         }
 
         public void Start(Action<string, string?> onFollowAlert)
@@ -98,7 +100,8 @@ namespace TwitchChatBot.UI.Services
                     if (!string.IsNullOrWhiteSpace(username))
                     {
                         _logger.LogInformation($"🟢 Follow alert received from {username}");
-                        _alertHandler?.Invoke($"🟢 {username} just followed the channel!", ""); // no media
+
+                        _twitchAlertTypesService.HandleFollowAsync(username);
                     }
                 }
             }
