@@ -85,12 +85,16 @@
             tabControlChatBot.Controls.Add(tabPageMainChat);
             tabControlChatBot.Controls.Add(tabPageLogging);
             tabControlChatBot.Controls.Add(tabTesting);
+            tabControlChatBot.DrawMode = TabDrawMode.OwnerDrawFixed;
             tabControlChatBot.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            tabControlChatBot.ItemSize = new Size(250, 35);
             tabControlChatBot.Location = new Point(12, 12);
             tabControlChatBot.Name = "tabControlChatBot";
             tabControlChatBot.SelectedIndex = 0;
             tabControlChatBot.Size = new Size(1049, 453);
+            tabControlChatBot.SizeMode = TabSizeMode.Fixed;
             tabControlChatBot.TabIndex = 2;
+            tabControlChatBot.DrawItem += tabControlChatBot_DrawItem;
             // 
             // tabPageMainChat
             // 
@@ -99,10 +103,10 @@
             tabPageMainChat.Controls.Add(richTextBoxStreamChat);
             tabPageMainChat.Controls.Add(labelChatBox);
             tabPageMainChat.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            tabPageMainChat.Location = new Point(4, 37);
+            tabPageMainChat.Location = new Point(4, 39);
             tabPageMainChat.Name = "tabPageMainChat";
             tabPageMainChat.Padding = new Padding(3);
-            tabPageMainChat.Size = new Size(1041, 412);
+            tabPageMainChat.Size = new Size(1041, 410);
             tabPageMainChat.TabIndex = 0;
             tabPageMainChat.Text = "Main Chat Bot Tab";
             tabPageMainChat.UseVisualStyleBackColor = true;
@@ -160,10 +164,10 @@
             tabPageLogging.Controls.Add(textBoxLogging);
             tabPageLogging.Controls.Add(labelLogging);
             tabPageLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            tabPageLogging.Location = new Point(4, 37);
+            tabPageLogging.Location = new Point(4, 39);
             tabPageLogging.Name = "tabPageLogging";
             tabPageLogging.Padding = new Padding(3);
-            tabPageLogging.Size = new Size(1041, 412);
+            tabPageLogging.Size = new Size(1041, 410);
             tabPageLogging.TabIndex = 1;
             tabPageLogging.Text = "Logging Tab";
             tabPageLogging.UseVisualStyleBackColor = true;
@@ -175,11 +179,11 @@
             textBoxLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             textBoxLogging.ForeColor = Color.White;
             textBoxLogging.Location = new Point(6, 38);
-            textBoxLogging.MinimumSize = new Size(1025, 372);
+            textBoxLogging.MinimumSize = new Size(1025, 365);
             textBoxLogging.Multiline = true;
             textBoxLogging.Name = "textBoxLogging";
             textBoxLogging.ScrollBars = ScrollBars.Both;
-            textBoxLogging.Size = new Size(1025, 372);
+            textBoxLogging.Size = new Size(1025, 365);
             textBoxLogging.TabIndex = 1;
             // 
             // labelLogging
@@ -199,10 +203,10 @@
             tabTesting.Controls.Add(groupBoxTextEntryTests);
             tabTesting.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabTesting.ForeColor = SystemColors.ControlText;
-            tabTesting.Location = new Point(4, 37);
+            tabTesting.Location = new Point(4, 39);
             tabTesting.Name = "tabTesting";
             tabTesting.Padding = new Padding(3);
-            tabTesting.Size = new Size(1041, 412);
+            tabTesting.Size = new Size(1041, 410);
             tabTesting.TabIndex = 2;
             tabTesting.Text = "Testing Tab";
             // 
