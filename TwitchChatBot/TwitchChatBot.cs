@@ -1,3 +1,4 @@
+using System.Windows.Forms;
 using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Services.Contracts;
 
@@ -226,6 +227,29 @@ namespace TwitchChatBot
                 buttonTestFirstChat.PerformClick();
                 textFirstChatter.Text = string.Empty;
             }
+        }
+
+        private void tabControlChatBot_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            TabPage tab = tabControlChatBot.TabPages[e.Index];
+            Rectangle tabRect = tabControlChatBot.GetTabRect(e.Index);
+            bool isSelected = (e.Index == tabControlChatBot.SelectedIndex);
+
+            // Background
+            e.Graphics.FillRectangle(isSelected ? Brushes.White : Brushes.LightGray, tabRect);
+
+            // Border
+            e.Graphics.DrawRectangle(Pens.Black, tabRect);
+
+            // Text
+            TextRenderer.DrawText(
+                e.Graphics,
+                tab.Text,
+                tab.Font,
+                tabRect,
+                Color.Black,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            );
         }
     }
 }
