@@ -6,6 +6,6 @@ namespace TwitchChatBot.Core.Services.Contracts
     {
         void AppendChat(string username, string message, Color nameColor);
         void AppendLog(string message);
-        void SetViewerList(IEnumerable<string> viewers);
+        void SetViewerListByGroup(List<ViewerEntry> groupedViewers);
     }
 }

@@ -25,6 +25,12 @@ namespace TwitchChatBot
             {
                 int start = richTextBoxStreamChat.TextLength;
 
+                // Fix Name Color
+                if (IsTooDark(nameColor))
+                {
+                    nameColor = Color.White; // fallback to white if too dark
+                }
+
                 // Append username
                 richTextBoxStreamChat.AppendText(username);
                 richTextBoxStreamChat.Select(start, username.Length);
@@ -33,6 +39,7 @@ namespace TwitchChatBot
                 // Append message
                 richTextBoxStreamChat.AppendText(": " + message + Environment.NewLine);
                 richTextBoxStreamChat.SelectionColor = richTextBoxStreamChat.ForeColor; // Reset to default
+                richTextBoxStreamChat.ScrollToCaret();
             }
         }
 
@@ -48,17 +55,48 @@ namespace TwitchChatBot
             }
         }
 
-        public void SetViewerList(IEnumerable<string> viewers)
+        public void SetViewerListByGroup(List<ViewerEntry> groupedViewers)
         {
-            if(listBoxCurrentViewers.InvokeRequired)
+            if (richTextBoxViewers.InvokeRequired)
             {
-                listBoxCurrentViewers.Invoke(() => listBoxCurrentViewers.Items.AddRange(viewers.ToArray()));
+                richTextBoxViewers.Invoke(() => SetViewerListByGroup(groupedViewers));
+                return;
             }
-            else
+
+            richTextBoxViewers.Clear();
+
+            string? currentRole = null;
+
+            foreach (var viewer in groupedViewers)
             {
-                listBoxCurrentViewers.Items.Clear();
-                listBoxCurrentViewers.DataSource = viewers;
+                if (viewer.Role != currentRole)
+                {
+                    currentRole = viewer.Role;
+                    richTextBoxViewers.SelectionFont = new Font(richTextBoxViewers.Font, FontStyle.Bold);
+                    richTextBoxViewers.SelectionColor = Color.White;
+                    richTextBoxViewers.AppendText($"-- {currentRole.ToUpper()}S --{Environment.NewLine}");
+                }
+
+                Color color = viewer.Role switch
+                {
+                    "mod" => Color.DeepSkyBlue,
+                    "vip" => Color.MediumPurple,
+                    _ => Color.Gray
+                };
+
+                richTextBoxViewers.SelectionFont = new Font(richTextBoxViewers.Font, FontStyle.Regular);
+                richTextBoxViewers.SelectionColor = color;
+                richTextBoxViewers.AppendText($"{viewer.Username}{Environment.NewLine}");
             }
+
+            richTextBoxViewers.SelectionColor = richTextBoxViewers.ForeColor;
+        }
+
+        private bool IsTooDark(Color color)
+        {
+            // Basic luminance check
+            double brightness = color.GetBrightness(); // 0 = dark, 1 = bright
+            return brightness < 0.3;
         }
 
         private async void startBotButton_Click(object sender, EventArgs e)
@@ -150,6 +188,7 @@ namespace TwitchChatBot
             if (e.KeyCode == Keys.Enter)
             {
                 buttonTestCheer.PerformClick();
+                textBits.Text = string.Empty;
             }
         }
 
@@ -158,6 +197,7 @@ namespace TwitchChatBot
             if (e.KeyCode == Keys.Enter)
             {
                 buttonTestMysteryGift.PerformClick();
+                textMysterySubs.Text = string.Empty;
             }
         }
 
@@ -166,6 +206,7 @@ namespace TwitchChatBot
             if (e.KeyCode == Keys.Enter)
             {
                 buttonTestChannelPoint.PerformClick();
+                textChannelPoint.Text = string.Empty;
             }
         }
 
@@ -174,6 +215,7 @@ namespace TwitchChatBot
             if (e.KeyCode == Keys.Enter)
             {
                 buttonTestCommand.PerformClick();
+                textCommand.Text = string.Empty;
             }
         }
 
@@ -182,6 +224,7 @@ namespace TwitchChatBot
             if (e.KeyCode == Keys.Enter)
             {
                 buttonTestFirstChat.PerformClick();
+                textFirstChatter.Text = string.Empty;
             }
         }
     }

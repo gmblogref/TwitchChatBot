@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchLib.Communication.Interfaces;
 
@@ -58,6 +59,14 @@ namespace TwitchChatBot.Core.Controller
                 {
                     _uiBridge!.AppendChat(e.Username, e.Message, e.Color);
                 };
+
+                _twitchClient.OnViewerListChanged += (s, viewers) =>
+                {
+                    _uiBridge!.SetViewerListByGroup(viewers);
+                };
+
+                // 🔁 start polling on construct
+                _twitchClient.StartTmiFallbackTimer(); 
 
                 // Connect to Streamlabs
                 _streamlabsService.Start(_alertService.EnqueueAlert);
