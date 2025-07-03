@@ -43,13 +43,6 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="wwwroot\commands\" />
-		<Folder Include="wwwroot\channel_points\" />
-		<Folder Include="wwwroot\first_chat_vods\" />
-		<Folder Include="wwwroot\twitch_alerts\" />
-	</ItemGroup>
 	<ItemGroup>
 		<Content Include="MediaMaps\**\*.json" Exclude="MediaMaps\**\*.example.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
