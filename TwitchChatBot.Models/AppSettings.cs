@@ -38,12 +38,17 @@ namespace TwitchChatBot.Models
             public static string? EVENTSUB_CALLBACK_URL => GetSetting("AppSettings:EVENTSUB_CALLBACK_URL");
         }
 
-        public static class MediaFiles
+        public static class MediaMapFiles
         {
-            public static string TwitchAlertMedia => GetSetting("MediaFiles:TwitchAlertMedia");
-            public static string ExcludedUsersMedia => GetSetting("MediaFiles:ExcludedUsersMedia");
-            public static string FirstChattersMedia => GetSetting("MediaFiles:FirstChattersMedia");
-            public static string CommandAlertMedia => GetSetting("MediaFiles:CommandAlertMedia");
+            public static string TwitchAlertMedia => GetSetting("MediaMapFiles:TwitchAlertMedia");
+            public static string ExcludedUsersMedia => GetSetting("MediaMapFiles:ExcludedUsersMedia");
+            public static string FirstChattersMedia => GetSetting("MediaMapFiles:FirstChattersMedia");
+            public static string CommandAlertMedia => GetSetting("MediaMapFiles:CommandAlertMedia");
+        }
+
+        public static class Media
+        {
+            public static string TwitchAlertsFolder => GetSetting("Media:TwitchAlertsFolder");
         }
 
         public static class Chatters

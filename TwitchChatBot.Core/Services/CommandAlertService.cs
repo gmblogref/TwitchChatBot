@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 
 namespace TwitchChatBot.Core.Services
@@ -56,7 +57,7 @@ namespace TwitchChatBot.Core.Services
             // Play media if exists
             if (!string.IsNullOrWhiteSpace(entry.Media))
             {
-                _alertService.EnqueueAlert("", entry.Media);
+                _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
@@ -33,14 +34,19 @@ namespace TwitchChatBot
                             {
                                 await next();
                             }
-                        }); 
-                        
+                        });
+
                         app.UseStaticFiles();
+
+                        app.UseStaticFiles(new StaticFileOptions
+                        {
+                            FileProvider = new PhysicalFileProvider(AppSettings.Media.TwitchAlertsFolder!),
+                            RequestPath = "/media"
+                        });
                     });
                 })
                 .Build();
         }
-
 
         public Task StartAsync(CancellationToken cancellationToken = default) => _host.StartAsync(cancellationToken);
 
