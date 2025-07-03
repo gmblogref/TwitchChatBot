@@ -43,7 +43,7 @@ namespace TwitchChatBot.Core.Services
                     .FirstOrDefault();
             }
 
-            _alertService.EnqueueAlert(msg, tier?.Media ?? cheers.Default);
+            EnqueueAlertWithMedia(msg, tier?.Media ?? cheers.Default);
         }
 
         public async Task HandleFollowAsync(string username)
@@ -57,7 +57,7 @@ namespace TwitchChatBot.Core.Services
 
             var selected = media[CoreHelperMethods.GetRandomNumberForMediaSelection(media.Count)];
             var msg = $"🎉 {username} just followed the channel!";
-            _alertService.EnqueueAlert(msg, selected);
+            EnqueueAlertWithMedia(msg, selected);
         }
         
         public async Task HandleHypeTrainAsync()
@@ -67,7 +67,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetHypeTrainMediaAsync();
             var msg = $"🚂 All aboard the Hype Train! Let's keep it going!";
 
-            _alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleRaidAsync(string username, int viewers)
@@ -77,7 +77,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetRaidMediaAsync();
             var msg = $"🚨 {username} is raiding with {viewers} viewers!";
 
-            _alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubscriptionAsync(string username)
@@ -87,7 +87,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetSubscriptionMediaAsync();
             var msg = $"💜 {username} just subscribed!";
 
-            _alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubGiftAsync(string username, string recipient)
@@ -97,7 +97,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetSubgiftMediaAsync();
             var msg = $"🎁 {username} gifted a sub to {recipient}!";
 
-            _alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleResubAsync(string username, int months, string userMessage)
@@ -107,7 +107,7 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetResubMediaAsync();
             var msg = $"💜 {username} resubscribed for {months} months! {userMessage}";
 
-            _alertService.EnqueueAlert(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
         public async Task HandleSubMysteryGiftAsync(string username, int numOfSubs)
@@ -120,7 +120,7 @@ namespace TwitchChatBot.Core.Services
             var tier = giftSubMedia!.tiers.FirstOrDefault(x =>
                 (x.Match == "gte" && numOfSubs >= x.Value) || (x.Match == "eq" && numOfSubs == x.Value));
 
-            _alertService.EnqueueAlert(msg, tier?.Media ?? giftSubMedia.Default);
+            EnqueueAlertWithMedia(msg, tier?.Media ?? giftSubMedia.Default);
         }
 
         public async Task HandleChannelPointRedemptionAsync(string username, string rewardTitle)
@@ -132,13 +132,21 @@ namespace TwitchChatBot.Core.Services
 
             if (channelPointMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {
-                _alertService.EnqueueAlert("", (channelPointMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Media));
+                EnqueueAlertWithMedia("", (channelPointMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Media));
             }
             else if (channelPointTextMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {
                 var fixedMessage = CoreHelperMethods.ReplacePlaceholders(channelPointTextMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Message, username);
                 _alertService.EnqueueAlert(fixedMessage, null);
             }
+        }
+
+        private void EnqueueAlertWithMedia(string message, string mediaPath)
+        {
+            if (string.IsNullOrWhiteSpace(mediaPath))
+                return;
+
+            _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaPath));
         }
     }
 }

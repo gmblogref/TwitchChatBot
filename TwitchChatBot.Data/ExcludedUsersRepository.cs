@@ -14,7 +14,7 @@ namespace TwitchChatBot.Data
         public ExcludedUsersRepository(ILogger<ExcludedUsersRepository> logger)
         {
             _logger = logger;
-            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaFiles.ExcludedUsersMedia);
+            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaMapFiles.ExcludedUsersMedia);
         }
 
         public async Task<bool> IsUserExcludedAsync(string username, CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ namespace TwitchChatBot.Data
             _excludedUsers = await DataHelperMethods.LoadAsync<HashSet<string>>(
                 _filePath,
                 _logger,
-                AppSettings.MediaFiles.ExcludedUsersMedia,
+                AppSettings.MediaMapFiles.ExcludedUsersMedia,
                 cancellationToken
             );
         }

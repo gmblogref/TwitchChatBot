@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
 
@@ -51,12 +52,12 @@ namespace TwitchChatBot.Core.Services
 
             MarkAsChatted(username);
 
-            var media = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
+            var mediaFileName = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
             var message = UniversalMessage.Replace("[userName]", displayName);
 
-            if (media != null)
+            if (mediaFileName != null)
             {
-                _alertService.EnqueueAlert(message, media);
+                _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaFileName));
             }
             else
             {

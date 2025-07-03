@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Utilities
 {
@@ -16,5 +17,8 @@ namespace TwitchChatBot.Core.Utilities
         {
             return text.Replace("[userName]", username);
         }
+
+        public static string ToPublicMediaPath(string mediaPath) =>
+            "/media/" + mediaPath.Replace("\\", "/");
     }
 }
