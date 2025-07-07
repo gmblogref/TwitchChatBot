@@ -62,11 +62,18 @@ namespace TwitchChatBot.Core.Controller
 
                 _twitchClient.OnViewerListChanged += (s, viewers) =>
                 {
+                    _logger.LogInformation("✅ SetViewerListByGroup started.");
                     _uiBridge!.SetViewerListByGroup(viewers);
+                    _logger.LogInformation("✅ SetViewerListByGroup finished.");
                 };
 
+                // Optional: Start any periodic timers like !ads
+                _twitchClient.StartAdTimer();
+                _logger.LogInformation("✅ Timer for ads started.");
+
                 // 🔁 start polling on construct
-                _twitchClient.StartTmiFallbackTimer(); 
+                //_twitchClient.StartTmiFallbackTimer();
+                //_logger.LogInformation("✅ Timer for get current views started.");
 
                 // Connect to Streamlabs
                 _streamlabsService.Start(_alertService.EnqueueAlert);
@@ -75,9 +82,6 @@ namespace TwitchChatBot.Core.Controller
                 // Connect to Twitch EventSub
                 await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
-
-                // Optional: Start any periodic timers like !ads
-                _alertService.StartAdTimer(TimeSpan.FromMinutes(60));
 
                 _logger.LogInformation("🎉 ChatBotController started successfully.");
             }

@@ -16,8 +16,9 @@ namespace TwitchChatBot.Models
         public static string? REFRESH_TOKEN => GetSetting("AppSettings:REFRESH_TOKEN");
         public static string? TWITCH_USER_ID => GetSetting("AppSettings:TWITCH_USER_ID");
         public static string? TWITCH_APP_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
-        
-        public static string? AdIntervalMinutes => GetSetting("AppSettings:AdIntervalMinutes");
+
+        public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes"); 
+        public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
 
         public static class WebHost
         {
@@ -54,8 +55,16 @@ namespace TwitchChatBot.Models
         public static class Chatters
         {
             public static string BaseUrl => GetSetting("Chatters:BaseUrl");
+            public static string VipUrl => GetSetting("Chatters:VipUrl");
             public static string InitialDelay => GetSetting("Chatters:InitialDelay");
             public static string ContinuousDelay => GetSetting("Chatters:ContinuousDelay");
+        }
+
+        public static class TTS
+        {
+            public static string TtsExecutable => GetSetting("TTS:TtsExecutable");
+            public static string DefaultModel => GetSetting("TTS:DefaultModel");
+            public static string DefaultSpeaker => GetSetting("TTS:DefaultSpeaker");
         }
 
         public static string GetSetting(string key)
@@ -64,10 +73,22 @@ namespace TwitchChatBot.Models
 
             if(value == null)
             {
-                throw new ArgumentOutOfRangeException($"Couldn't locate an applicatoin setting with key of: '{key}'");
+                throw new ArgumentOutOfRangeException($"Couldn't locate an application setting with key of: '{key}'");
             }
 
             return value;
+        }
+
+        public static int GetIntSetting(string key)
+        {
+            var value = Configuration![key];
+
+            if (value == null)
+            {
+                throw new ArgumentOutOfRangeException($"Couldn't locate an application setting with key of: '{key}'");
+            }
+
+            return int.TryParse(value, out var result) ? result : 0;
         }
     }
 }

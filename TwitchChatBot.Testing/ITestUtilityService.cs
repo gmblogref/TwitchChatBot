@@ -14,4 +14,6 @@
 
     Task TriggerFirstChatTestAsync(string username);
     void TriggerFirstChatClear();
+
+    Task TriggerTextToSpeech(string message, string speaker);
 }

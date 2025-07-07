@@ -1,3 +1,4 @@
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Windows.Forms;
 using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Services.Contracts;
@@ -250,6 +251,26 @@ namespace TwitchChatBot
                 Color.Black,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
             );
+        }
+
+        private async void buttonTestTts_Click(object sender, EventArgs e)
+        {
+            string text = textBoxTtsText.Text.Trim();
+            string speaker = comboBoxTtsSpeaker.Text.Trim();
+
+            if (text != string.Empty)
+            {
+                await _testUtilityService.TriggerTextToSpeech(text, speaker);
+            }
+        }
+
+        private void textBoxTtsText_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                buttonTestTts.PerformClick();
+                textBoxTtsText.Text = string.Empty;
+            }
         }
     }
 }

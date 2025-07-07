@@ -48,6 +48,9 @@
             buttonTestHypeTrain = new Button();
             buttonTestSubGift = new Button();
             groupBoxTextEntryTests = new GroupBox();
+            comboBoxTtsSpeaker = new ComboBox();
+            textBoxTtsText = new TextBox();
+            buttonTestTts = new Button();
             buttonTestCheer = new Button();
             textBits = new TextBox();
             buttonTestMysteryGift = new Button();
@@ -70,9 +73,9 @@
             // 
             buttonStartBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             buttonStartBot.BackColor = Color.Green;
-            buttonStartBot.Location = new Point(967, 463);
+            buttonStartBot.Location = new Point(1007, 518);
             buttonStartBot.Name = "buttonStartBot";
-            buttonStartBot.Size = new Size(94, 29);
+            buttonStartBot.Size = new Size(127, 49);
             buttonStartBot.TabIndex = 0;
             buttonStartBot.Text = "Start Bot";
             buttonStartBot.UseVisualStyleBackColor = false;
@@ -91,7 +94,7 @@
             tabControlChatBot.Location = new Point(12, 12);
             tabControlChatBot.Name = "tabControlChatBot";
             tabControlChatBot.SelectedIndex = 0;
-            tabControlChatBot.Size = new Size(1049, 453);
+            tabControlChatBot.Size = new Size(1126, 500);
             tabControlChatBot.SizeMode = TabSizeMode.Fixed;
             tabControlChatBot.TabIndex = 2;
             tabControlChatBot.DrawItem += tabControlChatBot_DrawItem;
@@ -106,7 +109,7 @@
             tabPageMainChat.Location = new Point(4, 39);
             tabPageMainChat.Name = "tabPageMainChat";
             tabPageMainChat.Padding = new Padding(3);
-            tabPageMainChat.Size = new Size(1041, 410);
+            tabPageMainChat.Size = new Size(1118, 457);
             tabPageMainChat.TabIndex = 0;
             tabPageMainChat.Text = "Main Chat Bot Tab";
             tabPageMainChat.UseVisualStyleBackColor = true;
@@ -167,7 +170,7 @@
             tabPageLogging.Location = new Point(4, 39);
             tabPageLogging.Name = "tabPageLogging";
             tabPageLogging.Padding = new Padding(3);
-            tabPageLogging.Size = new Size(1041, 410);
+            tabPageLogging.Size = new Size(1118, 457);
             tabPageLogging.TabIndex = 1;
             tabPageLogging.Text = "Logging Tab";
             tabPageLogging.UseVisualStyleBackColor = true;
@@ -206,7 +209,7 @@
             tabTesting.Location = new Point(4, 39);
             tabTesting.Name = "tabTesting";
             tabTesting.Padding = new Padding(3);
-            tabTesting.Size = new Size(1041, 410);
+            tabTesting.Size = new Size(1118, 457);
             tabTesting.TabIndex = 2;
             tabTesting.Text = "Testing Tab";
             // 
@@ -221,7 +224,7 @@
             groupBoxButtonTests.Controls.Add(buttonTestSubGift);
             groupBoxButtonTests.Location = new Point(65, 45);
             groupBoxButtonTests.Name = "groupBoxButtonTests";
-            groupBoxButtonTests.Size = new Size(394, 254);
+            groupBoxButtonTests.Size = new Size(394, 284);
             groupBoxButtonTests.TabIndex = 18;
             groupBoxButtonTests.TabStop = false;
             groupBoxButtonTests.Text = "Button Tests";
@@ -305,6 +308,9 @@
             // 
             // groupBoxTextEntryTests
             // 
+            groupBoxTextEntryTests.Controls.Add(comboBoxTtsSpeaker);
+            groupBoxTextEntryTests.Controls.Add(textBoxTtsText);
+            groupBoxTextEntryTests.Controls.Add(buttonTestTts);
             groupBoxTextEntryTests.Controls.Add(buttonTestCheer);
             groupBoxTextEntryTests.Controls.Add(textBits);
             groupBoxTextEntryTests.Controls.Add(buttonTestMysteryGift);
@@ -315,12 +321,41 @@
             groupBoxTextEntryTests.Controls.Add(textCommand);
             groupBoxTextEntryTests.Controls.Add(textChannelPoint);
             groupBoxTextEntryTests.Controls.Add(buttonTestCommand);
-            groupBoxTextEntryTests.Location = new Point(588, 45);
+            groupBoxTextEntryTests.Location = new Point(478, 45);
             groupBoxTextEntryTests.Name = "groupBoxTextEntryTests";
-            groupBoxTextEntryTests.Size = new Size(378, 312);
+            groupBoxTextEntryTests.Size = new Size(596, 368);
             groupBoxTextEntryTests.TabIndex = 17;
             groupBoxTextEntryTests.TabStop = false;
             groupBoxTextEntryTests.Text = "Text Entry Tests";
+            // 
+            // comboBoxTtsSpeaker
+            // 
+            comboBoxTtsSpeaker.FormattingEnabled = true;
+            comboBoxTtsSpeaker.Items.AddRange(new object[] { "p225", "p226", "p227", "p228", "p229", "p330" });
+            comboBoxTtsSpeaker.Location = new Point(209, 291);
+            comboBoxTtsSpeaker.Name = "comboBoxTtsSpeaker";
+            comboBoxTtsSpeaker.Size = new Size(151, 40);
+            comboBoxTtsSpeaker.TabIndex = 17;
+            comboBoxTtsSpeaker.Text = "p225";
+            // 
+            // textBoxTtsText
+            // 
+            textBoxTtsText.Location = new Point(384, 290);
+            textBoxTtsText.Name = "textBoxTtsText";
+            textBoxTtsText.Size = new Size(206, 40);
+            textBoxTtsText.TabIndex = 16;
+            textBoxTtsText.KeyDown += textBoxTtsText_KeyDown;
+            // 
+            // buttonTestTts
+            // 
+            buttonTestTts.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            buttonTestTts.Location = new Point(6, 291);
+            buttonTestTts.Name = "buttonTestTts";
+            buttonTestTts.Size = new Size(163, 40);
+            buttonTestTts.TabIndex = 15;
+            buttonTestTts.Text = "Text 2 Speach";
+            buttonTestTts.UseVisualStyleBackColor = true;
+            buttonTestTts.Click += buttonTestTts_Click;
             // 
             // buttonTestCheer
             // 
@@ -335,9 +370,9 @@
             // 
             // textBits
             // 
-            textBits.Location = new Point(209, 58);
+            textBits.Location = new Point(209, 59);
             textBits.Name = "textBits";
-            textBits.Size = new Size(163, 40);
+            textBits.Size = new Size(206, 40);
             textBits.TabIndex = 6;
             textBits.KeyDown += textBits_KeyDown;
             // 
@@ -354,9 +389,9 @@
             // 
             // textFirstChatter
             // 
-            textFirstChatter.Location = new Point(209, 256);
+            textFirstChatter.Location = new Point(209, 244);
             textFirstChatter.Name = "textFirstChatter";
-            textFirstChatter.Size = new Size(163, 40);
+            textFirstChatter.Size = new Size(206, 40);
             textFirstChatter.TabIndex = 14;
             textFirstChatter.KeyDown += textFirstChatter_KeyDown;
             // 
@@ -364,14 +399,14 @@
             // 
             textMysterySubs.Location = new Point(209, 105);
             textMysterySubs.Name = "textMysterySubs";
-            textMysterySubs.Size = new Size(163, 40);
+            textMysterySubs.Size = new Size(206, 40);
             textMysterySubs.TabIndex = 8;
             textMysterySubs.KeyDown += textMysterySubs_KeyDown;
             // 
             // buttonTestFirstChat
             // 
             buttonTestFirstChat.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestFirstChat.Location = new Point(6, 256);
+            buttonTestFirstChat.Location = new Point(6, 245);
             buttonTestFirstChat.Name = "buttonTestFirstChat";
             buttonTestFirstChat.Size = new Size(163, 40);
             buttonTestFirstChat.TabIndex = 13;
@@ -394,7 +429,7 @@
             // 
             textCommand.Location = new Point(209, 198);
             textCommand.Name = "textCommand";
-            textCommand.Size = new Size(163, 40);
+            textCommand.Size = new Size(206, 40);
             textCommand.TabIndex = 12;
             textCommand.KeyDown += textCommand_KeyDown;
             // 
@@ -402,7 +437,7 @@
             // 
             textChannelPoint.Location = new Point(209, 151);
             textChannelPoint.Name = "textChannelPoint";
-            textChannelPoint.Size = new Size(163, 40);
+            textChannelPoint.Size = new Size(206, 40);
             textChannelPoint.TabIndex = 10;
             textChannelPoint.KeyDown += textChannelPoint_KeyDown;
             // 
@@ -421,7 +456,7 @@
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1073, 504);
+            ClientSize = new Size(1150, 579);
             Controls.Add(tabControlChatBot);
             Controls.Add(buttonStartBot);
             MinimumSize = new Size(1091, 551);
@@ -473,5 +508,8 @@
         private RichTextBox richTextBoxViewers;
         private GroupBox groupBoxTextEntryTests;
         private GroupBox groupBoxButtonTests;
+        private Button buttonTestTts;
+        private TextBox textBoxTtsText;
+        private ComboBox comboBoxTtsSpeaker;
     }
 }
