@@ -132,7 +132,7 @@ namespace TwitchChatBot.Core.Services
 
             if (channelPointMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {
-                EnqueueAlertWithMedia("", (channelPointMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Media));
+                EnqueueAlertWithMedia($"{username} has redeemed {rewardTitle}", (channelPointMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Media));
             }
             else if (channelPointTextMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {

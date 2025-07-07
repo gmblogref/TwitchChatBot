@@ -2,6 +2,7 @@
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -10,7 +11,7 @@ namespace TwitchChatBot.Core.Services
         private readonly ILogger<CommandAlertService> _logger;
         private readonly ICommandMediaRepository _commandMediaRepository;
         private readonly IAlertService _alertService;
-
+        
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
             ICommandMediaRepository commandMediaRepository,

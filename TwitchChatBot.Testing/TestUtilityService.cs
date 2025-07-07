@@ -6,18 +6,21 @@ public class TestUtilityService : ITestUtilityService
     private readonly ITwitchAlertTypesService _twitchAlertTypesService;
     private readonly IFirstChatterAlertService _firstChatterAlertService;
     private readonly ICommandAlertService _commandAlertService;
+    private readonly ITtsService _tsService;
     private readonly ITwitchClientWrapper _twitchClient;
 
     public TestUtilityService(
         ITwitchAlertTypesService twitchAlertTypesService,
         IFirstChatterAlertService firstChatterAlertService,
         ICommandAlertService commandAlertService,
-        ITwitchClientWrapper twitchClient)
+        ITwitchClientWrapper twitchClient,
+        ITtsService tsService)
     {
         _twitchAlertTypesService = twitchAlertTypesService;
         _firstChatterAlertService = firstChatterAlertService;
         _commandAlertService = commandAlertService;
         _twitchClient = twitchClient;
+        _tsService = tsService;
     }
 
     // Twitch Alert Tests
@@ -60,4 +63,7 @@ public class TestUtilityService : ITestUtilityService
 
     public void TriggerFirstChatClear() =>
         _firstChatterAlertService.ClearFirstChatters();
+
+    public async Task TriggerTextToSpeech(string message, string speaker) =>
+        await _tsService.SpeakAsync(message, speaker, null);
 }

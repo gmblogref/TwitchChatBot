@@ -10,8 +10,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IWebSocketServer _webSocketServer;
         private readonly Queue<AlertItem> _alertQueue = new();
         private bool _isProcessing = false;
-        private System.Threading.Timer? _adTimer;
-
+        
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
 
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
@@ -34,21 +33,6 @@ namespace TwitchChatBot.Core.Services
             });
 
             ProcessQueue();
-        }
-
-        public void StartAdTimer(TimeSpan interval)
-        {
-            _adTimer = new System.Threading.Timer(_ =>
-            {
-                EnqueueAlert("📺 Ads starting soon! Use !ads to avoid surprises!", null);
-                _logger.LogInformation("⏰ Auto !ads alert triggered.");
-            }, null, interval, interval);
-        }
-
-        public void StopAdTimer()
-        {
-            _adTimer?.Dispose();
-            _adTimer = null;
         }
 
         private void ProcessQueue()
