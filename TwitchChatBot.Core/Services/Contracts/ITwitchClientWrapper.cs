@@ -8,7 +8,6 @@ namespace TwitchChatBot.Core.Services.Contracts
         void Disconnect();
         void SendMessage(string channel, string message);
         List<ViewerEntry> GetGroupedViewers();
-        //void StartTmiFallbackTimer();
         void StartAdTimer();
         void StopAdTimer();
 

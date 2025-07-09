@@ -71,10 +71,6 @@ namespace TwitchChatBot.Core.Controller
                 _twitchClient.StartAdTimer();
                 _logger.LogInformation("✅ Timer for ads started.");
 
-                // 🔁 start polling on construct
-                //_twitchClient.StartTmiFallbackTimer();
-                //_logger.LogInformation("✅ Timer for get current views started.");
-
                 // Connect to Streamlabs
                 _streamlabsService.Start(_alertService.EnqueueAlert);
                 _logger.LogInformation("✅ Streamlabs WebSocket started.");

@@ -20,8 +20,6 @@ namespace TwitchChatBot.Core.Services
         private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
         
-        //private readonly HttpClient _httpClient = new(); // 🔁 For TMI fallback
-        //private Timer? _fallbackTimer; // 🔁 TMI fallback timer
         private readonly HashSet<string> _connectedUsers = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _mods = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _vips = new(StringComparer.OrdinalIgnoreCase);
@@ -75,8 +73,6 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.Disconnect();
                 _logger.LogInformation("🛑 Twitch client disconnected.");
             }
-
-            //_fallbackTimer?.Dispose(); // 🔁 stop TMI polling on disconnect
         }
 
         public List<ViewerEntry> GetGroupedViewers()
@@ -129,74 +125,6 @@ namespace TwitchChatBot.Core.Services
             _adTimer?.Dispose();
             _adTimer = null;
         }
-
-        // 🔁 Polls TMI every 5 mins and merges users into _connectedUsers
-        //public void StartTmiFallbackTimer()
-        //{
-        //    if (!double.TryParse(AppSettings.Chatters.InitialDelay, out double initDelay))
-        //    {
-        //        initDelay = 15; // safe default
-        //        _logger.LogWarning("Using default initial delay (15s) for TMI fallback.");
-        //    }
-
-        //    if (!double.TryParse(AppSettings.Chatters.ContinuousDelay, out double continuousDelay))
-        //    {
-        //        continuousDelay = 300; // default 5 minutes
-        //        _logger.LogWarning("Using default continuous delay (5min) for TMI fallback.");
-        //    }
-
-        //    _fallbackTimer = new Timer(async _ => await PollTmiChattersAsync(), null, TimeSpan.FromSeconds(initDelay), TimeSpan.FromSeconds(continuousDelay));
-        //}
-
-        //private async Task PollTmiChattersAsync()
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("✅ PollTmiChattersAsync called.");
-        //        _mods.Clear();
-        //        _vips.Clear();
-        //        _viewers.Clear();
-
-        //        var url = $"{AppSettings.Chatters.BaseUrl}{AppSettings.TWITCH_CHANNEL!.ToLower()}/chatters";
-        //        var json = await _httpClient.GetStringAsync(url);
-
-        //        using var doc = JsonDocument.Parse(json);
-        //        var chatters = new List<string>();
-
-        //        foreach (var group in doc.RootElement.GetProperty("chatters").EnumerateObject())
-        //        {
-        //            foreach (var user in group.Value.EnumerateArray())
-        //            {
-        //                var name = user.GetString()!;
-
-        //                switch (group.Name.ToLowerInvariant())
-        //                {
-        //                    case "moderators":
-        //                        _mods.Add(name);
-        //                        break;
-        //                    case "vips":
-        //                        _vips.Add(name);
-        //                        break;
-        //                    case "viewers":
-        //                        _viewers.Add(name);
-        //                        break;
-        //                }
-        //            }
-        //        }
-
-        //        _connectedUsers.Clear(); // Clear connected users and just add what came back
-
-        //        _logger.LogInformation("🔁 TMI fallback updated viewer list. MODS: {Mods}, VIPS: {Vips}, VIEWERS: {Viewers}",
-        //            _mods.Count, _vips.Count, _viewers.Count);
-
-        //        OnViewerListChanged?.Invoke(this, GetGroupedViewers());
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogWarning(ex, "⚠️ Failed to fetch fallback viewer list.");
-        //    }
-        //}
 
         private async Task HandelOnConnectedAsync()
         {

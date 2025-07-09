@@ -54,7 +54,6 @@ namespace TwitchChatBot.Models
 
         public static class Chatters
         {
-            public static string BaseUrl => GetSetting("Chatters:BaseUrl");
             public static string VipUrl => GetSetting("Chatters:VipUrl");
             public static string InitialDelay => GetSetting("Chatters:InitialDelay");
             public static string ContinuousDelay => GetSetting("Chatters:ContinuousDelay");
