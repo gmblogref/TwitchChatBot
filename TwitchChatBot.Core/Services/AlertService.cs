@@ -25,6 +25,7 @@ namespace TwitchChatBot.Core.Services
         }
 
         public void EnqueueAlert(string message, string? mediaPath = null)
+        
         {
             _alertQueue.Enqueue(new AlertItem
             {

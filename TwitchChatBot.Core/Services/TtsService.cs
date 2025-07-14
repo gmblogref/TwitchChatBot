@@ -32,17 +32,22 @@ namespace TwitchChatBot.Core.Services
         public async Task SpeakAsync(string text, string? speakerOverride = null, string ? modelOverride = null)
         {
             var safeTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var filename = $"tts_{safeTimestamp}.wav";
-            var outputPath = Path.Combine(_ttsOutputDir, filename);
-            var publicPath = $"/media/text_to_speach/{filename}";
+            var wavFilename = $"tts_{safeTimestamp}.wav";
+            var mp3Filename = $"tts_{safeTimestamp}.mp3";
+
+            var wavPath = Path.Combine(_ttsOutputDir, wavFilename);
+            var mp3Path = Path.Combine(_ttsOutputDir, mp3Filename);
+            var publicPath = $"/media/text_to_speach/{mp3Filename}";
 
             var model = string.IsNullOrWhiteSpace(modelOverride) ? _coquiModel : modelOverride;
             var voice = string.IsNullOrWhiteSpace(speakerOverride) ? DefaultSpeaker : speakerOverride;
 
+            var ttsArgs = $"-m TTS.bin.synthesize --text \"{text.Replace("\"", "\\\"")}\" --model_name {model} --out_path \"{wavPath}\" --device cpu";
+
             var psi = new ProcessStartInfo
             {
                 FileName = _coquiExe,
-                Arguments = $"--text \"{text.Replace("\"", "\\\"")}\" --model_name {model} --out_path \"{outputPath}\" --speaker_idx {voice} --use_cuda false",
+                Arguments = ttsArgs,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -50,6 +55,7 @@ namespace TwitchChatBot.Core.Services
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8
             };
+            psi.EnvironmentVariables["CUDA_VISIBLE_DEVICES"] = "-1";
 
             _logger.LogInformation("🔊 Running TTS: {Args}", psi.Arguments);
 
@@ -70,15 +76,51 @@ namespace TwitchChatBot.Core.Services
                     _logger.LogWarning("⚠️ Coqui stderr: {Errors}", errors);
                 }
 
-                if (File.Exists(outputPath))
+                if (!File.Exists(wavPath))
                 {
-                    _generatedFiles.Add(outputPath);
-                    _alertService.EnqueueAlert("", publicPath);
+                    _logger.LogWarning("❌ TTS output file not found: {Path}", wavPath);
+                    return;
                 }
-                else
+
+                // Convert to MP3 using ffmpeg
+                var ffmpegArgs = $"-y -i \"{wavPath}\" \"{mp3Path}\"";
+                var ffmpegStartInfo = new ProcessStartInfo
                 {
-                    _logger.LogWarning("❌ TTS output file not found: {Path}", outputPath);
+                    FileName = "ffmpeg",
+                    Arguments = ffmpegArgs,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                _logger.LogInformation("🎵 Converting WAV to MP3: {Args}", ffmpegArgs);
+
+                using var ffmpegProc = Process.Start(ffmpegStartInfo);
+                if (ffmpegProc == null)
+                {
+                    _logger.LogError("❌ Failed to start ffmpeg process.");
+                    return;
                 }
+
+                await ffmpegProc.WaitForExitAsync();
+                var ffmpegErrors = await ffmpegProc.StandardError.ReadToEndAsync();
+                if (!string.IsNullOrEmpty(ffmpegErrors))
+                {
+                    _logger.LogWarning("⚠️ ffmpeg stderr: {Errors}", ffmpegErrors);
+                }
+
+                if (!File.Exists(mp3Path))
+                {
+                    _logger.LogError("❌ MP3 file was not created: {Path}", mp3Path);
+                    return;
+                }
+
+                _generatedFiles.Add(mp3Path);
+                _alertService.EnqueueAlert("", publicPath);
+
+                File.Delete(wavPath);
+                _logger.LogInformation("🧹 Deleted temporary WAV file: {Path}", wavPath);
             }
             catch (Exception ex)
             {

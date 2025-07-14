@@ -29,24 +29,24 @@ public class TestUtilityService : ITestUtilityService
     public async Task TriggerCheerTestAsync(int bits) =>
         await _twitchAlertTypesService.HandleCheerAsync("TestUser", bits, "Test cheer message");
 
-    public void TriggerFollowTest() =>
-        _twitchAlertTypesService.HandleFollowAsync("TestUser");
+    public void TriggerFollowTest(string userName) =>
+        _twitchAlertTypesService.HandleFollowAsync(userName);
     public async Task TriggerHypeTrainTestAsync() =>
         await _twitchAlertTypesService.HandleHypeTrainAsync();
 
-    public async Task TriggerRaidTestAsync() =>
-        await _twitchAlertTypesService.HandleRaidAsync("TestRaider", 20);
+    public async Task TriggerRaidTestAsync(string userName, int viewers) =>
+        await _twitchAlertTypesService.HandleRaidAsync(userName, viewers);
 
-    public async Task TriggerReSubTestAsync() =>
-        await _twitchAlertTypesService.HandleResubAsync("TestUser", 5, "5 months, that's almost a year");
+    public async Task TriggerReSubTestAsync(string userName, int months) =>
+        await _twitchAlertTypesService.HandleResubAsync(userName, months, $"{months} months that's almost a year");
     
-    public async Task TriggerSubGiftTestAsync() =>
-        await _twitchAlertTypesService.HandleSubGiftAsync("TestUser", "TestUser2");
+    public async Task TriggerSubGiftTestAsync(string userName, string recipient) =>
+        await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient);
 
-    public async Task TriggerSubMysteryGiftTestAsync(int subs) =>
-        await _twitchAlertTypesService.HandleSubMysteryGiftAsync("TestUser", subs);
-    public async Task TriggerSubTestAsync() =>
-        await _twitchAlertTypesService.HandleSubscriptionAsync("TestUser");
+    public async Task TriggerSubMysteryGiftTestAsync(string userName, int subs) =>
+        await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, subs);
+    public async Task TriggerSubTestAsync(string userName) =>
+        await _twitchAlertTypesService.HandleSubscriptionAsync(userName);
 
     
     // Commands Test
