@@ -40,22 +40,25 @@
             labelLogging = new Label();
             tabTesting = new TabPage();
             groupBoxButtonTests = new GroupBox();
-            buttonTestSub = new Button();
-            buttonTestRaid = new Button();
-            buttonClearFirst = new Button();
-            buttonTestReSub = new Button();
+            labelUserName = new Label();
+            textUserName = new TextBox();
+            labelAmount = new Label();
+            textAmount = new TextBox();
             buttonTestFollow = new Button();
-            buttonTestHypeTrain = new Button();
+            buttonTestSub = new Button();
+            buttonTestReSub = new Button();
             buttonTestSubGift = new Button();
+            buttonTestRaid = new Button();
+            buttonTestMysteryGift = new Button();
+            buttonTestHypeTrain = new Button();
+            buttonClearFirst = new Button();
             groupBoxTextEntryTests = new GroupBox();
             comboBoxTtsSpeaker = new ComboBox();
             textBoxTtsText = new TextBox();
             buttonTestTts = new Button();
             buttonTestCheer = new Button();
             textBits = new TextBox();
-            buttonTestMysteryGift = new Button();
             textFirstChatter = new TextBox();
-            textMysterySubs = new TextBox();
             buttonTestFirstChat = new Button();
             buttonTestChannelPoint = new Button();
             textCommand = new TextBox();
@@ -215,68 +218,66 @@
             // 
             // groupBoxButtonTests
             // 
-            groupBoxButtonTests.Controls.Add(buttonTestSub);
-            groupBoxButtonTests.Controls.Add(buttonTestRaid);
-            groupBoxButtonTests.Controls.Add(buttonClearFirst);
-            groupBoxButtonTests.Controls.Add(buttonTestReSub);
+            groupBoxButtonTests.Controls.Add(labelUserName);
+            groupBoxButtonTests.Controls.Add(textUserName);
+            groupBoxButtonTests.Controls.Add(labelAmount);
+            groupBoxButtonTests.Controls.Add(textAmount);
             groupBoxButtonTests.Controls.Add(buttonTestFollow);
-            groupBoxButtonTests.Controls.Add(buttonTestHypeTrain);
+            groupBoxButtonTests.Controls.Add(buttonTestSub);
+            groupBoxButtonTests.Controls.Add(buttonTestReSub);
             groupBoxButtonTests.Controls.Add(buttonTestSubGift);
-            groupBoxButtonTests.Location = new Point(65, 45);
+            groupBoxButtonTests.Controls.Add(buttonTestRaid);
+            groupBoxButtonTests.Controls.Add(buttonTestMysteryGift);
+            groupBoxButtonTests.Controls.Add(buttonTestHypeTrain);
+            groupBoxButtonTests.Controls.Add(buttonClearFirst);
+            groupBoxButtonTests.Font = new Font("Arial Black", 12F, FontStyle.Bold);
+            groupBoxButtonTests.Location = new Point(24, 45);
             groupBoxButtonTests.Name = "groupBoxButtonTests";
-            groupBoxButtonTests.Size = new Size(394, 284);
+            groupBoxButtonTests.Size = new Size(415, 325);
             groupBoxButtonTests.TabIndex = 18;
             groupBoxButtonTests.TabStop = false;
             groupBoxButtonTests.Text = "Button Tests";
             // 
-            // buttonTestSub
+            // labelUserName
             // 
-            buttonTestSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestSub.Location = new Point(206, 54);
-            buttonTestSub.Name = "buttonTestSub";
-            buttonTestSub.Size = new Size(163, 40);
-            buttonTestSub.TabIndex = 0;
-            buttonTestSub.Text = "Subscription";
-            buttonTestSub.UseVisualStyleBackColor = true;
-            buttonTestSub.Click += buttonTestSub_Click;
+            labelUserName.AutoSize = true;
+            labelUserName.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            labelUserName.Location = new Point(10, 35);
+            labelUserName.Name = "labelUserName";
+            labelUserName.Size = new Size(118, 24);
+            labelUserName.TabIndex = 0;
+            labelUserName.Text = "User Name:";
             // 
-            // buttonTestRaid
+            // textUserName
             // 
-            buttonTestRaid.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestRaid.Location = new Point(206, 124);
-            buttonTestRaid.Name = "buttonTestRaid";
-            buttonTestRaid.Size = new Size(163, 40);
-            buttonTestRaid.TabIndex = 1;
-            buttonTestRaid.Text = "Raid";
-            buttonTestRaid.UseVisualStyleBackColor = true;
-            buttonTestRaid.Click += buttonTestRaid_Click;
+            textUserName.Font = new Font("Arial", 10F);
+            textUserName.Location = new Point(160, 30);
+            textUserName.Name = "textUserName";
+            textUserName.Size = new Size(210, 27);
+            textUserName.TabIndex = 1;
             // 
-            // buttonClearFirst
+            // labelAmount
             // 
-            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonClearFirst.Location = new Point(106, 175);
-            buttonClearFirst.Name = "buttonClearFirst";
-            buttonClearFirst.Size = new Size(163, 40);
-            buttonClearFirst.TabIndex = 16;
-            buttonClearFirst.Text = "Clear First Chatters";
-            buttonClearFirst.UseVisualStyleBackColor = true;
-            buttonClearFirst.Click += buttonClearFirst_Click;
+            labelAmount.AutoSize = true;
+            labelAmount.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            labelAmount.Location = new Point(41, 73);
+            labelAmount.Name = "labelAmount";
+            labelAmount.Size = new Size(87, 24);
+            labelAmount.TabIndex = 2;
+            labelAmount.Text = "Amount:";
             // 
-            // buttonTestReSub
+            // textAmount
             // 
-            buttonTestReSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestReSub.Location = new Point(208, 89);
-            buttonTestReSub.Name = "buttonTestReSub";
-            buttonTestReSub.Size = new Size(163, 40);
-            buttonTestReSub.TabIndex = 2;
-            buttonTestReSub.Text = "ReSub";
-            buttonTestReSub.UseVisualStyleBackColor = true;
-            buttonTestReSub.Click += buttonTestReSub_Click;
+            textAmount.Font = new Font("Arial", 10F);
+            textAmount.Location = new Point(160, 70);
+            textAmount.Name = "textAmount";
+            textAmount.Size = new Size(210, 27);
+            textAmount.TabIndex = 3;
             // 
             // buttonTestFollow
             // 
-            buttonTestFollow.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestFollow.Location = new Point(6, 54);
+            buttonTestFollow.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestFollow.Location = new Point(10, 110);
             buttonTestFollow.Name = "buttonTestFollow";
             buttonTestFollow.Size = new Size(163, 40);
             buttonTestFollow.TabIndex = 15;
@@ -284,10 +285,65 @@
             buttonTestFollow.UseVisualStyleBackColor = true;
             buttonTestFollow.Click += buttonTestFollow_Click;
             // 
+            // buttonTestSub
+            // 
+            buttonTestSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestSub.Location = new Point(207, 110);
+            buttonTestSub.Name = "buttonTestSub";
+            buttonTestSub.Size = new Size(163, 40);
+            buttonTestSub.TabIndex = 0;
+            buttonTestSub.Text = "Subscription";
+            buttonTestSub.UseVisualStyleBackColor = true;
+            buttonTestSub.Click += buttonTestSub_Click;
+            // 
+            // buttonTestReSub
+            // 
+            buttonTestReSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestReSub.Location = new Point(10, 155);
+            buttonTestReSub.Name = "buttonTestReSub";
+            buttonTestReSub.Size = new Size(163, 40);
+            buttonTestReSub.TabIndex = 2;
+            buttonTestReSub.Text = "ReSub";
+            buttonTestReSub.UseVisualStyleBackColor = true;
+            buttonTestReSub.Click += buttonTestReSub_Click;
+            // 
+            // buttonTestSubGift
+            // 
+            buttonTestSubGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestSubGift.Location = new Point(207, 155);
+            buttonTestSubGift.Name = "buttonTestSubGift";
+            buttonTestSubGift.Size = new Size(163, 40);
+            buttonTestSubGift.TabIndex = 3;
+            buttonTestSubGift.Text = "Gift Subs";
+            buttonTestSubGift.UseVisualStyleBackColor = true;
+            buttonTestSubGift.Click += buttonTestSubGift_Click;
+            // 
+            // buttonTestRaid
+            // 
+            buttonTestRaid.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestRaid.Location = new Point(10, 200);
+            buttonTestRaid.Name = "buttonTestRaid";
+            buttonTestRaid.Size = new Size(163, 40);
+            buttonTestRaid.TabIndex = 1;
+            buttonTestRaid.Text = "Raid";
+            buttonTestRaid.UseVisualStyleBackColor = true;
+            buttonTestRaid.Click += buttonTestRaid_Click;
+            // 
+            // buttonTestMysteryGift
+            // 
+            buttonTestMysteryGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestMysteryGift.Location = new Point(207, 200);
+            buttonTestMysteryGift.Name = "buttonTestMysteryGift";
+            buttonTestMysteryGift.Size = new Size(163, 40);
+            buttonTestMysteryGift.TabIndex = 7;
+            buttonTestMysteryGift.Text = "Mystery Gifts";
+            buttonTestMysteryGift.UseVisualStyleBackColor = true;
+            buttonTestMysteryGift.Click += buttonTestMysteryGift_Click;
+            // 
             // buttonTestHypeTrain
             // 
-            buttonTestHypeTrain.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestHypeTrain.Location = new Point(6, 89);
+            buttonTestHypeTrain.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestHypeTrain.Location = new Point(10, 245);
             buttonTestHypeTrain.Name = "buttonTestHypeTrain";
             buttonTestHypeTrain.Size = new Size(163, 40);
             buttonTestHypeTrain.TabIndex = 4;
@@ -295,16 +351,16 @@
             buttonTestHypeTrain.UseVisualStyleBackColor = true;
             buttonTestHypeTrain.Click += buttonTestHypeTrain_Click;
             // 
-            // buttonTestSubGift
+            // buttonClearFirst
             // 
-            buttonTestSubGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestSubGift.Location = new Point(6, 124);
-            buttonTestSubGift.Name = "buttonTestSubGift";
-            buttonTestSubGift.Size = new Size(163, 40);
-            buttonTestSubGift.TabIndex = 3;
-            buttonTestSubGift.Text = "Gift Subs";
-            buttonTestSubGift.UseVisualStyleBackColor = true;
-            buttonTestSubGift.Click += buttonTestSubGift_Click;
+            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonClearFirst.Location = new Point(207, 245);
+            buttonClearFirst.Name = "buttonClearFirst";
+            buttonClearFirst.Size = new Size(163, 40);
+            buttonClearFirst.TabIndex = 16;
+            buttonClearFirst.Text = "Clear First";
+            buttonClearFirst.UseVisualStyleBackColor = true;
+            buttonClearFirst.Click += buttonClearFirst_Click;
             // 
             // groupBoxTextEntryTests
             // 
@@ -313,17 +369,15 @@
             groupBoxTextEntryTests.Controls.Add(buttonTestTts);
             groupBoxTextEntryTests.Controls.Add(buttonTestCheer);
             groupBoxTextEntryTests.Controls.Add(textBits);
-            groupBoxTextEntryTests.Controls.Add(buttonTestMysteryGift);
             groupBoxTextEntryTests.Controls.Add(textFirstChatter);
-            groupBoxTextEntryTests.Controls.Add(textMysterySubs);
             groupBoxTextEntryTests.Controls.Add(buttonTestFirstChat);
             groupBoxTextEntryTests.Controls.Add(buttonTestChannelPoint);
             groupBoxTextEntryTests.Controls.Add(textCommand);
             groupBoxTextEntryTests.Controls.Add(textChannelPoint);
             groupBoxTextEntryTests.Controls.Add(buttonTestCommand);
-            groupBoxTextEntryTests.Location = new Point(478, 45);
+            groupBoxTextEntryTests.Location = new Point(522, 45);
             groupBoxTextEntryTests.Name = "groupBoxTextEntryTests";
-            groupBoxTextEntryTests.Size = new Size(596, 368);
+            groupBoxTextEntryTests.Size = new Size(552, 325);
             groupBoxTextEntryTests.TabIndex = 17;
             groupBoxTextEntryTests.TabStop = false;
             groupBoxTextEntryTests.Text = "Text Entry Tests";
@@ -332,7 +386,7 @@
             // 
             comboBoxTtsSpeaker.FormattingEnabled = true;
             comboBoxTtsSpeaker.Items.AddRange(new object[] { "p225", "p226", "p227", "p228", "p229", "p330" });
-            comboBoxTtsSpeaker.Location = new Point(209, 291);
+            comboBoxTtsSpeaker.Location = new Point(209, 248);
             comboBoxTtsSpeaker.Name = "comboBoxTtsSpeaker";
             comboBoxTtsSpeaker.Size = new Size(151, 40);
             comboBoxTtsSpeaker.TabIndex = 17;
@@ -340,7 +394,7 @@
             // 
             // textBoxTtsText
             // 
-            textBoxTtsText.Location = new Point(384, 290);
+            textBoxTtsText.Location = new Point(366, 248);
             textBoxTtsText.Name = "textBoxTtsText";
             textBoxTtsText.Size = new Size(206, 40);
             textBoxTtsText.TabIndex = 16;
@@ -349,7 +403,7 @@
             // buttonTestTts
             // 
             buttonTestTts.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestTts.Location = new Point(6, 291);
+            buttonTestTts.Location = new Point(6, 248);
             buttonTestTts.Name = "buttonTestTts";
             buttonTestTts.Size = new Size(163, 40);
             buttonTestTts.TabIndex = 15;
@@ -376,37 +430,18 @@
             textBits.TabIndex = 6;
             textBits.KeyDown += textBits_KeyDown;
             // 
-            // buttonTestMysteryGift
-            // 
-            buttonTestMysteryGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestMysteryGift.Location = new Point(6, 105);
-            buttonTestMysteryGift.Name = "buttonTestMysteryGift";
-            buttonTestMysteryGift.Size = new Size(163, 40);
-            buttonTestMysteryGift.TabIndex = 7;
-            buttonTestMysteryGift.Text = "Mystery Gifts";
-            buttonTestMysteryGift.UseVisualStyleBackColor = true;
-            buttonTestMysteryGift.Click += buttonTestMysteryGift_Click;
-            // 
             // textFirstChatter
             // 
-            textFirstChatter.Location = new Point(209, 244);
+            textFirstChatter.Location = new Point(209, 202);
             textFirstChatter.Name = "textFirstChatter";
             textFirstChatter.Size = new Size(206, 40);
             textFirstChatter.TabIndex = 14;
             textFirstChatter.KeyDown += textFirstChatter_KeyDown;
             // 
-            // textMysterySubs
-            // 
-            textMysterySubs.Location = new Point(209, 105);
-            textMysterySubs.Name = "textMysterySubs";
-            textMysterySubs.Size = new Size(206, 40);
-            textMysterySubs.TabIndex = 8;
-            textMysterySubs.KeyDown += textMysterySubs_KeyDown;
-            // 
             // buttonTestFirstChat
             // 
             buttonTestFirstChat.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestFirstChat.Location = new Point(6, 245);
+            buttonTestFirstChat.Location = new Point(6, 202);
             buttonTestFirstChat.Name = "buttonTestFirstChat";
             buttonTestFirstChat.Size = new Size(163, 40);
             buttonTestFirstChat.TabIndex = 13;
@@ -417,7 +452,7 @@
             // buttonTestChannelPoint
             // 
             buttonTestChannelPoint.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestChannelPoint.Location = new Point(6, 152);
+            buttonTestChannelPoint.Location = new Point(6, 110);
             buttonTestChannelPoint.Name = "buttonTestChannelPoint";
             buttonTestChannelPoint.Size = new Size(163, 40);
             buttonTestChannelPoint.TabIndex = 9;
@@ -427,7 +462,7 @@
             // 
             // textCommand
             // 
-            textCommand.Location = new Point(209, 198);
+            textCommand.Location = new Point(209, 156);
             textCommand.Name = "textCommand";
             textCommand.Size = new Size(206, 40);
             textCommand.TabIndex = 12;
@@ -435,7 +470,7 @@
             // 
             // textChannelPoint
             // 
-            textChannelPoint.Location = new Point(209, 151);
+            textChannelPoint.Location = new Point(209, 110);
             textChannelPoint.Name = "textChannelPoint";
             textChannelPoint.Size = new Size(206, 40);
             textChannelPoint.TabIndex = 10;
@@ -444,7 +479,7 @@
             // buttonTestCommand
             // 
             buttonTestCommand.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestCommand.Location = new Point(6, 198);
+            buttonTestCommand.Location = new Point(6, 156);
             buttonTestCommand.Name = "buttonTestCommand";
             buttonTestCommand.Size = new Size(163, 40);
             buttonTestCommand.TabIndex = 11;
@@ -469,6 +504,7 @@
             tabPageLogging.PerformLayout();
             tabTesting.ResumeLayout(false);
             groupBoxButtonTests.ResumeLayout(false);
+            groupBoxButtonTests.PerformLayout();
             groupBoxTextEntryTests.ResumeLayout(false);
             groupBoxTextEntryTests.PerformLayout();
             ResumeLayout(false);
@@ -498,7 +534,6 @@
         private Button buttonTestCommand;
         private TextBox textChannelPoint;
         private Button buttonTestChannelPoint;
-        private TextBox textMysterySubs;
         private Button buttonTestMysteryGift;
         private TextBox textBits;
         private Button buttonTestCheer;
@@ -511,5 +546,9 @@
         private Button buttonTestTts;
         private TextBox textBoxTtsText;
         private ComboBox comboBoxTtsSpeaker;
+        private TextBox textUserName;
+        private TextBox textAmount;
+        private Label labelUserName;
+        private Label labelAmount;
     }
 }

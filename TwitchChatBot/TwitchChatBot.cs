@@ -127,17 +127,34 @@ namespace TwitchChatBot
             }
         }
 
-        private async void buttonTestSub_Click(object sender, EventArgs e) =>
-            await _testUtilityService.TriggerSubTestAsync();
+        private async void buttonTestSub_Click(object sender, EventArgs e)
+        {
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            await _testUtilityService.TriggerSubTestAsync(userName);
+        }
 
-        private async void buttonTestRaid_Click(object sender, EventArgs e) =>
-            await _testUtilityService.TriggerRaidTestAsync();
+        private async void buttonTestRaid_Click(object sender, EventArgs e)
+        {
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            int viewers = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 123;
 
-        private async void buttonTestReSub_Click(object sender, EventArgs e) =>
-            await _testUtilityService.TriggerReSubTestAsync();
+            await _testUtilityService.TriggerRaidTestAsync(userName, viewers);
+        }
 
-        private async void buttonTestSubGift_Click(object sender, EventArgs e) =>
-            await _testUtilityService.TriggerSubGiftTestAsync();
+        private async void buttonTestReSub_Click(object sender, EventArgs e)
+        {
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            int months = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 12;
+
+            await _testUtilityService.TriggerReSubTestAsync(userName, months);
+        }
+
+        private async void buttonTestSubGift_Click(object sender, EventArgs e)
+        {
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            string recipient = string.IsNullOrWhiteSpace(textAmount.Text) ? "RecipientUser" : textAmount.Text.Trim();
+            await _testUtilityService.TriggerSubGiftTestAsync(userName, recipient);
+        }
 
         private async void buttonTestHypeTrain_Click(object sender, EventArgs e) =>
             await _testUtilityService.TriggerHypeTrainTestAsync();
@@ -150,8 +167,10 @@ namespace TwitchChatBot
 
         private async void buttonTestMysteryGift_Click(object sender, EventArgs e)
         {
-            if (int.TryParse(textMysterySubs.Text, out var subs))
-                await _testUtilityService.TriggerSubMysteryGiftTestAsync(subs);
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            int subs = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 12;
+
+            await _testUtilityService.TriggerSubMysteryGiftTestAsync(userName, subs);
         }
 
         private async void buttonTestChannelPoint_Click(object sender, EventArgs e)
@@ -177,7 +196,9 @@ namespace TwitchChatBot
 
         private void buttonTestFollow_Click(object sender, EventArgs e)
         {
-            _testUtilityService.TriggerFollowTest();
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+
+            _testUtilityService.TriggerFollowTest(userName);
         }
 
         private void buttonClearFirst_Click(object sender, EventArgs e)
@@ -191,15 +212,6 @@ namespace TwitchChatBot
             {
                 buttonTestCheer.PerformClick();
                 textBits.Text = string.Empty;
-            }
-        }
-
-        private void textMysterySubs_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                buttonTestMysteryGift.PerformClick();
-                textMysterySubs.Text = string.Empty;
             }
         }
 

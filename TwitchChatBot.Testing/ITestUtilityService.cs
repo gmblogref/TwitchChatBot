@@ -2,13 +2,13 @@
 {
     Task TriggerChannelPointTestAsync(string redemption);
     Task TriggerCheerTestAsync(int bits);
-    void TriggerFollowTest();
+    void TriggerFollowTest(string userName);
     Task TriggerHypeTrainTestAsync();
-    Task TriggerRaidTestAsync();
-    Task TriggerReSubTestAsync();
-    Task TriggerSubGiftTestAsync();
-    Task TriggerSubMysteryGiftTestAsync(int subs);
-    Task TriggerSubTestAsync();
+    Task TriggerRaidTestAsync(string userName, int viewers);
+    Task TriggerReSubTestAsync(string userName, int months);
+    Task TriggerSubGiftTestAsync(string userName, string recipient);
+    Task TriggerSubMysteryGiftTestAsync(string userName, int subs);
+    Task TriggerSubTestAsync(string userName);
 
     Task TriggerCommandTestAsync(string command);
 
