@@ -82,7 +82,7 @@ namespace TwitchChatBot.Core.Services
 
         public async Task HandleSubscriptionAsync(string username)
         {
-            _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "ubscription", username);
+            _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "Subscription", username);
 
             var media = await _twitchAlertMediaRepository.GetSubscriptionMediaAsync();
             var msg = $"💜 {username} just subscribed!";

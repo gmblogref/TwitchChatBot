@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Net.WebSockets;
-using System.Text;
+using SocketIOClient;
 using System.Text.Json;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Models;
@@ -11,11 +10,7 @@ namespace TwitchChatBot.UI.Services
     {
         private readonly ILogger<StreamlabsSocketService> _logger;
         private readonly ITwitchAlertTypesService _twitchAlertTypesService;
-        private readonly ClientWebSocket _socket = new();
-        private readonly CancellationTokenSource _cts = new();
-        private Task? _listenTask;
-        private Action<string, string?>? _alertHandler;
-        private int _reconnectAttempts = 0;
+        private SocketIOClient.SocketIO? _socket;
 
         public StreamlabsSocketService(ILogger<StreamlabsSocketService> logger, ITwitchAlertTypesService twitchAlertTypesService)
         {
@@ -25,8 +20,6 @@ namespace TwitchChatBot.UI.Services
 
         public void Start(Action<string, string?> onFollowAlert)
         {
-            _alertHandler = onFollowAlert;
-
             var token = AppSettings.Streamlabs.STREAMLABS_SOCKET_TOKEN;
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -35,93 +28,59 @@ namespace TwitchChatBot.UI.Services
             }
 
             var uri = new Uri(string.Format(AppSettings.Streamlabs.Url!, token));
-            _listenTask = Task.Run(() => ConnectAndListenAsync(uri, _cts.Token));
+            _socket = new SocketIOClient.SocketIO(uri.ToString(), new SocketIOOptions
+            {
+                Reconnection = true,
+                ReconnectionAttempts = int.MaxValue,
+                ReconnectionDelay = 2000,
+                Transport = SocketIOClient.Transport.TransportProtocol.WebSocket
+            });
+
+            _socket.OnConnected += (_, _) => _logger.LogInformation("✅ Connected to Streamlabs Socket.IO");
+            _socket.OnDisconnected += (_, reason) => _logger.LogWarning($"⚠️ Disconnected from Streamlabs: {reason}");
+            _socket.OnError += (sender, ex) => _logger.LogError(ex, "❌ Streamlabs Socket.IO error");
+            _socket.OnReconnectAttempt += (sender, attempt) => _logger.LogInformation($"🔁 Reconnect attempt #{attempt}");
+            _socket.On("event", async response =>
+            {
+                try
+                {
+                    var payload = response.GetValue<string>();
+
+                    var followEvent = JsonSerializer.Deserialize<StreamlabsFollowWrapper>(payload);
+
+                    if (followEvent?.Type == "follow" && followEvent.Message?.Count > 0)
+                    {
+                        foreach (var msg in followEvent.Message)
+                        {
+                            var username = msg?.Name?.Trim();
+                            if (!string.IsNullOrWhiteSpace(username))
+                            {
+                                _logger.LogInformation($"🟢 Follow alert received from {username}");
+                                await _twitchAlertTypesService.HandleFollowAsync(username);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Streamlabs event received, but was not a valid follow payload.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ Failed to deserialize or process Streamlabs follow event.");
+                }
+            });
+
+            _socket.ConnectAsync();
         }
 
         public void Stop()
         {
-            _cts.Cancel();
-            _socket.Dispose();
-        }
-
-        private async Task ConnectAndListenAsync(Uri uri, CancellationToken cancellationToken)
-        {
-            try
+            if (_socket is not null)
             {
-                await _socket.ConnectAsync(uri, cancellationToken);
-                _logger.LogInformation("✅ Connected to Streamlabs WebSocket.");
-
-                var buffer = new byte[8192];
-
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    var result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        _logger.LogWarning("⚠️ Streamlabs WebSocket closed. Reconnecting...");
-                        await AttemptReconnectAsync(uri, cancellationToken);
-                        return;
-                    }
-
-                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    if (json.StartsWith("42"))
-                    {
-                        HandlePayload(json[2..]); // Skip the "42" prefix
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error in Streamlabs WebSocket connection.");
-                await AttemptReconnectAsync(uri, cancellationToken);
-            }
-        }
-
-        private void HandlePayload(string rawJson)
-        {
-            try
-            {
-                var doc = JsonDocument.Parse(rawJson);
-                var root = doc.RootElement;
-
-                if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() != 2) return;
-
-                var eventType = root[0].GetString();
-                var data = root[1];
-
-                if (eventType != "event") return;
-
-                var type = data.GetProperty("type").GetString();
-                if (type != "follow") return;
-
-                foreach (var message in data.GetProperty("message").EnumerateArray())
-                {
-                    var username = message.GetProperty("name").GetString();
-                    if (!string.IsNullOrWhiteSpace(username))
-                    {
-                        _logger.LogInformation($"🟢 Follow alert received from {username}");
-
-                        _twitchAlertTypesService.HandleFollowAsync(username);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "⚠️ Failed to parse follow alert payload.");
-            }
-        }
-
-        private async Task AttemptReconnectAsync(Uri uri, CancellationToken cancellationToken)
-        {
-            _reconnectAttempts++;
-            var delay = Math.Min(10000, 1000 * (int)Math.Pow(2, _reconnectAttempts));
-            _logger.LogInformation($"🔄 Reconnecting to Streamlabs in {delay / 1000}s...");
-
-            await Task.Delay(delay, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
-            {
+                _ = _socket.DisconnectAsync();
                 _socket.Dispose();
-                await ConnectAndListenAsync(uri, cancellationToken);
+                _logger.LogInformation("⛔ Streamlabs Socket.IO stopped.");
             }
         }
     }

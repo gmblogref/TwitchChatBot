@@ -89,8 +89,8 @@
             // 
             tabControlChatBot.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tabControlChatBot.Controls.Add(tabPageMainChat);
-            tabControlChatBot.Controls.Add(tabPageLogging);
             tabControlChatBot.Controls.Add(tabTesting);
+            tabControlChatBot.Controls.Add(tabPageLogging);
             tabControlChatBot.DrawMode = TabDrawMode.OwnerDrawFixed;
             tabControlChatBot.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabControlChatBot.ItemSize = new Size(250, 35);
@@ -188,6 +188,7 @@
             textBoxLogging.MinimumSize = new Size(1025, 365);
             textBoxLogging.Multiline = true;
             textBoxLogging.Name = "textBoxLogging";
+            textBoxLogging.ReadOnly = true;
             textBoxLogging.ScrollBars = ScrollBars.Both;
             textBoxLogging.Size = new Size(1025, 365);
             textBoxLogging.TabIndex = 1;
