@@ -72,7 +72,7 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogInformation("✅ Timer for ads started.");
 
                 // Connect to Streamlabs
-                _streamlabsService.Start(_alertService.EnqueueAlert);
+                await _streamlabsService.StartAsync(_alertService.EnqueueAlert);
                 _logger.LogInformation("✅ Streamlabs WebSocket started.");
 
                 // Connect to Twitch EventSub

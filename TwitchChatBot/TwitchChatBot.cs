@@ -47,13 +47,29 @@ namespace TwitchChatBot
 
         public void AppendLog(string message)
         {
+            // Local function call
+            void Append()
+            {
+                // Only scroll if you're near the bottom already
+                bool autoScroll =
+                    textBoxLogging.SelectionStart >= textBoxLogging.TextLength - textBoxLogging.ClientSize.Height;
+
+                textBoxLogging.AppendText(message + Environment.NewLine);
+
+                if (autoScroll)
+                {
+                    textBoxLogging.SelectionStart = textBoxLogging.Text.Length;
+                    textBoxLogging.ScrollToCaret();
+                }
+            }
+
             if (textBoxLogging.InvokeRequired)
             {
-                textBoxLogging.Invoke(() => textBoxLogging.AppendText(message + Environment.NewLine));
+                textBoxLogging.Invoke(Append);
             }
             else
             {
-                textBoxLogging.AppendText(message + Environment.NewLine);
+                Append();
             }
         }
 
