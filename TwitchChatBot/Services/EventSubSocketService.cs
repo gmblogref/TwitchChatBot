@@ -124,41 +124,47 @@ namespace TwitchChatBot.UI.Services
                     }
                     else if (type == "notification")
                     {
+                        string userName = "someone";
                         var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                         var eventPayload = root.GetProperty("payload").GetProperty("event");
-                        var username = eventPayload.GetProperty("user_name").GetString() ?? "someone";
-
+                        
                         switch (subscriptionType)
                         {
                             case TwitchEventTypes.ChannelCheer:
+                                userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                 var bits = eventPayload.GetProperty("bits").GetInt32();
                                 var message = eventPayload.GetProperty("message").GetString() ?? "";
-                                await _twitchAlertTypesService.HandleCheerAsync(username, bits, message);
+                                await _twitchAlertTypesService.HandleCheerAsync(userName, bits, message);
                                 break;
 
                             case TwitchEventTypes.ChannelPointsRedemption:
+                                userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                 var rewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? "";
-                                await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(username, rewardTitle);
+                                await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(userName, rewardTitle);
                                 break;
 
                             case TwitchEventTypes.ChannelRaid:
+                                var raiderName = eventPayload.GetProperty("from_broadcaster_user_login").GetString() ?? "someone";
                                 var viewers = eventPayload.GetProperty("viewers").GetInt32();
-                                await _twitchAlertTypesService.HandleRaidAsync(username, viewers);
+                                await _twitchAlertTypesService.HandleRaidAsync(raiderName, viewers);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscribe:
-                                await _twitchAlertTypesService.HandleSubscriptionAsync(username);
+                                userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
+                                await _twitchAlertTypesService.HandleSubscriptionAsync(userName);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionGift:
+                                userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                 var recipient = eventPayload.GetProperty("recipient_user_name").GetString() ?? "someone";
-                                await _twitchAlertTypesService.HandleSubGiftAsync(username, recipient);
+                                await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient);
                                 break;
 
                             case TwitchEventTypes.ChannelSubscriptionMessage:
+                                userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                 var months = eventPayload.GetProperty("cumulative_months").GetInt32();
                                 var resubMessage = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
-                                await _twitchAlertTypesService.HandleResubAsync(username, months, resubMessage);
+                                await _twitchAlertTypesService.HandleResubAsync(userName, months, resubMessage);
                                 break;
 
                             case TwitchEventTypes.HypeTrainBegin:
