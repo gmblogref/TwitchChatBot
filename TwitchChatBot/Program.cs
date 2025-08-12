@@ -76,13 +76,15 @@ namespace TwitchChatBot
             services.TryAddSingleton<ITwitchRoleService, TwitchRoleService>();
             services.TryAddSingleton<ITwitchClientWrapper, TwitchClientWrapper>();
             services.TryAddSingleton<IWebSocketServer, WebSocketServer>();
-            
+            services.TryAddSingleton<IWatchStreakService, WatchStreakService>();
+
             services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(
                 sp.GetRequiredService<ILogger<FirstChatterAlertService>>(),
                 sp.GetRequiredService<IFirstChatterMediaRepository>(),
                 sp.GetRequiredService<IExcludedUsersService>(),
                 sp.GetRequiredService<IAlertService>(),
+                sp.GetRequiredService<IWatchStreakService>(),
                 (channel, message) =>
                 {
                     var twitchClient = sp.GetRequiredService<ITwitchClientWrapper>();

@@ -35,9 +35,6 @@
             labelViewers = new Label();
             richTextBoxStreamChat = new RichTextBox();
             labelChatBox = new Label();
-            tabPageLogging = new TabPage();
-            textBoxLogging = new TextBox();
-            labelLogging = new Label();
             tabTesting = new TabPage();
             groupBoxButtonTests = new GroupBox();
             labelUserName = new Label();
@@ -64,12 +61,17 @@
             textCommand = new TextBox();
             textChannelPoint = new TextBox();
             buttonTestCommand = new Button();
+            tabPageLogging = new TabPage();
+            textBoxLogging = new TextBox();
+            labelLogging = new Label();
+            buttonTestBot = new Button();
+            buttonStopBot = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
-            tabPageLogging.SuspendLayout();
             tabTesting.SuspendLayout();
             groupBoxButtonTests.SuspendLayout();
             groupBoxTextEntryTests.SuspendLayout();
+            tabPageLogging.SuspendLayout();
             SuspendLayout();
             // 
             // buttonStartBot
@@ -83,7 +85,7 @@
             buttonStartBot.Text = "Start Bot";
             buttonStartBot.UseVisualStyleBackColor = false;
             buttonStartBot.EnabledChanged += buttonStartBot_EnabledChanged;
-            buttonStartBot.Click += startBotButton_Click;
+            buttonStartBot.Click += buttonStartBot_Click;
             // 
             // tabControlChatBot
             // 
@@ -163,45 +165,6 @@
             labelChatBox.Size = new Size(170, 32);
             labelChatBox.TabIndex = 3;
             labelChatBox.Text = "Stream Chat";
-            // 
-            // tabPageLogging
-            // 
-            tabPageLogging.BorderStyle = BorderStyle.Fixed3D;
-            tabPageLogging.Controls.Add(textBoxLogging);
-            tabPageLogging.Controls.Add(labelLogging);
-            tabPageLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            tabPageLogging.Location = new Point(4, 39);
-            tabPageLogging.Name = "tabPageLogging";
-            tabPageLogging.Padding = new Padding(3);
-            tabPageLogging.Size = new Size(1118, 457);
-            tabPageLogging.TabIndex = 1;
-            tabPageLogging.Text = "Logging Tab";
-            tabPageLogging.UseVisualStyleBackColor = true;
-            // 
-            // textBoxLogging
-            // 
-            textBoxLogging.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            textBoxLogging.BackColor = Color.Black;
-            textBoxLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            textBoxLogging.ForeColor = Color.White;
-            textBoxLogging.Location = new Point(6, 38);
-            textBoxLogging.MinimumSize = new Size(1025, 365);
-            textBoxLogging.Multiline = true;
-            textBoxLogging.Name = "textBoxLogging";
-            textBoxLogging.ReadOnly = true;
-            textBoxLogging.ScrollBars = ScrollBars.Both;
-            textBoxLogging.Size = new Size(1025, 365);
-            textBoxLogging.TabIndex = 1;
-            // 
-            // labelLogging
-            // 
-            labelLogging.AutoSize = true;
-            labelLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            labelLogging.Location = new Point(6, 3);
-            labelLogging.Name = "labelLogging";
-            labelLogging.Size = new Size(265, 32);
-            labelLogging.TabIndex = 0;
-            labelLogging.Text = "Logging Information";
             // 
             // tabTesting
             // 
@@ -488,26 +451,93 @@
             buttonTestCommand.UseVisualStyleBackColor = true;
             buttonTestCommand.Click += buttonTestCommand_Click;
             // 
+            // tabPageLogging
+            // 
+            tabPageLogging.BorderStyle = BorderStyle.Fixed3D;
+            tabPageLogging.Controls.Add(textBoxLogging);
+            tabPageLogging.Controls.Add(labelLogging);
+            tabPageLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            tabPageLogging.Location = new Point(4, 39);
+            tabPageLogging.Name = "tabPageLogging";
+            tabPageLogging.Padding = new Padding(3);
+            tabPageLogging.Size = new Size(1118, 457);
+            tabPageLogging.TabIndex = 1;
+            tabPageLogging.Text = "Logging Tab";
+            tabPageLogging.UseVisualStyleBackColor = true;
+            // 
+            // textBoxLogging
+            // 
+            textBoxLogging.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            textBoxLogging.BackColor = Color.Black;
+            textBoxLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            textBoxLogging.ForeColor = Color.White;
+            textBoxLogging.Location = new Point(6, 38);
+            textBoxLogging.MinimumSize = new Size(1025, 365);
+            textBoxLogging.Multiline = true;
+            textBoxLogging.Name = "textBoxLogging";
+            textBoxLogging.ReadOnly = true;
+            textBoxLogging.ScrollBars = ScrollBars.Both;
+            textBoxLogging.Size = new Size(1025, 365);
+            textBoxLogging.TabIndex = 1;
+            // 
+            // labelLogging
+            // 
+            labelLogging.AutoSize = true;
+            labelLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            labelLogging.Location = new Point(6, 3);
+            labelLogging.Name = "labelLogging";
+            labelLogging.Size = new Size(265, 32);
+            labelLogging.TabIndex = 0;
+            labelLogging.Text = "Logging Information";
+            // 
+            // buttonTestBot
+            // 
+            buttonTestBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            buttonTestBot.BackColor = Color.Yellow;
+            buttonTestBot.Location = new Point(16, 518);
+            buttonTestBot.Name = "buttonTestBot";
+            buttonTestBot.Size = new Size(127, 49);
+            buttonTestBot.TabIndex = 3;
+            buttonTestBot.Text = "Test Bot";
+            buttonTestBot.UseVisualStyleBackColor = false;
+            buttonTestBot.Click += buttonTestBot_Click;
+            // 
+            // buttonStopBot
+            // 
+            buttonStopBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            buttonStopBot.BackColor = Color.Crimson;
+            buttonStopBot.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            buttonStopBot.Location = new Point(874, 518);
+            buttonStopBot.Name = "buttonStopBot";
+            buttonStopBot.Size = new Size(127, 49);
+            buttonStopBot.TabIndex = 4;
+            buttonStopBot.Text = "Stop Bot";
+            buttonStopBot.UseVisualStyleBackColor = false;
+            buttonStopBot.Click += buttonStopBot_Click;
+            // 
             // TwitchChatBot
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1150, 579);
+            Controls.Add(buttonStopBot);
+            Controls.Add(buttonTestBot);
             Controls.Add(tabControlChatBot);
             Controls.Add(buttonStartBot);
             MinimumSize = new Size(1091, 551);
             Name = "TwitchChatBot";
             Text = "Twitch Chat Bot";
+            FormClosing += TwitchChatBot_FormClosing;
             tabControlChatBot.ResumeLayout(false);
             tabPageMainChat.ResumeLayout(false);
             tabPageMainChat.PerformLayout();
-            tabPageLogging.ResumeLayout(false);
-            tabPageLogging.PerformLayout();
             tabTesting.ResumeLayout(false);
             groupBoxButtonTests.ResumeLayout(false);
             groupBoxButtonTests.PerformLayout();
             groupBoxTextEntryTests.ResumeLayout(false);
             groupBoxTextEntryTests.PerformLayout();
+            tabPageLogging.ResumeLayout(false);
+            tabPageLogging.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -551,5 +581,7 @@
         private TextBox textAmount;
         private Label labelUserName;
         private Label labelAmount;
+        private Button buttonTestBot;
+        private Button buttonStopBot;
     }
 }

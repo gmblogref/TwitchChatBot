@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchLib.Communication.Interfaces;
+using static TwitchChatBot.Models.AppSettings;
 
 namespace TwitchChatBot.Core.Controller
 {
@@ -11,10 +13,13 @@ namespace TwitchChatBot.Core.Controller
         private readonly IEventSubService _eventSubService;
         private readonly ILogger<ChatBotController> _logger;
         private readonly IStreamlabsService _streamlabsService;
+        private readonly ITtsService _tsService;
         private readonly ITwitchClientWrapper _twitchClient;
         private readonly IWebSocketServer _webSocketServer;
         private readonly IWebHostWrapper _webHostWrapper;
+        private readonly IWatchStreakService _watchStreakService;
 
+        private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
 
         public ChatBotController(
@@ -22,29 +27,38 @@ namespace TwitchChatBot.Core.Controller
         IEventSubService eventSubService,
         ILogger<ChatBotController> logger,
         IStreamlabsService streamlabsService,
+        ITtsService tsService,
         ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
-        IWebHostWrapper webHostWrapper)
+        IWebHostWrapper webHostWrapper,
+        IWatchStreakService watchStreakService)
         {
             _alertService = alertService;
             _eventSubService = eventSubService;
             _logger = logger;
             _streamlabsService = streamlabsService;
             _twitchClient = twitchClient;
+            _tsService = tsService;
             _webSocketServer = webSocketServer;
             _webHostWrapper = webHostWrapper;
+            _watchStreakService = watchStreakService;
         }
+
+        public bool IsStarted => Interlocked.CompareExchange(ref _started, 1, 1) == 1;
 
         public void SetUiBridge(IUiBridge bridge)
         {
             _uiBridge = bridge;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken = default)
+        public async Task StartAsync(StreamSessionMode streamSessionMode, CancellationToken cancellationToken = default)
         {
             try
             {
                 _logger.LogInformation("🚀 Starting ChatBotController...");
+
+                if (Interlocked.Exchange(ref _started, 1) == 1)
+                    return; // already started
 
                 // Start WebSocket server to communicate with front end
                 _webSocketServer.Start();
@@ -79,12 +93,39 @@ namespace TwitchChatBot.Core.Controller
                 await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
 
+                _watchStreakService.BeginStream(streamSessionMode);
+
                 _logger.LogInformation("🎉 ChatBotController started successfully.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Failed to start ChatBotController.");
             }
+        }
+
+        public async Task StopAsync(CancellationToken ct = default)
+        {
+            if (Interlocked.Exchange(ref _started, 0) == 0)
+                return; // already stopped / never started
+
+            _logger.LogInformation("🛑 Stopping ChatBotController…");
+
+            // stop in a forgiving way; each try/catch prevents one failure from blocking others
+            try { _twitchClient.StartAdTimer(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop ads"); }
+
+            try { _streamlabsService.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop Streamlabs"); }
+
+            try { await _eventSubService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop EventSub"); }
+
+            try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
+
+            try { _twitchClient.Disconnect(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
+
+            try { (_tsService as IDisposable)?.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose TTS"); }
+
+            try { _watchStreakService.EndStream(); } catch (Exception ex) { _logger.LogWarning(ex, "End stream"); }
+
+            _logger.LogInformation("🏁 ChatBotController stopped.");
         }
     }
 }

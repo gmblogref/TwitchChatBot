@@ -101,19 +101,6 @@ namespace TwitchChatBot
             return brightness < 0.3;
         }
 
-        private async void startBotButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                await _chatBotController.StartAsync();
-                buttonStartBot.Enabled = false;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error starting bot: {ex.Message}");
-            }
-        }
-
         private void buttonStartBot_EnabledChanged(object sender, EventArgs e)
         {
             Button currentButton = (Button)sender;
@@ -282,6 +269,60 @@ namespace TwitchChatBot
             {
                 buttonTestTts.PerformClick();
                 textBoxTtsText.Text = string.Empty;
+            }
+        }
+
+        private async void buttonTestBot_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await _chatBotController.StartAsync(StreamSessionMode.Testing);
+                buttonStartBot.Enabled = false;
+                buttonTestBot.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error starting bot: {ex.Message}");
+            }
+        }
+
+        private async void buttonStartBot_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await _chatBotController.StartAsync(StreamSessionMode.Live);
+                buttonStartBot.Enabled = false;
+                buttonTestBot.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error starting bot: {ex.Message}");
+            }
+        }
+
+        private async void buttonStopBot_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await _chatBotController.StopAsync();
+                buttonStartBot.Enabled = true;
+                buttonTestBot.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error stopping bot: {ex.Message}");
+            }
+        }
+
+        private async void TwitchChatBot_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                await _chatBotController.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while closing: {ex.Message}");
             }
         }
     }

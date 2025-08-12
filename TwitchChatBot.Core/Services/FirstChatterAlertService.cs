@@ -12,6 +12,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IFirstChatterMediaRepository _firstChatterMediaRepository;
         private readonly IExcludedUsersService _excludedUsersService;
         private readonly IAlertService _alertService;
+        private readonly IWatchStreakService _watchStreakService;
         private readonly Action<string, string> _sendMessage;
         private HashSet<string> _firstChatters = [];
 
@@ -23,12 +24,14 @@ namespace TwitchChatBot.Core.Services
             IFirstChatterMediaRepository firstChatterMediaRepository,
             IExcludedUsersService excludedUsersService,
             IAlertService alertService,
+            IWatchStreakService watchStreakService,
             Action<string, string> sendMessage)
         {
             _logger = logger;
             _firstChatterMediaRepository = firstChatterMediaRepository;
             _excludedUsersService = excludedUsersService;
             _alertService = alertService;
+            _watchStreakService = watchStreakService;
             _sendMessage = sendMessage;
         }
 
@@ -50,6 +53,7 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
+            await _watchStreakService.MarkAttendanceAsync(username);
             MarkAsChatted(username);
 
             var mediaFileName = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
