@@ -24,6 +24,17 @@ namespace TwitchChatBot.Data
             return _commandMediaMap?.CommandMediaItems.FirstOrDefault(x => x.Command.Equals(command));
         }
 
+        public async Task<IReadOnlyList<string>> GetAllCommandNamesAsync(CancellationToken cancellationToken = default)
+        {
+            await GetCommandsAsync(cancellationToken);
+            return (_commandMediaMap?.CommandMediaItems ?? Enumerable.Empty<CommandMediaItem>())
+                .Select(c => c.Command)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                .AsReadOnly();
+        }
+
         private async Task GetCommandsAsync(CancellationToken cancellationToken = default)
         {
             if (_commandMediaMap != null && _commandMediaMap.CommandMediaItems.Count > 0)
