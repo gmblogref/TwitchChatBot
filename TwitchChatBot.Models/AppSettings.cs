@@ -35,16 +35,17 @@ namespace TwitchChatBot.Models
         public static class EventSub
         {
             public static string? Uri => GetSetting("EventSub:Uri");
-            public static string? EVENTSUB_SECRET => GetSetting("AppSettings:EVENTSUB_SECRET");
-            public static string? EVENTSUB_CALLBACK_URL => GetSetting("AppSettings:EVENTSUB_CALLBACK_URL");
+            public static string? EVENTSUB_SECRET => GetSetting("EventSub:EVENTSUB_SECRET");
+            public static string? EVENTSUB_CALLBACK_URL => GetSetting("EventSub:EVENTSUB_CALLBACK_URL");
+            public static string? PostSubscriptionsUrl => GetSetting("EventSub:PostSubscriptionsurl");
         }
 
         public static class MediaMapFiles
         {
-            public static string TwitchAlertMedia => GetSetting("MediaMapFiles:TwitchAlertMedia");
-            public static string ExcludedUsersMedia => GetSetting("MediaMapFiles:ExcludedUsersMedia");
-            public static string FirstChattersMedia => GetSetting("MediaMapFiles:FirstChattersMedia");
-            public static string CommandAlertMedia => GetSetting("MediaMapFiles:CommandAlertMedia");
+            public static string? TwitchAlertMedia => GetSetting("MediaMapFiles:TwitchAlertMedia");
+            public static string? ExcludedUsersMedia => GetSetting("MediaMapFiles:ExcludedUsersMedia");
+            public static string? FirstChattersMedia => GetSetting("MediaMapFiles:FirstChattersMedia");
+            public static string? CommandAlertMedia => GetSetting("MediaMapFiles:CommandAlertMedia");
         }
 
         public static class Media
@@ -54,10 +55,10 @@ namespace TwitchChatBot.Models
 
         public static class Chatters
         {
-            public static string ModsUrl => GetSetting("Chatters:ModsUrl");
-            public static string VipUrl => GetSetting("Chatters:VipUrl");
-            public static string InitialDelay => GetSetting("Chatters:InitialDelay");
-            public static string ContinuousDelay => GetSetting("Chatters:ContinuousDelay");
+            public static string? ModsUrl => GetSetting("Chatters:ModsUrl");
+            public static string? VipUrl => GetSetting("Chatters:VipUrl");
+            public static string? InitialDelay => GetSetting("Chatters:InitialDelay");
+            public static string? ContinuousDelay => GetSetting("Chatters:ContinuousDelay");
         }
 
         public static class TTS
