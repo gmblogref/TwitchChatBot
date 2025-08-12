@@ -54,6 +54,7 @@ namespace TwitchChatBot.Models
 
         public static class Chatters
         {
+            public static string ModsUrl => GetSetting("Chatters:ModsUrl");
             public static string VipUrl => GetSetting("Chatters:VipUrl");
             public static string InitialDelay => GetSetting("Chatters:InitialDelay");
             public static string ContinuousDelay => GetSetting("Chatters:ContinuousDelay");
@@ -64,6 +65,15 @@ namespace TwitchChatBot.Models
             public static string TtsExecutable => GetSetting("TTS:TtsExecutable");
             public static string DefaultModel => GetSetting("TTS:DefaultModel");
             public static string DefaultSpeaker => GetSetting("TTS:DefaultSpeaker");
+        }
+
+        public static class Commands
+        {
+            public static string UsersByLogin => GetSetting("Commands:UsersByLogin");
+            public static string StreamsByUserId => GetSetting("Commands:StreamsByUserId");
+            public static string ChannelInfoByBroadcasterId => GetSetting("Commands:ChannelInfoByBroadcasterId");
+            public static string VideosByUserId => GetSetting("Commands:VideosByUserId");
+            public static string GamesByGameId => GetSetting("Commands:GamesByGameId");
         }
 
         public static string GetSetting(string key)

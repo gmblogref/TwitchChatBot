@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Logging;
 using TwitchChatBot.Core.Services;
@@ -91,6 +92,15 @@ namespace TwitchChatBot
                     twitchClient.SendMessage(channel, message);
                 }
                 ));
+
+            services.AddHttpClient("twitch-helix", client =>
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", AppSettings.TWITCH_ACCESS_TOKEN);
+                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+            });
+
+            services.AddSingleton<IHelixLookupService, HelixLookupService>();
 
             // 💡 WebHost
             services.TryAddSingleton<IWebHostWrapper, WebHostWrapper>();

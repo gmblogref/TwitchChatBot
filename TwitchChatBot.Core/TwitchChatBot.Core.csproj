@@ -9,16 +9,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
-	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
-	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.7" />
-	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
-	  <PackageReference Include="TwitchLib.Client" Version="3.4.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+		<PackageReference Include="TwitchLib.Client" Version="3.4.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\TwitchChatBot.Data\TwitchChatBot.Data.csproj" />
-	  <ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
+		<ProjectReference Include="..\TwitchChatBot.Data\TwitchChatBot.Data.csproj" />
+		<ProjectReference Include="..\TwitchChatBot.Models\TwitchChatBot.Models.csproj" />
 	</ItemGroup>
 
 </Project>
