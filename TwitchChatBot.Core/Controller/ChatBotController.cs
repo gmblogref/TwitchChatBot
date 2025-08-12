@@ -85,9 +85,9 @@ namespace TwitchChatBot.Core.Controller
                 _twitchClient.StartAdTimer();
                 _logger.LogInformation("✅ Timer for ads started.");
 
-                // Connect to Streamlabs
-                _streamlabsService.Start(_alertService.EnqueueAlert);
-                _logger.LogInformation("✅ Streamlabs WebSocket started.");
+                // Connect to Streamlabs -- COMMENTED OUT DUE TO USE EVENTSUB FOLLOW, THIS IS A FALL BACK
+                //_streamlabsService.Start(_alertService.EnqueueAlert);
+                //_logger.LogInformation("✅ Streamlabs WebSocket started.");
 
                 // Connect to Twitch EventSub
                 await _eventSubService.StartAsync(cancellationToken);
@@ -113,7 +113,8 @@ namespace TwitchChatBot.Core.Controller
             // stop in a forgiving way; each try/catch prevents one failure from blocking others
             try { _twitchClient.StartAdTimer(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop ads"); }
 
-            try { _streamlabsService.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop Streamlabs"); }
+            // COMMENTED OUT DUE TO USE EVENTSUB FOLLOW, THIS IS A FALL BACK
+            //try { _streamlabsService.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop Streamlabs"); }
 
             try { await _eventSubService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop EventSub"); }
 
