@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
-using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -14,19 +12,22 @@ namespace TwitchChatBot.Core.Services
         private readonly IAlertService _alertService;
         private readonly IExcludedUsersService _excludedUsersService;
         private readonly IWatchStreakService _watchStreakService;
-        
+        private readonly IHelixLookupService _helixLookupService;
+
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
             ICommandMediaRepository commandMediaRepository,
             IAlertService alertService,
             IExcludedUsersService excludedUsersService,
-            IWatchStreakService watchStreakService)
+            IWatchStreakService watchStreakService,
+            IHelixLookupService helixLookupService)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
             _alertService = alertService;
             _excludedUsersService = excludedUsersService;
             _watchStreakService = watchStreakService;
+            _helixLookupService = helixLookupService;
         }
 
         public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
@@ -36,7 +37,7 @@ namespace TwitchChatBot.Core.Services
 
             var commandTuple = ParseCommandTuple(commandText);
 
-            if (IsCommandSpecial(commandTuple.command))
+            if (commandTuple.command == "!commands")
             {
                 await HandleShowAvaiableCommands(channel, sendMessage);
                 return;
@@ -50,6 +51,7 @@ namespace TwitchChatBot.Core.Services
             }
 
             var ctx = BuildContext(username, channel, commandTuple.rawTarget);
+            await DoSpecialCommandOptions(commandTuple.command, ctx);
 
             // TEXT Command
             if (!string.IsNullOrWhiteSpace(entry.Text))
@@ -80,7 +82,7 @@ namespace TwitchChatBot.Core.Services
             public required string RawTarget { get; init; }      // target name without '@'
             public string Target => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"@{RawTarget}";
             public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"https://twitch.tv/{RawTarget}";
-            public string Game { get; init; } = string.Empty;    // TODO: fill via Helix later
+            public string Game { get; set; } = string.Empty;    // TODO: fill via Helix later
         }
 
         /// <summary>
@@ -139,16 +141,22 @@ namespace TwitchChatBot.Core.Services
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        private bool IsCommandSpecial(string command)
+        private async Task DoSpecialCommandOptions(string command, CommandContext ctx, CancellationToken ct = default)
         {
             switch (command)
             {
-                case "!command":
-                case "!commands":
-                    return true;
+                case "!so":
+                    // Choose login to inspect: explicit target if provided, else the invoker
+                    var login = string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget;
+                    var userId = await _helixLookupService.GetUserIdByLoginAsync(login, ct);
+                    if (string.IsNullOrEmpty(userId))
+                        return;
+                    
+                    var game = await _helixLookupService.GetLastKnownGameByUserIdAsync(userId, ct);
+                    if (!string.IsNullOrWhiteSpace(game))
+                        ctx.Game = game; // token replacer will drop this into $game
+                    break;
             }
-
-            return false;
         }
 
         private async Task HandleShowAvaiableCommands(string channel, Action<string, string> sendMessage)
