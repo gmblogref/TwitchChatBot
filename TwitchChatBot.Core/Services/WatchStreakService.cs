@@ -177,6 +177,20 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
+        public Task<(int Consecutive, int Total)> GetStatsTupleAsync(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return Task.FromResult((0, 0));
+
+            lock (_sync)
+            {
+                if (_state.Users.TryGetValue(username, out var s))
+                    return Task.FromResult((s.Consecutive, s.TotalStreams));
+            }
+
+            return Task.FromResult((0, 0));
+        }
+
         private void Load()
         {
             try

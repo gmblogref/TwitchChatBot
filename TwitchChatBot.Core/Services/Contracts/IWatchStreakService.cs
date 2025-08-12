@@ -17,5 +17,6 @@ namespace TwitchChatBot.Core.Services.Contracts
 
         IReadOnlyList<WatchUserStats> TopByConsecutive(int take = 10);
         IReadOnlyList<WatchUserStats> TopByTotal(int take = 10);
+        Task<(int Consecutive, int Total)> GetStatsTupleAsync(string username);
     }
 }
