@@ -17,6 +17,7 @@ namespace TwitchChatBot.Core.Services
         private IExcludedUsersService _excludedUsersService;
         private IFirstChatterAlertService _firstChatterAlertService;
         private readonly ITwitchRoleService _twitchRoleService;
+        private readonly IWatchStreakService _watchStreakService;
         private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
         
@@ -35,13 +36,15 @@ namespace TwitchChatBot.Core.Services
                 ICommandAlertService commandAlertService,
                 IExcludedUsersService excludedUsersService,
                 IFirstChatterAlertService firstChatterAlertService,
-                ITwitchRoleService twitchRoleService)
+                ITwitchRoleService twitchRoleService,
+                IWatchStreakService watchStreakService)
         {
             _logger = logger;
             _commandAlertService = commandAlertService;
             _excludedUsersService = excludedUsersService;
             _firstChatterAlertService = firstChatterAlertService;
             _twitchRoleService = twitchRoleService;
+            _watchStreakService = watchStreakService;
 
             try
             {
@@ -54,7 +57,7 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.OnJoinedChannel += (s, e) => _logger.LogInformation("✅ Successfully joined Twitch channel: {Channel}", e.Channel);
                 _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
                 _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
-                _twitchClient.OnUserJoined += (s, e) => HandleOnUserJoined(e.Username);
+                _twitchClient.OnUserJoined += async (s, e) => await HandleOnUserJoined(e.Username);
                 _twitchClient.OnUserLeft += (s, e) => HandleOnUserLeft(e.Username);
             }
             catch (Exception ex)
@@ -146,8 +149,10 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private void HandleOnUserJoined(string username)
+        private async Task HandleOnUserJoined(string username)
         {
+            await _watchStreakService.MarkAttendanceAsync(username);
+            
             if (!_connectedUsers.Add(username))
                 return;
 
