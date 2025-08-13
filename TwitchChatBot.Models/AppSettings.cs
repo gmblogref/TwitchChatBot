@@ -16,6 +16,7 @@ namespace TwitchChatBot.Models
         public static string? REFRESH_TOKEN => GetSetting("AppSettings:REFRESH_TOKEN");
         public static string? TWITCH_USER_ID => GetSetting("AppSettings:TWITCH_USER_ID");
         public static string? TWITCH_APP_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
+        public static string? TwitchUrl => GetSetting("AppSettings:TwitchUrl");
 
         public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes"); 
         public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
@@ -38,6 +39,7 @@ namespace TwitchChatBot.Models
             public static string? EVENTSUB_SECRET => GetSetting("EventSub:EVENTSUB_SECRET");
             public static string? EVENTSUB_CALLBACK_URL => GetSetting("EventSub:EVENTSUB_CALLBACK_URL");
             public static string? PostSubscriptionsUrl => GetSetting("EventSub:PostSubscriptionsurl");
+            public static string? Validate => GetSetting("EventSub:Validate");
         }
 
         public static class MediaMapFiles

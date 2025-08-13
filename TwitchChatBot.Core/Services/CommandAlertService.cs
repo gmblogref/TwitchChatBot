@@ -2,6 +2,7 @@
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -81,7 +82,7 @@ namespace TwitchChatBot.Core.Services
             public required string Username { get; init; }       // user who ran the command
             public required string RawTarget { get; init; }      // target name without '@'
             public string Target => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"@{RawTarget}";
-            public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"https://twitch.tv/{RawTarget}";
+            public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : AppSettings.TwitchUrl + $"{RawTarget}";
             public string Game { get; set; } = string.Empty;    // TODO: fill via Helix later
         }
 
@@ -112,7 +113,7 @@ namespace TwitchChatBot.Core.Services
                 .Replace("@$targetname", $"@{(string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget)}", StringComparison.OrdinalIgnoreCase)
                 .Replace("$targetname", (string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget), StringComparison.OrdinalIgnoreCase)
                 .Replace("$target", string.IsNullOrEmpty(ctx.RawTarget) ? $"@{ctx.Username}" : ctx.Target, StringComparison.OrdinalIgnoreCase)
-                .Replace("$url", string.IsNullOrEmpty(ctx.RawTarget) ? $"https://twitch.tv/{ctx.Username}" : ctx.Url, StringComparison.OrdinalIgnoreCase)
+                .Replace("$url", string.IsNullOrEmpty(ctx.RawTarget) ? AppSettings.TwitchUrl + $"{ctx.Username}" : ctx.Url, StringComparison.OrdinalIgnoreCase)
                 .Replace("$game", ctx.Game, StringComparison.OrdinalIgnoreCase);
         }
 
