@@ -71,7 +71,6 @@ namespace TwitchChatBot
             services.TryAddSingleton<ICommandAlertService, CommandAlertService>();
             services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IExcludedUsersService, ExcludedUsersService>();
-            services.TryAddSingleton<IStreamlabsService, StreamlabsSocketService>();
             services.TryAddSingleton<ITtsService, TtsService>();
             services.TryAddSingleton<ITwitchAlertTypesService, TwitchAlertTypesService>();
             services.TryAddSingleton<ITwitchRoleService, TwitchRoleService>();

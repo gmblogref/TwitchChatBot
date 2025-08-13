@@ -39,7 +39,6 @@ namespace TwitchChatBot.UI.Services
         {
             _logger.LogInformation("🛑 Stopping EventSub WebSocket...");
             _cts.Cancel();
-            //_heartbeatTimer?.Dispose();
             return Task.CompletedTask;
         }
 
@@ -392,7 +391,7 @@ namespace TwitchChatBot.UI.Services
         {
             try
             {
-                using var resp = await http.GetAsync("https://id.twitch.tv/oauth2/validate");
+                using var resp = await http.GetAsync(AppSettings.EventSub.Validate);
                 if (!resp.IsSuccessStatusCode) return null;
 
                 using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());

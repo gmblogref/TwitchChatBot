@@ -12,7 +12,6 @@ namespace TwitchChatBot.Core.Controller
         private readonly IAlertService _alertService;
         private readonly IEventSubService _eventSubService;
         private readonly ILogger<ChatBotController> _logger;
-        private readonly IStreamlabsService _streamlabsService;
         private readonly ITtsService _tsService;
         private readonly ITwitchClientWrapper _twitchClient;
         private readonly IWebSocketServer _webSocketServer;
@@ -26,7 +25,6 @@ namespace TwitchChatBot.Core.Controller
         IAlertService alertService,
         IEventSubService eventSubService,
         ILogger<ChatBotController> logger,
-        IStreamlabsService streamlabsService,
         ITtsService tsService,
         ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
@@ -36,7 +34,6 @@ namespace TwitchChatBot.Core.Controller
             _alertService = alertService;
             _eventSubService = eventSubService;
             _logger = logger;
-            _streamlabsService = streamlabsService;
             _twitchClient = twitchClient;
             _tsService = tsService;
             _webSocketServer = webSocketServer;
@@ -85,10 +82,6 @@ namespace TwitchChatBot.Core.Controller
                 _twitchClient.StartAdTimer();
                 _logger.LogInformation("✅ Timer for ads started.");
 
-                // Connect to Streamlabs -- COMMENTED OUT DUE TO USE EVENTSUB FOLLOW, THIS IS A FALL BACK
-                //_streamlabsService.Start(_alertService.EnqueueAlert);
-                //_logger.LogInformation("✅ Streamlabs WebSocket started.");
-
                 // Connect to Twitch EventSub
                 await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
@@ -112,10 +105,7 @@ namespace TwitchChatBot.Core.Controller
 
             // stop in a forgiving way; each try/catch prevents one failure from blocking others
             try { _twitchClient.StartAdTimer(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop ads"); }
-
-            // COMMENTED OUT DUE TO USE EVENTSUB FOLLOW, THIS IS A FALL BACK
-            //try { _streamlabsService.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop Streamlabs"); }
-
+                    
             try { await _eventSubService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop EventSub"); }
 
             try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
