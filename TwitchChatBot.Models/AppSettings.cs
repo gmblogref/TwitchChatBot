@@ -65,9 +65,10 @@ namespace TwitchChatBot.Models
 
         public static class TTS
         {
-            public static string TtsExecutable => GetSetting("TTS:TtsExecutable");
-            public static string DefaultModel => GetSetting("TTS:DefaultModel");
+            public static string Engine => GetSetting("TTS:Engine");
+            public static string PollyRegion => GetSetting("TTS:PollyRegion");
             public static string DefaultSpeaker => GetSetting("TTS:DefaultSpeaker");
+            public static int MaxChars => GetIntSetting("TTS:MaxChars");
         }
 
         public static class Commands

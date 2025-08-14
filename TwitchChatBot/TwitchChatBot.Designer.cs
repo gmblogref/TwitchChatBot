@@ -35,6 +35,10 @@
             labelViewers = new Label();
             richTextBoxStreamChat = new RichTextBox();
             labelChatBox = new Label();
+            tabPageUtilities = new TabPage();
+            groupBoxTts = new GroupBox();
+            buttonTtsReset = new Button();
+            buttonTtsSkip = new Button();
             tabTesting = new TabPage();
             groupBoxButtonTests = new GroupBox();
             labelUserName = new Label();
@@ -68,6 +72,8 @@
             buttonStopBot = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
+            tabPageUtilities.SuspendLayout();
+            groupBoxTts.SuspendLayout();
             tabTesting.SuspendLayout();
             groupBoxButtonTests.SuspendLayout();
             groupBoxTextEntryTests.SuspendLayout();
@@ -91,6 +97,7 @@
             // 
             tabControlChatBot.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tabControlChatBot.Controls.Add(tabPageMainChat);
+            tabControlChatBot.Controls.Add(tabPageUtilities);
             tabControlChatBot.Controls.Add(tabTesting);
             tabControlChatBot.Controls.Add(tabPageLogging);
             tabControlChatBot.DrawMode = TabDrawMode.OwnerDrawFixed;
@@ -165,6 +172,47 @@
             labelChatBox.Size = new Size(170, 32);
             labelChatBox.TabIndex = 3;
             labelChatBox.Text = "Stream Chat";
+            // 
+            // tabPageUtilities
+            // 
+            tabPageUtilities.Controls.Add(groupBoxTts);
+            tabPageUtilities.Location = new Point(4, 39);
+            tabPageUtilities.Name = "tabPageUtilities";
+            tabPageUtilities.Size = new Size(1118, 457);
+            tabPageUtilities.TabIndex = 3;
+            tabPageUtilities.Text = "Utilities Tab";
+            tabPageUtilities.UseVisualStyleBackColor = true;
+            // 
+            // groupBoxTts
+            // 
+            groupBoxTts.Controls.Add(buttonTtsReset);
+            groupBoxTts.Controls.Add(buttonTtsSkip);
+            groupBoxTts.Location = new Point(23, 24);
+            groupBoxTts.Name = "groupBoxTts";
+            groupBoxTts.Size = new Size(250, 96);
+            groupBoxTts.TabIndex = 0;
+            groupBoxTts.TabStop = false;
+            groupBoxTts.Text = "TTS Controls";
+            // 
+            // buttonTtsReset
+            // 
+            buttonTtsReset.Location = new Point(126, 35);
+            buttonTtsReset.Name = "buttonTtsReset";
+            buttonTtsReset.Size = new Size(94, 37);
+            buttonTtsReset.TabIndex = 1;
+            buttonTtsReset.Text = "Reset";
+            buttonTtsReset.UseVisualStyleBackColor = true;
+            buttonTtsReset.Click += buttonTtsReset_Click;
+            // 
+            // buttonTtsSkip
+            // 
+            buttonTtsSkip.Location = new Point(10, 35);
+            buttonTtsSkip.Name = "buttonTtsSkip";
+            buttonTtsSkip.Size = new Size(94, 37);
+            buttonTtsSkip.TabIndex = 0;
+            buttonTtsSkip.Text = "Skip";
+            buttonTtsSkip.UseVisualStyleBackColor = true;
+            buttonTtsSkip.Click += buttonTtsSkip_Click;
             // 
             // tabTesting
             // 
@@ -349,12 +397,12 @@
             // comboBoxTtsSpeaker
             // 
             comboBoxTtsSpeaker.FormattingEnabled = true;
-            comboBoxTtsSpeaker.Items.AddRange(new object[] { "p225", "p226", "p227", "p228", "p229", "p330" });
+            comboBoxTtsSpeaker.Items.AddRange(new object[] { "Matthew", "Joanna", "Brian", "Emma", "Justin", "Kimberly", "Amy", "Russel", "Nicole", "Olivia", "Stephen", "Salli", "Joey", "Ivy", "Kendra" });
             comboBoxTtsSpeaker.Location = new Point(209, 248);
             comboBoxTtsSpeaker.Name = "comboBoxTtsSpeaker";
             comboBoxTtsSpeaker.Size = new Size(151, 40);
             comboBoxTtsSpeaker.TabIndex = 17;
-            comboBoxTtsSpeaker.Text = "p225";
+            comboBoxTtsSpeaker.Text = "Matthew";
             // 
             // textBoxTtsText
             // 
@@ -531,6 +579,8 @@
             tabControlChatBot.ResumeLayout(false);
             tabPageMainChat.ResumeLayout(false);
             tabPageMainChat.PerformLayout();
+            tabPageUtilities.ResumeLayout(false);
+            groupBoxTts.ResumeLayout(false);
             tabTesting.ResumeLayout(false);
             groupBoxButtonTests.ResumeLayout(false);
             groupBoxButtonTests.PerformLayout();
@@ -583,5 +633,9 @@
         private Label labelAmount;
         private Button buttonTestBot;
         private Button buttonStopBot;
+        private TabPage tabPageUtilities;
+        private GroupBox groupBoxTts;
+        private Button buttonTtsReset;
+        private Button buttonTtsSkip;
     }
 }
