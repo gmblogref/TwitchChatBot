@@ -14,6 +14,19 @@ namespace TwitchChatBot.Core.Services
         private readonly IExcludedUsersService _excludedUsersService;
         private readonly IWatchStreakService _watchStreakService;
         private readonly IHelixLookupService _helixLookupService;
+        private readonly ITtsService _tsService;
+
+        private static readonly Dictionary<string, string> FriendlyVoiceMap =
+            new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Bob", "p225" },
+            { "Alice", "p226" },
+            { "John", "p229" },
+            { "Sophie", "p231" },
+            { "Emma", "p238" },
+            { "Mike", "p248" }
+        };
+
 
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
@@ -21,7 +34,8 @@ namespace TwitchChatBot.Core.Services
             IAlertService alertService,
             IExcludedUsersService excludedUsersService,
             IWatchStreakService watchStreakService,
-            IHelixLookupService helixLookupService)
+            IHelixLookupService helixLookupService,
+            ITtsService tsService)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
@@ -29,10 +43,14 @@ namespace TwitchChatBot.Core.Services
             _excludedUsersService = excludedUsersService;
             _watchStreakService = watchStreakService;
             _helixLookupService = helixLookupService;
+            _tsService = tsService;
         }
 
         public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
         {
+            if (await _excludedUsersService.IsUserExcludedAsync(username))
+                return;
+
             if (string.IsNullOrWhiteSpace(commandText))
                 return;
 
@@ -41,6 +59,22 @@ namespace TwitchChatBot.Core.Services
             if (commandTuple.command == "!commands")
             {
                 await HandleShowAvaiableCommands(channel, sendMessage);
+                return;
+            }
+
+            // ---- special: !tts ----
+            if (commandTuple.command.ToLower() == "!tts")
+            {
+                var (voice, text) = ParseTtsArgs(commandTuple.ttsText);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return;
+                }
+
+                if (text.Length > 500) text = text[..500] + "…"; // simple cap
+
+                await _tsService.SpeakAsync(text, voice, null);
+
                 return;
             }
 
@@ -91,12 +125,56 @@ namespace TwitchChatBot.Core.Services
         /// </summary>
         /// <param name="commandText"></param>
         /// <returns></returns>
-        private (string command, string rawTarget) ParseCommandTuple(string commandText)
+        private (string command, string rawTarget, string ttsText) ParseCommandTuple(string commandText)
         {
-            var parts = commandText.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var command = parts[0].ToLowerInvariant();
-            var rawTarget = parts.Length > 1 ? parts[1].TrimStart('@') : string.Empty;
-            return (command, rawTarget);
+            if (string.IsNullOrWhiteSpace(commandText))
+            {
+                return (string.Empty, string.Empty, string.Empty);
+            }
+
+            // Split only once: [command] [remainder...]
+            var firstSplit = commandText.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            var command = firstSplit[0].ToLowerInvariant();
+            var remainder = firstSplit.Length > 1 ? firstSplit[1] : string.Empty;
+
+            // Only commands that actually need a target should parse one out here.
+            // Example: !so @user (or !so user)
+            string rawTarget = string.Empty;
+            if (command is "!so" or "!raid" or "!ban" or "!timeout") // extend as needed
+            {
+                var parts = remainder.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                rawTarget = parts.Length > 0 ? parts[0].TrimStart('@') : string.Empty;
+                remainder = parts.Length > 1 ? parts[1] : string.Empty; // remainder after the target
+            }
+
+            return (command, rawTarget, remainder);
+        }
+
+        /// <summary>
+        /// Gets ValueTuple of TTS voice and TTS text to speak
+        /// </summary>
+        /// <param name="remainder"></param>
+        /// <returns></returns>
+        private (string? voice, string text) ParseTtsArgs(string remainder)
+        {
+            if (string.IsNullOrWhiteSpace(remainder))
+            {
+                return (null, string.Empty);
+            }
+
+            // [maybeVoice] [rest...]
+            var parts = remainder.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 1)
+            {
+                return (null, parts[0]);
+            }
+
+            var maybeVoice = parts[0];
+            var rest = parts[1];
+
+            // Not a recognized voice → treat full remainder as text
+            return (maybeVoice, rest);
         }
 
         private CommandContext BuildContext(string username, string channel, string rawTarget)
@@ -118,17 +196,13 @@ namespace TwitchChatBot.Core.Services
         }
 
         /// <summary>
-        /// Supplies optional string.Format args per command. For most commands, return null/empty.
+        /// Supplies optional string format args per command. For most commands, return null/empty.
         /// </summary>
         private async Task<object[]?> GetFormatArgsForCommandAsync(string command, CommandContext ctx)
         {
             switch (command)
             {
                 case "!streak":
-                    // Optional: block excluded users
-                    if (await _excludedUsersService.IsUserExcludedAsync(ctx.Username))
-                        return Array.Empty<object>(); // no args -> message stays as-is (safe no-op)
-
                     var statsTuple = await _watchStreakService.GetStatsTupleAsync(ctx.Username);
                     return new object[] { statsTuple.Consecutive, statsTuple.Total };
 
@@ -152,7 +226,7 @@ namespace TwitchChatBot.Core.Services
                     var userId = await _helixLookupService.GetUserIdByLoginAsync(login, ct);
                     if (string.IsNullOrEmpty(userId))
                         return;
-                    
+
                     var game = await _helixLookupService.GetLastKnownGameByUserIdAsync(userId, ct);
                     if (!string.IsNullOrWhiteSpace(game))
                         ctx.Game = game; // token replacer will drop this into $game

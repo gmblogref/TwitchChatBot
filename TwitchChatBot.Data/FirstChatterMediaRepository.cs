@@ -14,7 +14,7 @@ namespace TwitchChatBot.Data
         public FirstChatterMediaRepository(ILogger<FirstChatterMediaRepository> logger)
         {
             _logger = logger;
-            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaMapFiles.FirstChattersMedia);
+            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaMapFiles.FirstChattersMedia!);
         }
 
         public async Task<bool> IsEligibleForFirstChatAsync(string username, CancellationToken cancellationToken = default)
@@ -39,7 +39,7 @@ namespace TwitchChatBot.Data
             _firstChattersMediaMap = await DataHelperMethods.LoadAsync<FirstChatterMediaMap>(
                 _filePath,
                 _logger,
-                AppSettings.MediaMapFiles.FirstChattersMedia,
+                AppSettings.MediaMapFiles.FirstChattersMedia!,
                 cancellationToken);
         }
     }

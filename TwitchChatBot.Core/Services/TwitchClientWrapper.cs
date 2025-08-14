@@ -191,9 +191,7 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            var trimmedMessage = e.ChatMessage.Message.Trim().ToLower();
-
-            if (trimmedMessage == "!clearfirst" && username == AppSettings.TWITCH_CHANNEL!.ToLower())
+            if (e.ChatMessage.Message.Trim().ToLower() == "!clearfirst" && username == AppSettings.TWITCH_CHANNEL!.ToLower())
             {
                 _firstChatterAlertService.ClearFirstChatters();
                 _logger.LogInformation("✅ First chatters list cleared by {User}", username);
@@ -203,9 +201,9 @@ namespace TwitchChatBot.Core.Services
 
             await _firstChatterAlertService.HandleFirstChatAsync(username, e.ChatMessage.Username);
 
-            if (trimmedMessage.StartsWith("!"))
+            if (e.ChatMessage.Message.Trim().StartsWith("!"))
             {
-                await _commandAlertService.HandleCommandAsync(trimmedMessage, username, channel, SendMessage);
+                await _commandAlertService.HandleCommandAsync(e.ChatMessage.Message.Trim(), username, channel, SendMessage);
             }
 
             OnMessageReceived?.Invoke(this, new TwitchMessageEventArgs

@@ -9,12 +9,16 @@ namespace TwitchChatBot
     {
         private readonly ChatBotController _chatBotController;
         private readonly ITestUtilityService _testUtilityService;
+        private readonly ITtsService _ttsService;
 
-        public TwitchChatBot(ChatBotController chatBotController, ITestUtilityService testUtilityService)
+        public TwitchChatBot(ChatBotController chatBotController,
+            ITestUtilityService testUtilityService,
+            ITtsService ttsService)
         {
             InitializeComponent();
             _chatBotController = chatBotController;
             _testUtilityService = testUtilityService;
+            _ttsService = ttsService;
         }
 
         public void AppendChat(string username, string message, Color nameColor)
@@ -324,6 +328,16 @@ namespace TwitchChatBot
             {
                 Console.WriteLine($"Error while closing: {ex.Message}");
             }
+        }
+
+        private void buttonTtsSkip_Click(object sender, EventArgs e)
+        {
+            _ttsService.SkipCurrent();
+        }
+
+        private void buttonTtsReset_Click(object sender, EventArgs e)
+        {
+            _ttsService.ResetQueue();
         }
     }
 }

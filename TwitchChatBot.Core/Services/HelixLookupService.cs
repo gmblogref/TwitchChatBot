@@ -98,7 +98,7 @@ namespace TwitchChatBot.Core.Services
 
             do
             {
-                var url = AppSettings.Chatters.ModsUrl.Replace("{broadcasterId}", Uri.EscapeDataString(broadcasterId))
+                var url = AppSettings.Chatters.ModsUrl!.Replace("{broadcasterId}", Uri.EscapeDataString(broadcasterId))
                         + (cursor is null ? "" : $"&after={Uri.EscapeDataString(cursor)}");
 
                 using var resp = await _httpClient.GetAsync(url, ct);
@@ -138,7 +138,7 @@ namespace TwitchChatBot.Core.Services
 
             do
             {
-                var url = AppSettings.Chatters.VipUrl.Replace("{broadcasterId}", Uri.EscapeDataString(broadcasterId))
+                var url = AppSettings.Chatters.VipUrl!.Replace("{broadcasterId}", Uri.EscapeDataString(broadcasterId))
                         + (cursor is null ? "" : $"&after={Uri.EscapeDataString(cursor)}");
 
                 using var resp = await _httpClient.GetAsync(url, ct);

@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.Text;
+﻿using Amazon;
+using Amazon.Polly;
+using Amazon.Polly.Model;
+using Amazon.Runtime.Credentials;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Models;
 
@@ -10,12 +13,29 @@ namespace TwitchChatBot.Core.Services
     {
         private readonly ILogger<TtsService> _logger;
         private readonly IAlertService _alertService;
+
         private readonly string _ttsOutputDir;
-        private readonly string _coquiExe; // Optional: path to custom run script or python command
-        private readonly string _coquiModel;
-        private readonly List<string> _generatedFiles = new();
-        private bool _disposed;
-        private const string DefaultSpeaker = "p225";
+        private readonly string _defaultVoice;
+        private readonly RegionEndpoint _region;
+        private readonly int _maxChars;
+
+        private readonly ConcurrentQueue<(string text, string? voice)> _queue = new();
+        private readonly CancellationTokenSource _runnerCts = new();
+        private CancellationTokenSource? _currentItemCts;
+        private Task? _runnerTask;
+        private volatile bool _disposed;
+
+        private volatile bool _hasAwsCreds;
+        private DateTime _lastCredCheckUtc = DateTime.MinValue;
+        private static readonly TimeSpan CredRecheckInterval = TimeSpan.FromMinutes(10);
+
+        // Allow‑list of Polly voices. Add any you want to permit.
+        private static readonly HashSet<string> PollyVoices = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Matthew","Joanna","Brian","Emma","Justin","Kimberly",
+            "Amy","Russell","Nicole","Olivia","Stephen",
+            "Salli","Joey","Ivy","Kendra"
+        };
 
         public TtsService(ILogger<TtsService> logger, IAlertService alertService)
         {
@@ -25,128 +45,252 @@ namespace TwitchChatBot.Core.Services
             _ttsOutputDir = Path.Combine(AppSettings.Media.TwitchAlertsFolder!, "text_to_speach");
             Directory.CreateDirectory(_ttsOutputDir);
 
-            _coquiExe = AppSettings.TTS.TtsExecutable;
-            _coquiModel = AppSettings.TTS.DefaultModel;
+            _defaultVoice = string.IsNullOrWhiteSpace(AppSettings.TTS.DefaultSpeaker)
+                ? "Matthew"
+                : AppSettings.TTS.DefaultSpeaker!;
+
+            var regionName = string.IsNullOrWhiteSpace(AppSettings.TTS.PollyRegion)
+                ? "us-east-1"
+                : AppSettings.TTS.PollyRegion!;
+            _region = RegionEndpoint.GetBySystemName(regionName);
+
+            _maxChars = AppSettings.TTS.MaxChars > 0 ? AppSettings.TTS.MaxChars : 350;
+
+            _runnerTask = Task.Run(RunAsync);
         }
 
-        public async Task SpeakAsync(string text, string? speakerOverride = null, string ? modelOverride = null)
+        public async Task SpeakAsync(string text, string? speakerOverride = null, string? modelOverride = null)
         {
-            var safeTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var wavFilename = $"tts_{safeTimestamp}.wav";
-            var mp3Filename = $"tts_{safeTimestamp}.mp3";
+            if (string.IsNullOrWhiteSpace(text)) return;
 
-            var wavPath = Path.Combine(_ttsOutputDir, wavFilename);
-            var mp3Path = Path.Combine(_ttsOutputDir, mp3Filename);
-            var publicPath = $"/media/text_to_speach/{mp3Filename}";
-
-            var model = string.IsNullOrWhiteSpace(modelOverride) ? _coquiModel : modelOverride;
-            var voice = string.IsNullOrWhiteSpace(speakerOverride) ? DefaultSpeaker : speakerOverride;
-
-            var ttsArgs = $"-m TTS.bin.synthesize --text \"{text.Replace("\"", "\\\"")}\" --model_name {model} --out_path \"{wavPath}\" --device cpu";
-
-            var psi = new ProcessStartInfo
+            if (!_hasAwsCreds)
             {
-                FileName = _coquiExe,
-                Arguments = ttsArgs,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8
-            };
-            psi.EnvironmentVariables["CUDA_VISIBLE_DEVICES"] = "-1";
+                _logger.LogWarning("🛑 Skipping TTS enqueue: AWS credentials not available.");
+                // opportunistic re-check if it's been a while
+                if (DateTime.UtcNow - _lastCredCheckUtc > CredRecheckInterval)
+                    await AwsCheckCredentialsAsync();
+                return;
+            }
 
-            _logger.LogInformation("🔊 Running TTS: {Args}", psi.Arguments);
+            _queue.Enqueue((text, speakerOverride));
+        }
 
+        public void SkipCurrent()
+        {
             try
             {
-                using var proc = Process.Start(psi);
-                if (proc == null)
-                {
-                    _logger.LogError("❌ Failed to start Coqui TTS process.");
-                    return;
-                }
-
-                await proc.WaitForExitAsync();
-
-                var errors = await proc.StandardError.ReadToEndAsync();
-                if (!string.IsNullOrEmpty(errors))
-                {
-                    _logger.LogWarning("⚠️ Coqui stderr: {Errors}", errors);
-                }
-
-                if (!File.Exists(wavPath))
-                {
-                    _logger.LogWarning("❌ TTS output file not found: {Path}", wavPath);
-                    return;
-                }
-
-                // Convert to MP3 using ffmpeg
-                var ffmpegArgs = $"-y -i \"{wavPath}\" \"{mp3Path}\"";
-                var ffmpegStartInfo = new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = ffmpegArgs,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                _logger.LogInformation("🎵 Converting WAV to MP3: {Args}", ffmpegArgs);
-
-                using var ffmpegProc = Process.Start(ffmpegStartInfo);
-                if (ffmpegProc == null)
-                {
-                    _logger.LogError("❌ Failed to start ffmpeg process.");
-                    return;
-                }
-
-                await ffmpegProc.WaitForExitAsync();
-                var ffmpegErrors = await ffmpegProc.StandardError.ReadToEndAsync();
-                if (!string.IsNullOrEmpty(ffmpegErrors))
-                {
-                    _logger.LogWarning("⚠️ ffmpeg stderr: {Errors}", ffmpegErrors);
-                }
-
-                if (!File.Exists(mp3Path))
-                {
-                    _logger.LogError("❌ MP3 file was not created: {Path}", mp3Path);
-                    return;
-                }
-
-                _generatedFiles.Add(mp3Path);
-                _alertService.EnqueueAlert("", publicPath);
-
-                File.Delete(wavPath);
-                _logger.LogInformation("🧹 Deleted temporary WAV file: {Path}", wavPath);
+                _currentItemCts?.Cancel();
+                _logger.LogInformation("⏭️ Polly TTS skip requested.");
             }
-            catch (Exception ex)
+            catch { /* ignore */ }
+        }
+
+        public void ResetQueue()
+        {
+            try
             {
-                _logger.LogError(ex, "❌ Error running Coqui TTS");
+                while (_queue.TryDequeue(out _)) { }
+                _currentItemCts?.Cancel();
+                _logger.LogInformation("♻️ Polly TTS queue reset (cleared & canceled current).");
             }
+            catch { /* ignore */ }
         }
 
         public void Dispose()
         {
             if (_disposed) return;
+            _disposed = true;
 
             try
             {
-                foreach (var file in _generatedFiles)
+                _runnerCts.Cancel();
+                _currentItemCts?.Cancel();
+            }
+            catch { /* ignore */ }
+
+            try
+            {
+                if (Directory.Exists(_ttsOutputDir))
                 {
-                    if (File.Exists(file))
-                        File.Delete(file);
+                    foreach (var file in Directory.EnumerateFiles(_ttsOutputDir, "*.*", SearchOption.TopDirectoryOnly))
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                            _logger.LogInformation("🧹 Deleted TTS file: {File}", file);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "⚠️ Failed to delete TTS file: {File}", file);
+                        }
+                    }
                 }
-                _logger.LogInformation("🧹 TTS temp files deleted on shutdown.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "⚠️ Failed to clean up TTS files.");
+                _logger.LogError(ex, "⚠️ Failed to clean up TTS folder.");
+            }
+        }
+
+        private async Task RunAsync()
+        {
+            // Log credentials status once at startup of the TTS runner
+            await AwsCheckCredentialsAsync(); 
+            
+            using var polly = new AmazonPollyClient(_region);
+            var token = _runnerCts.Token;
+
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    if (DateTime.UtcNow - _lastCredCheckUtc > CredRecheckInterval)
+                    {
+                        await AwsCheckCredentialsAsync();
+                    }
+
+                    if (!_queue.TryDequeue(out var job))
+                    {
+                        await Task.Delay(50, token);
+                        continue;
+                    }
+
+                    _currentItemCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    try
+                    {
+                        await ProcessOneAsync(polly, job.text, job.voice, _currentItemCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("⏹️ Polly TTS item canceled.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "❌ Polly TTS item failed.");
+                    }
+                    finally
+                    {
+                        _currentItemCts.Dispose();
+                        _currentItemCts = null;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // shutting down
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Polly TTS runner loop error; continuing.");
+                    await Task.Delay(250, token);
+                }
+            }
+        }
+
+        private async Task ProcessOneAsync(AmazonPollyClient polly, string rawText, string? voiceOverride, CancellationToken ct)
+        {
+            var text = Sanitize(rawText, _maxChars);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
             }
 
-            _disposed = true;
+            var voice = ResolveVoice(voiceOverride);
+            var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+            var mp3Path = Path.Combine(_ttsOutputDir, $"tts_{ts}.mp3");
+            var publicPath = $"/media/text_to_speach/{Path.GetFileName(mp3Path)}";
+
+            // Prefer Neural if supported; fallback to Standard automatically.
+            var req = new SynthesizeSpeechRequest
+            {
+                Text = text,
+                VoiceId = voice,
+                OutputFormat = OutputFormat.Mp3,
+                Engine = Engine.Neural
+            };
+
+            _logger.LogInformation("🔊 Polly synth: {Voice} (pref: Neural) \"{Preview}\"",
+                voice, text.Length > 80 ? text[..80] + "…" : text);
+
+            try
+            {
+                using var resp = await polly.SynthesizeSpeechAsync(req, ct);
+                await using var fs = File.Create(mp3Path);
+                await resp.AudioStream.CopyToAsync(fs, ct);
+            }
+            catch (AmazonPollyException ex) when (ex.Message.Contains("Neural", StringComparison.OrdinalIgnoreCase))
+            {
+                // Voice/region may not support Neural; retry with Standard.
+                _logger.LogInformation("ℹ️ Voice {Voice} not Neural in {Region}. Retrying with Standard.", voice, _region.SystemName);
+                req.Engine = Engine.Standard;
+                using var resp = await polly.SynthesizeSpeechAsync(req, ct);
+                await using var fs = File.Create(mp3Path);
+                await resp.AudioStream.CopyToAsync(fs, ct);
+            }
+
+            _alertService.EnqueueAlert("", publicPath);
+            _logger.LogInformation("✅ Polly TTS ready: {File}", mp3Path);
+        }
+
+        private string ResolveVoice(string? voiceOverride)
+        {
+            if (!string.IsNullOrWhiteSpace(voiceOverride) && PollyVoices.Contains(voiceOverride))
+            {
+                return voiceOverride;
+            }
+
+            return _defaultVoice;
+        }
+
+        private string Sanitize(string s, int maxChars)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+
+            // Collapse excessive repeats (e.g., looooool -> loool) + trim + hard cap.
+            var sb = new System.Text.StringBuilder(s.Length);
+            int run = 0; char prev = '\0';
+            foreach (var ch in s)
+            {
+                if (ch == prev) run++; else { prev = ch; run = 1; }
+                if (run <= 4) sb.Append(ch);
+            }
+            var trimmed = sb.ToString().Trim();
+            return trimmed.Length > maxChars ? trimmed[..maxChars] + "…" : trimmed;
+        }
+
+        private async Task AwsCheckCredentialsAsync()
+        {
+            try
+            {
+                var resolver = new DefaultAWSCredentialsIdentityResolver();
+                var config = new AmazonPollyConfig { RegionEndpoint = _region };
+
+                var identity = await resolver.ResolveIdentityAsync(config, CancellationToken.None);
+                _lastCredCheckUtc = DateTime.UtcNow;
+
+                if (identity == null)
+                {
+                    _hasAwsCreds = false;
+                    _logger.LogWarning("⚠️ AWS credentials not found. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars or use ~/.aws/credentials.");
+                    return;
+                }
+
+                var immutableCreds = identity.GetCredentials(); // correct for your version
+                if (string.IsNullOrWhiteSpace(immutableCreds.AccessKey) || string.IsNullOrWhiteSpace(immutableCreds.SecretKey))
+                {
+                    _hasAwsCreds = false;
+                    _logger.LogWarning("⚠️ AWS credentials are configured but empty. Check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY values.");
+                    return;
+                }
+
+                _hasAwsCreds = true;
+                _logger.LogInformation("✅ AWS credentials detected for AccessKey: {KeyId}", immutableCreds.AccessKey);
+            }
+            catch (Exception ex)
+            {
+                _hasAwsCreds = false;
+                _lastCredCheckUtc = DateTime.UtcNow;
+                _logger.LogError(ex, "❌ Failed to load AWS credentials. Polly TTS will not work until credentials are fixed.");
+            }
         }
     }
 }
