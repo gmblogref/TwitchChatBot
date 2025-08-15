@@ -71,6 +71,28 @@ namespace TwitchChatBot.Models
             public static int MaxChars => GetIntSetting("TTS:MaxChars");
         }
 
+        public static class Voices
+        {
+            public static string Cheer => GetSetting("TTS:Voices:Cheer");
+            public static string Subscribe => GetSetting("TTS:Voices:Subscribe");
+            public static string SubscriptionMessage => GetSetting("TTS:Voices:SubscriptionMessage");
+            public static string GiftSubs => GetSetting("TTS:Voices:GiftSubs");
+            public static string Raid => GetSetting("TTS:Voices:Raid");
+            public static string Follow => GetSetting("TTS:Voices:Follow");
+            public static string SingleGiftSub => GetSetting("TTS:Voices:SingleGiftSub");
+        }
+
+        public static class Templates
+        {
+            public static string Follow => GetSetting("TTS:Templates:Follow");
+            public static string Raid => GetSetting("TTS:Templates:Raid");
+            public static string CheerNoMessage => GetSetting("TTS:Templates:CheerNoMessage");
+            public static string SubNoMessage => GetSetting("TTS:Templates:SubNoMessage");
+            public static string ReSub => GetSetting("TTS:Templates:ReSub");
+            public static string MysteryGift => GetSetting("TTS:Templates:MysteryGift");
+            public static string SingleGiftSub => GetSetting("TTS:Templates:SingleGiftSub");
+        }
+        
         public static class Commands
         {
             public static string UsersByLogin => GetSetting("Commands:UsersByLogin");
