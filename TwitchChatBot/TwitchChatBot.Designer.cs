@@ -52,7 +52,6 @@
             buttonTestRaid = new Button();
             buttonTestMysteryGift = new Button();
             buttonTestHypeTrain = new Button();
-            buttonClearFirst = new Button();
             groupBoxTextEntryTests = new GroupBox();
             comboBoxTtsSpeaker = new ComboBox();
             textBoxTtsText = new TextBox();
@@ -70,6 +69,7 @@
             labelLogging = new Label();
             buttonTestBot = new Button();
             buttonStopBot = new Button();
+            buttonClearFirst = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
             tabPageUtilities.SuspendLayout();
@@ -175,6 +175,7 @@
             // 
             // tabPageUtilities
             // 
+            tabPageUtilities.Controls.Add(buttonClearFirst);
             tabPageUtilities.Controls.Add(groupBoxTts);
             tabPageUtilities.Location = new Point(4, 39);
             tabPageUtilities.Name = "tabPageUtilities";
@@ -241,7 +242,6 @@
             groupBoxButtonTests.Controls.Add(buttonTestRaid);
             groupBoxButtonTests.Controls.Add(buttonTestMysteryGift);
             groupBoxButtonTests.Controls.Add(buttonTestHypeTrain);
-            groupBoxButtonTests.Controls.Add(buttonClearFirst);
             groupBoxButtonTests.Font = new Font("Arial Black", 12F, FontStyle.Bold);
             groupBoxButtonTests.Location = new Point(24, 45);
             groupBoxButtonTests.Name = "groupBoxButtonTests";
@@ -311,7 +311,7 @@
             // buttonTestReSub
             // 
             buttonTestReSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestReSub.Location = new Point(10, 155);
+            buttonTestReSub.Location = new Point(207, 245);
             buttonTestReSub.Name = "buttonTestReSub";
             buttonTestReSub.Size = new Size(163, 40);
             buttonTestReSub.TabIndex = 2;
@@ -333,7 +333,7 @@
             // buttonTestRaid
             // 
             buttonTestRaid.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestRaid.Location = new Point(10, 200);
+            buttonTestRaid.Location = new Point(10, 157);
             buttonTestRaid.Name = "buttonTestRaid";
             buttonTestRaid.Size = new Size(163, 40);
             buttonTestRaid.TabIndex = 1;
@@ -355,24 +355,13 @@
             // buttonTestHypeTrain
             // 
             buttonTestHypeTrain.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestHypeTrain.Location = new Point(10, 245);
+            buttonTestHypeTrain.Location = new Point(10, 203);
             buttonTestHypeTrain.Name = "buttonTestHypeTrain";
             buttonTestHypeTrain.Size = new Size(163, 40);
             buttonTestHypeTrain.TabIndex = 4;
             buttonTestHypeTrain.Text = "Hype Train";
             buttonTestHypeTrain.UseVisualStyleBackColor = true;
             buttonTestHypeTrain.Click += buttonTestHypeTrain_Click;
-            // 
-            // buttonClearFirst
-            // 
-            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonClearFirst.Location = new Point(207, 245);
-            buttonClearFirst.Name = "buttonClearFirst";
-            buttonClearFirst.Size = new Size(163, 40);
-            buttonClearFirst.TabIndex = 16;
-            buttonClearFirst.Text = "Clear First";
-            buttonClearFirst.UseVisualStyleBackColor = true;
-            buttonClearFirst.Click += buttonClearFirst_Click;
             // 
             // groupBoxTextEntryTests
             // 
@@ -563,6 +552,16 @@
             buttonStopBot.UseVisualStyleBackColor = false;
             buttonStopBot.Click += buttonStopBot_Click;
             // 
+            // buttonClearFirst
+            // 
+            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonClearFirst.Location = new Point(33, 180);
+            buttonClearFirst.Name = "buttonClearFirst";
+            buttonClearFirst.Size = new Size(163, 40);
+            buttonClearFirst.TabIndex = 17;
+            buttonClearFirst.Text = "Clear First";
+            buttonClearFirst.UseVisualStyleBackColor = true;
+            // 
             // TwitchChatBot
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -619,7 +618,6 @@
         private TextBox textBits;
         private Button buttonTestCheer;
         private Button buttonTestFollow;
-        private Button buttonClearFirst;
         private Label labelViewers;
         private RichTextBox richTextBoxViewers;
         private GroupBox groupBoxTextEntryTests;
@@ -637,5 +635,6 @@
         private GroupBox groupBoxTts;
         private Button buttonTtsReset;
         private Button buttonTtsSkip;
+        private Button buttonClearFirst;
     }
 }

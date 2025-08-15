@@ -38,16 +38,15 @@ public class TestUtilityService : ITestUtilityService
         await _twitchAlertTypesService.HandleRaidAsync(userName, viewers);
 
     public async Task TriggerReSubTestAsync(string userName, int months) =>
-        await _twitchAlertTypesService.HandleResubAsync(userName, months, $"{months} months that's almost a year");
+        await _twitchAlertTypesService.HandleResubAsync(userName, months, $"{months} months that's almost a year", "1000");
     
     public async Task TriggerSubGiftTestAsync(string userName, string recipient) =>
-        await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient);
+        await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient, "2000");
 
     public async Task TriggerSubMysteryGiftTestAsync(string userName, int subs) =>
-        await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, subs);
+        await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, subs, "3000");
     public async Task TriggerSubTestAsync(string userName) =>
-        await _twitchAlertTypesService.HandleSubscriptionAsync(userName);
-
+        await _twitchAlertTypesService.HandleSubscriptionAsync(userName, "");
     
     // Commands Test
     public async Task TriggerCommandTestAsync(string command) =>

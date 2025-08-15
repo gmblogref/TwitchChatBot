@@ -174,6 +174,7 @@ namespace TwitchChatBot.UI.Services
                             string userName = "someone";
                             var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                             var eventPayload = root.GetProperty("payload").GetProperty("event");
+                            var subTier = "1000";
 
                             switch (subscriptionType)
                             {
@@ -198,20 +199,35 @@ namespace TwitchChatBot.UI.Services
 
                                 case TwitchEventTypes.ChannelSubscribe:
                                     userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
-                                    await _twitchAlertTypesService.HandleSubscriptionAsync(userName);
+                                    subTier = GetSubTier(eventPayload);
+
+                                    await _twitchAlertTypesService.HandleSubscriptionAsync(userName, subTier);
                                     break;
 
                                 case TwitchEventTypes.ChannelSubscriptionGift:
-                                    userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
+                                    userName = eventPayload.GetProperty("user_name").GetString() == null ? userName : "someone";
                                     var recipient = eventPayload.GetProperty("recipient_user_name").GetString() ?? "someone";
-                                    await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient);
+                                    subTier = GetSubTier(eventPayload);
+                                    var totalGifts = eventPayload.TryGetProperty("total", out var totalVal) ? totalVal.GetInt32() : 1;
+
+                                    if (totalGifts > 1)
+                                    {
+                                        // Mystery gift bundle
+                                        await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, totalGifts, subTier);
+                                    }
+                                    else
+                                    {
+                                        await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient, subTier!);
+                                    }
                                     break;
 
-                                case TwitchEventTypes.ChannelSubscriptionMessage:
+                               case TwitchEventTypes.ChannelSubscriptionMessage:
                                     userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                     var months = eventPayload.GetProperty("cumulative_months").GetInt32();
                                     var resubMessage = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
-                                    await _twitchAlertTypesService.HandleResubAsync(userName, months, resubMessage);
+                                    subTier = GetSubTier(eventPayload);
+                                    
+                                    await _twitchAlertTypesService.HandleResubAsync(userName, months, resubMessage, subTier);
                                     break;
 
                                 case TwitchEventTypes.HypeTrainBegin:
@@ -402,6 +418,15 @@ namespace TwitchChatBot.UI.Services
                 _logger.LogWarning(ex, "Failed to validate token for user id.");
                 return null;
             }
+        }
+
+        private string GetSubTier(JsonElement eventPayload)
+        {
+            var result = eventPayload.TryGetProperty("tier", out var t) && t.ValueKind == JsonValueKind.String
+                                        ? t.GetString()
+                                        : "1000";
+
+            return result ?? "1000";
         }
     }
 }

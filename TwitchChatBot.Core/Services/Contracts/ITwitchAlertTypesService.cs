@@ -5,8 +5,8 @@
     Task HandleFollowAsync(string username);
     Task HandleHypeTrainAsync();
     Task HandleRaidAsync(string username, int viewers);
-    Task HandleResubAsync(string username, int months, string userMessage);
-    Task HandleSubGiftAsync(string username, string recipient);
-    Task HandleSubMysteryGiftAsync(string username, int numOfSubs);
-    Task HandleSubscriptionAsync(string username);
+    Task HandleResubAsync(string username, int months, string userMessage, string subTier);
+    Task HandleSubGiftAsync(string username, string recipient, string subTier);
+    Task HandleSubMysteryGiftAsync(string username, int numOfSubs, string subTier);
+    Task HandleSubscriptionAsync(string username, string subTier);
 }
