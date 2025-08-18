@@ -10,17 +10,16 @@ namespace TwitchChatBot.Core.Services
     {
         private readonly ILogger<WatchStreakService> _logger;
         private readonly IExcludedUsersService _excludedUsersService;
+        private readonly IAppFlags _appFlags;
         private readonly string _filePath;
         private readonly object _sync = new();
-        private StreamSessionMode _mode = StreamSessionMode.Off;
         private bool _streamOpen;
         private State _state = new();
         private readonly HashSet<string> _attendeesThisStream = new(StringComparer.OrdinalIgnoreCase);
-        
-        public StreamSessionMode Mode { get { lock (_sync) return _mode; } }
-        public bool IsLive { get { lock (_sync) return _mode == StreamSessionMode.Live; } }
 
-        public WatchStreakService(ILogger<WatchStreakService> logger, IExcludedUsersService excludedUsersService)
+        public WatchStreakService(ILogger<WatchStreakService> logger,
+            IExcludedUsersService excludedUsersService,
+            IAppFlags appFlags)
         {
             _logger = logger;
             var baseFolder = AppSettings.Media.TwitchAlertsFolder
@@ -30,26 +29,27 @@ namespace TwitchChatBot.Core.Services
             Directory.CreateDirectory(baseFolder);
             Load();
             _excludedUsersService = excludedUsersService;
+            _appFlags = appFlags;
         }
 
-        public void BeginStream(StreamSessionMode mode)
+        public void BeginStream()
         {
             lock (_sync)
             {
-                if (_streamOpen && _mode == mode) return;
+                if (_streamOpen && _appFlags.IsTesting)
+                    return;
 
-                _mode = mode;
                 _streamOpen = true;
                 _attendeesThisStream.Clear();
 
-                if (_mode == StreamSessionMode.Live)
+                if (_appFlags.IsTesting)
                 {
-                    _state.CurrentStreamIndex += 1;
-                    _logger.LogInformation("📡 Stream started (LIVE). Index now {Index}.", _state.CurrentStreamIndex);
+                    _logger.LogInformation("🧪 Stream started (TESTING). Stats will not be updated.");
                 }
                 else
                 {
-                    _logger.LogInformation("🧪 Stream started (TESTING). Stats will not be updated.");
+                    _state.CurrentStreamIndex += 1;
+                    _logger.LogInformation("📡 Stream started (LIVE). Index now {Index}.", _state.CurrentStreamIndex);
                 }
 
                 Save();
@@ -60,26 +60,29 @@ namespace TwitchChatBot.Core.Services
         {
             lock (_sync)
             {
-                if (!_streamOpen) return;
+                if (!_streamOpen || _appFlags.IsTesting)
+                    return;
+
                 _streamOpen = false;
                 _attendeesThisStream.Clear();
-                _logger.LogInformation("🏁 Stream ended. Mode was {Mode}.", _mode);
-                _mode = StreamSessionMode.Off;
                 Save();
             }
         }
 
         public async Task MarkAttendanceAsync(string userName)
         {
-            if (string.IsNullOrWhiteSpace(userName) || await _excludedUsersService.IsUserExcludedAsync(userName))
+            if (string.IsNullOrWhiteSpace(userName) ||
+                await _excludedUsersService.IsUserExcludedAsync(userName) ||
+                !_streamOpen ||
+                _appFlags.IsTesting)
             {
                 return;
             }
 
             lock (_sync)
             {
-                if (!_streamOpen || _mode != StreamSessionMode.Live) return;
-                if (!_attendeesThisStream.Add(userName)) return;
+                if (!_attendeesThisStream.Add(userName)) 
+                    return;
 
                 if (!_state.Users.TryGetValue(userName, out var u))
                 {
@@ -102,7 +105,12 @@ namespace TwitchChatBot.Core.Services
 
         public async Task MarkAttendanceBatchAsync(IEnumerable<string> userNames)
         {
-            if (userNames == null) return;
+            if (userNames == null ||
+                !_streamOpen ||
+                _appFlags.IsTesting)
+            {
+                return;
+            }
 
             // 1) Do async filtering outside the lock
             var toMark = new List<string>();
@@ -119,8 +127,6 @@ namespace TwitchChatBot.Core.Services
             // 2) Lock only while mutating shared state
             lock (_sync)
             {
-                if (!_streamOpen || _mode != StreamSessionMode.Live) return;
-
                 foreach (var user in toMark)
                 {
                     if (string.IsNullOrWhiteSpace(user))

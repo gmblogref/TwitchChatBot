@@ -13,6 +13,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IExcludedUsersService _excludedUsersService;
         private readonly IAlertService _alertService;
         private readonly IWatchStreakService _watchStreakService;
+        private readonly IAlertHistoryService _alertHistoryService;
         private readonly Action<string, string> _sendMessage;
         private HashSet<string> _firstChatters = [];
 
@@ -25,6 +26,7 @@ namespace TwitchChatBot.Core.Services
             IExcludedUsersService excludedUsersService,
             IAlertService alertService,
             IWatchStreakService watchStreakService,
+            IAlertHistoryService alertHistoryService,
             Action<string, string> sendMessage)
         {
             _logger = logger;
@@ -32,6 +34,7 @@ namespace TwitchChatBot.Core.Services
             _excludedUsersService = excludedUsersService;
             _alertService = alertService;
             _watchStreakService = watchStreakService;
+            _alertHistoryService = alertHistoryService;
             _sendMessage = sendMessage;
         }
 
@@ -61,6 +64,14 @@ namespace TwitchChatBot.Core.Services
 
             if (mediaFileName != null)
             {
+                _alertHistoryService.Add(new AlertHistoryEntry
+                {
+                    Type = AlertHistoryType.First,
+                    Display = $"First Chatter: {username}",
+                    Username = username,
+                    DisplayName = displayName,
+                });
+
                 _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaFileName));
             }
             else
