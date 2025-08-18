@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Windows.Forms;
-using TwitchChatBot.Core.Controller;
+﻿using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot
 {
@@ -10,15 +9,26 @@ namespace TwitchChatBot
         private readonly ChatBotController _chatBotController;
         private readonly ITestUtilityService _testUtilityService;
         private readonly ITtsService _ttsService;
+        private readonly IAlertHistoryService _alertHistoryService;
+        private readonly IAlertReplayService _alertReplayService;
+        private readonly IAppFlags _appFlags;
 
         public TwitchChatBot(ChatBotController chatBotController,
             ITestUtilityService testUtilityService,
-            ITtsService ttsService)
+            ITtsService ttsService,
+            IAlertHistoryService alertHistoryService,
+            IAlertReplayService alertReplayService,
+            IAppFlags appFlags)
         {
             InitializeComponent();
             _chatBotController = chatBotController;
             _testUtilityService = testUtilityService;
             _ttsService = ttsService;
+            _alertHistoryService = alertHistoryService;
+            _alertReplayService = alertReplayService;
+            _appFlags = appFlags;
+
+            InitializeAlertHistoryUi();
         }
 
         public void AppendChat(string username, string message, Color nameColor)
@@ -96,6 +106,62 @@ namespace TwitchChatBot
             }
 
             richTextBoxViewers.SelectionColor = richTextBoxViewers.ForeColor;
+        }
+
+        private void InitializeAlertHistoryUi()
+        {
+            // Columns
+            listViewAlertHistory.Columns.Clear();
+            listViewAlertHistory.Columns.Add("Time", 90);
+            listViewAlertHistory.Columns.Add("Type", 140);
+            listViewAlertHistory.Columns.Add("User", 140);
+            listViewAlertHistory.Columns.Add("Summary", 600);
+
+            listViewAlertHistory.View = View.Details;
+            listViewAlertHistory.FullRowSelect = true;
+            listViewAlertHistory.GridLines = true;
+            listViewAlertHistory.HideSelection = false;
+            listViewAlertHistory.MultiSelect = false;
+
+            // Seed from snapshot
+            foreach (var e in _alertHistoryService.Snapshot())
+                AddHistoryRow(e);
+
+            // Live updates
+            _alertHistoryService.EntryAdded += entry =>
+            {
+                if (InvokeRequired)
+                    BeginInvoke((Action)(() => AddHistoryRow(entry)));
+                else
+                    AddHistoryRow(entry);
+            };
+        }
+
+        private void AddHistoryRow(AlertHistoryEntry e)
+        {
+            var lvi = new ListViewItem(new[]
+            {
+                e.Timestamp.ToString("HH:mm:ss"),
+                e.Type,
+                e.Username ?? string.Empty,
+                e.Display
+            })
+            { Tag = e };
+
+            listViewAlertHistory.Items.Add(lvi);
+            listViewAlertHistory.Columns[listViewAlertHistory.Columns.Count - 1].Width = -2;
+
+            if (listViewAlertHistory.Items.Count > 0)
+                listViewAlertHistory.EnsureVisible(listViewAlertHistory.Items.Count - 1);
+        }
+
+        private async void ReplaySelectedAlert()
+        {
+            if (listViewAlertHistory.SelectedItems.Count == 0)
+                return;
+
+            if (listViewAlertHistory.SelectedItems[0].Tag is AlertHistoryEntry entry)
+                await _alertReplayService.ReplayAsync(entry);
         }
 
         private bool IsTooDark(Color color)
@@ -280,7 +346,8 @@ namespace TwitchChatBot
         {
             try
             {
-                await _chatBotController.StartAsync(StreamSessionMode.Testing);
+                _appFlags.IsTesting = true;
+                await _chatBotController.StartAsync();
                 buttonStartBot.Enabled = false;
                 buttonTestBot.Enabled = false;
             }
@@ -294,7 +361,8 @@ namespace TwitchChatBot
         {
             try
             {
-                await _chatBotController.StartAsync(StreamSessionMode.Live);
+                _appFlags.IsTesting = false;
+                await _chatBotController.StartAsync();
                 buttonStartBot.Enabled = false;
                 buttonTestBot.Enabled = false;
             }
@@ -338,6 +406,16 @@ namespace TwitchChatBot
         private void buttonTtsReset_Click(object sender, EventArgs e)
         {
             _ttsService.ResetQueue();
+        }
+
+        private void buttonReplayAlert_Click(object sender, EventArgs e)
+        {
+            ReplaySelectedAlert();
+        }
+
+        private void listViewAlertHistory_DoubleClick(object sender, EventArgs e)
+        {
+            ReplaySelectedAlert();
         }
     }
 }

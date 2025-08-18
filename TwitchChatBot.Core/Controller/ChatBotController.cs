@@ -17,6 +17,7 @@ namespace TwitchChatBot.Core.Controller
         private readonly IWebSocketServer _webSocketServer;
         private readonly IWebHostWrapper _webHostWrapper;
         private readonly IWatchStreakService _watchStreakService;
+        private readonly IAppFlags _appFlags;
 
         private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
@@ -29,7 +30,8 @@ namespace TwitchChatBot.Core.Controller
         ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
         IWebHostWrapper webHostWrapper,
-        IWatchStreakService watchStreakService)
+        IWatchStreakService watchStreakService,
+        IAppFlags appFlags)
         {
             _alertService = alertService;
             _eventSubService = eventSubService;
@@ -39,6 +41,7 @@ namespace TwitchChatBot.Core.Controller
             _webSocketServer = webSocketServer;
             _webHostWrapper = webHostWrapper;
             _watchStreakService = watchStreakService;
+            _appFlags = appFlags;
         }
 
         public bool IsStarted => Interlocked.CompareExchange(ref _started, 1, 1) == 1;
@@ -48,7 +51,7 @@ namespace TwitchChatBot.Core.Controller
             _uiBridge = bridge;
         }
 
-        public async Task StartAsync(StreamSessionMode streamSessionMode, CancellationToken cancellationToken = default)
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -86,7 +89,7 @@ namespace TwitchChatBot.Core.Controller
                 await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
 
-                _watchStreakService.BeginStream(streamSessionMode);
+                _watchStreakService.BeginStream();
 
                 _logger.LogInformation("🎉 ChatBotController started successfully.");
             }

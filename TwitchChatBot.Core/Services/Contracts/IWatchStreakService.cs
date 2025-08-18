@@ -2,14 +2,9 @@
 
 namespace TwitchChatBot.Core.Services.Contracts
 {
-    public enum StreamSessionMode { Off = 0, Testing = 1, Live = 2 }
-
     public interface IWatchStreakService
     {
-        StreamSessionMode Mode { get; }
-        bool IsLive { get; }
-
-        void BeginStream(StreamSessionMode mode);
+        void BeginStream();
         void EndStream();
 
         Task MarkAttendanceAsync(string userName);

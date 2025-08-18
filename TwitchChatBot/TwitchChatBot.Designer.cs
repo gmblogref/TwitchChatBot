@@ -36,6 +36,10 @@
             richTextBoxStreamChat = new RichTextBox();
             labelChatBox = new Label();
             tabPageUtilities = new TabPage();
+            groupBoxAlertHistory = new GroupBox();
+            buttonReplayAlert = new Button();
+            listViewAlertHistory = new ListView();
+            buttonClearFirst = new Button();
             groupBoxTts = new GroupBox();
             buttonTtsReset = new Button();
             buttonTtsSkip = new Button();
@@ -69,10 +73,10 @@
             labelLogging = new Label();
             buttonTestBot = new Button();
             buttonStopBot = new Button();
-            buttonClearFirst = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
             tabPageUtilities.SuspendLayout();
+            groupBoxAlertHistory.SuspendLayout();
             groupBoxTts.SuspendLayout();
             tabTesting.SuspendLayout();
             groupBoxButtonTests.SuspendLayout();
@@ -175,6 +179,7 @@
             // 
             // tabPageUtilities
             // 
+            tabPageUtilities.Controls.Add(groupBoxAlertHistory);
             tabPageUtilities.Controls.Add(buttonClearFirst);
             tabPageUtilities.Controls.Add(groupBoxTts);
             tabPageUtilities.Location = new Point(4, 39);
@@ -183,6 +188,49 @@
             tabPageUtilities.TabIndex = 3;
             tabPageUtilities.Text = "Utilities Tab";
             tabPageUtilities.UseVisualStyleBackColor = true;
+            // 
+            // groupBoxAlertHistory
+            // 
+            groupBoxAlertHistory.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBoxAlertHistory.Controls.Add(buttonReplayAlert);
+            groupBoxAlertHistory.Controls.Add(listViewAlertHistory);
+            groupBoxAlertHistory.Location = new Point(497, 24);
+            groupBoxAlertHistory.Name = "groupBoxAlertHistory";
+            groupBoxAlertHistory.Size = new Size(604, 412);
+            groupBoxAlertHistory.TabIndex = 18;
+            groupBoxAlertHistory.TabStop = false;
+            groupBoxAlertHistory.Text = "Alert History";
+            // 
+            // buttonReplayAlert
+            // 
+            buttonReplayAlert.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            buttonReplayAlert.Location = new Point(72, 357);
+            buttonReplayAlert.Name = "buttonReplayAlert";
+            buttonReplayAlert.Size = new Size(101, 49);
+            buttonReplayAlert.TabIndex = 1;
+            buttonReplayAlert.Text = "Replay";
+            buttonReplayAlert.UseVisualStyleBackColor = true;
+            buttonReplayAlert.Click += buttonReplayAlert_Click;
+            // 
+            // listViewAlertHistory
+            // 
+            listViewAlertHistory.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            listViewAlertHistory.Location = new Point(23, 35);
+            listViewAlertHistory.Name = "listViewAlertHistory";
+            listViewAlertHistory.Size = new Size(535, 302);
+            listViewAlertHistory.TabIndex = 0;
+            listViewAlertHistory.UseCompatibleStateImageBehavior = false;
+            listViewAlertHistory.DoubleClick += listViewAlertHistory_DoubleClick;
+            // 
+            // buttonClearFirst
+            // 
+            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonClearFirst.Location = new Point(33, 180);
+            buttonClearFirst.Name = "buttonClearFirst";
+            buttonClearFirst.Size = new Size(163, 40);
+            buttonClearFirst.TabIndex = 17;
+            buttonClearFirst.Text = "Clear First";
+            buttonClearFirst.UseVisualStyleBackColor = true;
             // 
             // groupBoxTts
             // 
@@ -552,16 +600,6 @@
             buttonStopBot.UseVisualStyleBackColor = false;
             buttonStopBot.Click += buttonStopBot_Click;
             // 
-            // buttonClearFirst
-            // 
-            buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonClearFirst.Location = new Point(33, 180);
-            buttonClearFirst.Name = "buttonClearFirst";
-            buttonClearFirst.Size = new Size(163, 40);
-            buttonClearFirst.TabIndex = 17;
-            buttonClearFirst.Text = "Clear First";
-            buttonClearFirst.UseVisualStyleBackColor = true;
-            // 
             // TwitchChatBot
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -571,7 +609,7 @@
             Controls.Add(buttonTestBot);
             Controls.Add(tabControlChatBot);
             Controls.Add(buttonStartBot);
-            MinimumSize = new Size(1091, 551);
+            MinimumSize = new Size(1168, 626);
             Name = "TwitchChatBot";
             Text = "Twitch Chat Bot";
             FormClosing += TwitchChatBot_FormClosing;
@@ -579,6 +617,7 @@
             tabPageMainChat.ResumeLayout(false);
             tabPageMainChat.PerformLayout();
             tabPageUtilities.ResumeLayout(false);
+            groupBoxAlertHistory.ResumeLayout(false);
             groupBoxTts.ResumeLayout(false);
             tabTesting.ResumeLayout(false);
             groupBoxButtonTests.ResumeLayout(false);
@@ -636,5 +675,8 @@
         private Button buttonTtsReset;
         private Button buttonTtsSkip;
         private Button buttonClearFirst;
+        private GroupBox groupBoxAlertHistory;
+        private ListView listViewAlertHistory;
+        private Button buttonReplayAlert;
     }
 }

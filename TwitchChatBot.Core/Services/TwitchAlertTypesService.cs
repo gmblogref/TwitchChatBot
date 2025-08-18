@@ -13,17 +13,20 @@ namespace TwitchChatBot.Core.Services
         private readonly ITwitchAlertMediaRepository _twitchAlertMediaRepository;
         private readonly IAlertService _alertService;
         private readonly ITtsService _tsService;
+        private readonly IAlertHistoryService _alertHistoryService;
 
         public TwitchAlertTypesService(
             ILogger<TwitchAlertTypesService> logger, 
             ITwitchAlertMediaRepository twitchAlertMediaRepository,
             IAlertService alertService,
-            ITtsService tsService)
+            ITtsService tsService,
+            IAlertHistoryService alertHistoryService)
         {
             _logger = logger;
             _twitchAlertMediaRepository = twitchAlertMediaRepository;
             _alertService = alertService;
             _tsService = tsService;
+            _alertHistoryService = alertHistoryService;
         }
 
         public async Task HandleCheerAsync(string username, int bits, string message)
@@ -47,6 +50,15 @@ namespace TwitchChatBot.Core.Services
                     .OrderByDescending(x => x.Min)
                     .FirstOrDefault();
             }
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchCheer,
+                Display = $"Cheer: {username} +{bits}",
+                Username = username,
+                Bits = bits,
+                Message = message
+            });
 
             EnqueueAlertWithMedia(msg, tier?.Media ?? cheers.Default);
 
@@ -77,6 +89,14 @@ namespace TwitchChatBot.Core.Services
 
             var selected = media[CoreHelperMethods.GetRandomNumberForMediaSelection(media.Count)];
             var msg = $"🎉 {username} just followed the channel!";
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchFollow,
+                Display = $"Follow: {username}",
+                Username = username
+            });
+
             EnqueueAlertWithMedia(msg, selected);
 
             var voice = AppSettings.Voices.Follow ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
@@ -106,6 +126,14 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetRaidMediaAsync();
             var msg = $"🚨 {username} is raiding with {viewers} viewers!";
 
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchRaid,
+                Display = $"Raid: {username} ({viewers})",
+                Username = username,
+                Viewers = viewers
+            });
+
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.Raid ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
@@ -125,6 +153,14 @@ namespace TwitchChatBot.Core.Services
 
             var media = await _twitchAlertMediaRepository.GetSubscriptionMediaAsync();
             var msg = $"💜 {username} just subscribed!";
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchSub,
+                Display = $"Sub: {username} (Tier {subTier})",
+                Username = username,
+                Tier = subTier
+            });
 
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
@@ -146,6 +182,15 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetSubgiftMediaAsync();
             var msg = $"🎁 {username} gifted a sub to {recipient}!";
 
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchSubGift,
+                Display = $"Gift: {username} → {recipient} (Tier {subTier})",
+                Gifter = username,
+                Recipient = recipient,
+                Tier = subTier
+            });
+
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.SingleGiftSub ?? AppSettings.TTS.DefaultSpeaker;
@@ -166,6 +211,16 @@ namespace TwitchChatBot.Core.Services
 
             var media = await _twitchAlertMediaRepository.GetResubMediaAsync();
             var msg = $"💜 {username} resubscribed for {months} months! {userMessage}";
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchSubMessage,
+                Display = $"ReSub: {username} ({months} months, Tier {subTier})",
+                Username = username,
+                Months = months,
+                Tier = subTier,
+                Message = msg
+            });
 
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
@@ -196,6 +251,15 @@ namespace TwitchChatBot.Core.Services
             var tier = giftSubMedia!.tiers.FirstOrDefault(x =>
                 (x.Match == "gte" && numOfSubs >= x.Value) || (x.Match == "eq" && numOfSubs == x.Value));
 
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchMysteryGift,
+                Display = $"MysteryGift: {username} x{numOfSubs} (Tier {subTier})",
+                Gifter = username,
+                Count = numOfSubs,
+                Tier = subTier
+            });
+
             EnqueueAlertWithMedia(msg, tier?.Media ?? giftSubMedia.Default);
 
             var voice = AppSettings.Voices.GiftSubs ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
@@ -216,6 +280,14 @@ namespace TwitchChatBot.Core.Services
 
             var channelPointMedia = await _twitchAlertMediaRepository.GetChannelPointsMapAsync();
             var channelPointTextMedia = await _twitchAlertMediaRepository.GetChannelPointsTextMapAsync();
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.ChannelPoint,
+                Display = $"CP: {username} - {rewardTitle}",
+                Username = username,
+                RewardTitle = rewardTitle
+            });
 
             if (channelPointMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {

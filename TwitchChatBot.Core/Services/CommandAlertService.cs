@@ -15,18 +15,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IWatchStreakService _watchStreakService;
         private readonly IHelixLookupService _helixLookupService;
         private readonly ITtsService _tsService;
-
-        private static readonly Dictionary<string, string> FriendlyVoiceMap =
-            new(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Bob", "p225" },
-            { "Alice", "p226" },
-            { "John", "p229" },
-            { "Sophie", "p231" },
-            { "Emma", "p238" },
-            { "Mike", "p248" }
-        };
-
+        private readonly IAlertHistoryService _alertHistoryService;
 
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
@@ -35,7 +24,8 @@ namespace TwitchChatBot.Core.Services
             IExcludedUsersService excludedUsersService,
             IWatchStreakService watchStreakService,
             IHelixLookupService helixLookupService,
-            ITtsService tsService)
+            ITtsService tsService,
+            IAlertHistoryService alertHistoryService)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
@@ -44,6 +34,7 @@ namespace TwitchChatBot.Core.Services
             _watchStreakService = watchStreakService;
             _helixLookupService = helixLookupService;
             _tsService = tsService;
+            _alertHistoryService = alertHistoryService;
         }
 
         public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
@@ -59,6 +50,15 @@ namespace TwitchChatBot.Core.Services
             if (commandTuple.command == "!commands")
             {
                 await HandleShowAvaiableCommands(channel, sendMessage);
+
+                _alertHistoryService.Add(new AlertHistoryEntry
+                {
+                    Type = AlertHistoryType.Cmd,
+                    Display = $"{username} ran: {commandText}",
+                    Username = username,
+                    CommandText = commandText
+                });
+
                 return;
             }
 
@@ -74,6 +74,15 @@ namespace TwitchChatBot.Core.Services
                 if (text.Length > 500) text = text[..500] + "…"; // simple cap
 
                 await _tsService.SpeakAsync(text, voice, null);
+
+                _alertHistoryService.Add(new AlertHistoryEntry
+                {
+                    Type= AlertHistoryType.Tts,
+                    Display = $"{username} ran: {commandText}",
+                    Username = username,
+                    Voice = voice,
+                    Message = text
+                });
 
                 return;
             }
@@ -99,6 +108,15 @@ namespace TwitchChatBot.Core.Services
                 var message = SafeFormat(templated, formatArgs);
                 if (!string.IsNullOrWhiteSpace(message))
                 {
+                    _alertHistoryService.Add(new AlertHistoryEntry
+                    {
+                        Type = AlertHistoryType.Cmd,
+                        Display = $"{username} ran: {commandText}",
+                        Username = username,
+                        CommandText = commandText,
+                        Message = message
+                    });
+
                     sendMessage(channel, message);
                 }
             }
@@ -106,6 +124,15 @@ namespace TwitchChatBot.Core.Services
             // MEDIA Command
             if (!string.IsNullOrWhiteSpace(entry.Media))
             {
+                _alertHistoryService.Add(new AlertHistoryEntry
+                {
+                    Type = AlertHistoryType.Cmd,
+                    Display = $"{username} ran: {commandText}",
+                    Username = username,
+                    CommandText = commandText,
+                    MediaPath = entry.Media
+                });
+
                 _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
             }
         }
