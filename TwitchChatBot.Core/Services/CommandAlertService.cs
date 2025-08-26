@@ -1,8 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Amazon.Polly.Model;
+using Microsoft.Extensions.Logging;
+using System.Data;
+using System.Runtime.CompilerServices;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -65,26 +69,14 @@ namespace TwitchChatBot.Core.Services
             // ---- special: !tts ----
             if (commandTuple.command.ToLower() == "!tts")
             {
-                var (voice, text) = ParseTtsArgs(commandTuple.ttsText);
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    return;
-                }
-
-                if (text.Length > 500) text = text[..500] + "…"; // simple cap
-
-                await _tsService.SpeakAsync(text, voice, null);
-
-                _alertHistoryService.Add(new AlertHistoryEntry
-                {
-                    Type= AlertHistoryType.Tts,
-                    Display = $"{username} ran: {commandText}",
-                    Username = username,
-                    Voice = voice,
-                    Message = text
-                });
+                await DoTtsCommand(commandTuple.ttsText, username, commandText);
 
                 return;
+            }
+
+            if(commandTuple.command.ToLower() == "!birthday")
+            {
+                await DoBirthdayCommand(commandTuple.ttsText);
             }
 
             var entry = await _commandMediaRepository.GetCommandMediaItemAsync(commandTuple.command);
@@ -135,6 +127,33 @@ namespace TwitchChatBot.Core.Services
 
                 _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
             }
+        }
+
+        private async Task DoTtsCommand(string ttsText, string username, string commandText)
+        {
+            var (voice, text) = ParseTtsArgs(ttsText);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            if (text.Length > 500) text = text[..500] + "…"; // simple cap
+
+            await _tsService.SpeakAsync(text, voice, null);
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.Tts,
+                Display = $"{username} ran: {commandText}",
+                Username = username,
+                Voice = voice,
+                Message = text
+            });
+        }
+
+        private async Task DoBirthdayCommand(string ttsText)
+        {
+            await _tsService.SpeakAsync($"Happy Birthday {ttsText}");
         }
 
         private sealed class CommandContext
