@@ -83,6 +83,8 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("🛑 GetGroupedViewers called.");
             var result = new List<ViewerEntry>();
 
+            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL!, Role = "Broadcaster" }); 
+
             foreach (var name in _mods.OrderBy(x => x))
                 result.Add(new ViewerEntry { Username = name, Role = "mod" });
 
@@ -160,7 +162,7 @@ namespace TwitchChatBot.Core.Services
                 _mods.Add(username);
             else if (_vipList.Contains(username))
                 _vips.Add(username);
-            else
+            else if(username != AppSettings.TWITCH_CHANNEL)
                 _viewers.Add(username);
 
             _logger.LogInformation("👤 Joined: {User}", username);
