@@ -231,6 +231,7 @@
             buttonClearFirst.TabIndex = 17;
             buttonClearFirst.Text = "Clear First";
             buttonClearFirst.UseVisualStyleBackColor = true;
+            buttonClearFirst.Click += buttonClearFirst_Click;
             // 
             // groupBoxTts
             // 
