@@ -49,7 +49,7 @@ namespace TwitchChatBot.Core.Services
                 {
                     case AlertHistoryType.First:
                         if (!string.IsNullOrWhiteSpace(e.Username))
-                            await _firstChatter.HandleFirstChatAsync(e.Username, e.Display);
+                            await _firstChatter.HandleFirstChatAsync(e.Username, e.Display, true);
                         else
                             _logger.LogWarning("Replay First: missing Username.");
                         break;
