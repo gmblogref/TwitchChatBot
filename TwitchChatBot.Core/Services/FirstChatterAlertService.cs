@@ -43,21 +43,24 @@ namespace TwitchChatBot.Core.Services
             _firstChatters?.Clear();
         }
 
-        public async Task HandleFirstChatAsync(string username, string displayName)
+        public async Task HandleFirstChatAsync(string username, string displayName, bool isReplay = false)
         {
-            if (await _excludedUsersService.IsUserExcludedAsync(username))
+            if (!isReplay)
             {
-                _logger.LogInformation("⛔ Ignored first chatter alert for excluded user or non eligible user: {User}", username);
-                return;
-            }
+                if (await _excludedUsersService.IsUserExcludedAsync(username))
+                {
+                    _logger.LogInformation("⛔ Ignored first chatter alert for excluded user or non eligible user: {User}", username);
+                    return;
+                }
 
-            if (HasAlreadyChatted(username))
-            {
-                return;
-            }
+                if (HasAlreadyChatted(username))
+                {
+                    return;
+                }
 
-            await _watchStreakService.MarkAttendanceAsync(username);
-            MarkAsChatted(username);
+                await _watchStreakService.MarkAttendanceAsync(username);
+                MarkAsChatted(username);
+            }
 
             var mediaFileName = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
             var message = UniversalMessage.Replace("[userName]", displayName);
