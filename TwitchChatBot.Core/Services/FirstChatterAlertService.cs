@@ -65,7 +65,7 @@ namespace TwitchChatBot.Core.Services
             var mediaFileName = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
             var message = UniversalMessage.Replace("[userName]", displayName);
 
-            if (mediaFileName != null)
+            if (mediaFileName != null && CanPlayChatterMedia(username))
             {
                 _alertHistoryService.Add(new AlertHistoryEntry
                 {
@@ -96,6 +96,19 @@ namespace TwitchChatBot.Core.Services
         private async Task<bool> IsEligibleForFirstChatAsync(string username)
         {
             return await _firstChatterMediaRepository.IsEligibleForFirstChatAsync(username);
+        }
+
+        private bool CanPlayChatterMedia(string username)
+        {
+            // Move this list to Config if it gets bigger than 2 users
+            if (!string.Equals(username, "whynot7058", StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(username, "whynot7058", StringComparison.OrdinalIgnoreCase) &&
+                DateTime.Now.DayOfWeek == DayOfWeek.Wednesday))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }
