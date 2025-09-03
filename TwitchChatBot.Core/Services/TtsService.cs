@@ -194,7 +194,7 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            var voice = ResolveVoice(voiceOverride);
+            var (voice, finalText) = ResolveVoiceAndText(voiceOverride, text);
             var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
             var mp3Path = Path.Combine(_ttsOutputDir, $"tts_{ts}.mp3");
             var publicPath = $"/media/text_to_speach/{Path.GetFileName(mp3Path)}";
@@ -202,14 +202,14 @@ namespace TwitchChatBot.Core.Services
             // Prefer Neural if supported; fallback to Standard automatically.
             var req = new SynthesizeSpeechRequest
             {
-                Text = text,
+                Text = finalText,
                 VoiceId = voice,
                 OutputFormat = OutputFormat.Mp3,
                 Engine = Engine.Neural
             };
 
             _logger.LogInformation("🔊 Polly synth: {Voice} (pref: Neural) \"{Preview}\"",
-                voice, text.Length > 80 ? text[..80] + "…" : text);
+                voice, finalText.Length > 80 ? finalText[..80] + "…" : finalText);
 
             try
             {
@@ -231,14 +231,20 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("✅ Polly TTS ready: {File}", mp3Path);
         }
 
-        private string ResolveVoice(string? voiceOverride)
+        private (string voice, string text) ResolveVoiceAndText(string? voiceOverride, string text)
         {
-            if (!string.IsNullOrWhiteSpace(voiceOverride) && PollyVoices.Contains(voiceOverride))
+            if (!string.IsNullOrWhiteSpace(voiceOverride))
             {
-                return voiceOverride;
+                if (PollyVoices.Contains(voiceOverride))
+                {
+                    return (voiceOverride, text); // ✅ Valid override
+                }
+
+                // ❌ Invalid override — prepend to text
+                text = $"{voiceOverride} {text}";
             }
 
-            return _defaultVoice;
+            return (_defaultVoice, text); // Use default voice
         }
 
         private string Sanitize(string s, int maxChars)
