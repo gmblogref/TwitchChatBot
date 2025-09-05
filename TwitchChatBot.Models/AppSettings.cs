@@ -7,6 +7,8 @@ namespace TwitchChatBot.Models
         public static IConfiguration? Configuration { get; set; }
 
         public static string? TWITCH_BOT_USERNAME => GetSetting("AppSettings:TWITCH_BOT_USERNAME");
+        public static string? TWITCH_OAUTH_BEARER_BOT => GetSetting("AppSettings:TWITCH_OAUTH_BEARER_BOT");
+        public static string? TWITCH_BOT_ID => GetSetting("AppSettings:TWITCH_BOT_ID");
         public static string? TWITCH_OAUTH_TOKEN => GetSetting("AppSettings:TWITCH_OAUTH_TOKEN");
         public static string? TWITCH_CHANNEL => GetSetting("AppSettings:TWITCH_CHANNEL");
         public static string? BOT_CLIENT_ID => GetSetting("AppSettings:BOT_CLIENT_ID");
@@ -18,7 +20,7 @@ namespace TwitchChatBot.Models
         public static string? TWITCH_APP_ACCESS_TOKEN => GetSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
         public static string? TwitchUrl => GetSetting("AppSettings:TwitchUrl");
 
-        public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes"); 
+        public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes");
         public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
 
         public static class WebHost
@@ -92,7 +94,7 @@ namespace TwitchChatBot.Models
             public static string MysteryGift => GetSetting("TTS:Templates:MysteryGift");
             public static string SingleGiftSub => GetSetting("TTS:Templates:SingleGiftSub");
         }
-        
+
         public static class Commands
         {
             public static string UsersByLogin => GetSetting("Commands:UsersByLogin");
@@ -106,7 +108,7 @@ namespace TwitchChatBot.Models
         {
             var value = Configuration![key];
 
-            if(value == null)
+            if (value == null)
             {
                 throw new ArgumentOutOfRangeException($"Couldn't locate an application setting with key of: '{key}'");
             }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Drawing;
 using System.Text.Json;
+using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Models;
 using TwitchLib.Client;

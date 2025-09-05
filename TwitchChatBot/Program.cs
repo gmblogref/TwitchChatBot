@@ -103,6 +103,16 @@ namespace TwitchChatBot
                 client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
             });
 
+            services.AddHttpClient("twitch-bot-helix", client =>
+            {
+                // Bot bearer WITHOUT "oauth:" prefix
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", AppSettings.TWITCH_OAUTH_BEARER_BOT);
+                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+            });
+
+            services.AddHttpClient<IModerationService, ModerationService>("twitch-bot-helix", _ => { }); // where injected use the bot client
+
             services.AddSingleton<IHelixLookupService, HelixLookupService>();
 
             // 💡 WebHost
@@ -116,6 +126,14 @@ namespace TwitchChatBot
 
             // 🧠 Register Tests
             services.TryAddSingleton<ITestUtilityService, TestUtilityService>();
+
+            services.AddScoped<ModerationService>(sp =>
+            {
+                var factory = sp.GetRequiredService<IHttpClientFactory>();
+                var http = factory.CreateClient("twitch-bot-helix");
+
+                return new ModerationService(http);
+            });
 
             return services;
         }

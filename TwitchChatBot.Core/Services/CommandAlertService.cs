@@ -1,12 +1,10 @@
-﻿using Amazon.Polly.Model;
+﻿using Amazon.Runtime.Internal.Util;
 using Microsoft.Extensions.Logging;
-using System.Data;
-using System.Runtime.CompilerServices;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
-using static System.Net.Mime.MediaTypeNames;
+using TwitchLib.Client.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -20,7 +18,11 @@ namespace TwitchChatBot.Core.Services
         private readonly IHelixLookupService _helixLookupService;
         private readonly ITtsService _tsService;
         private readonly IAlertHistoryService _alertHistoryService;
+        private readonly ITwitchRoleService _twitchRoleService;
+        private readonly IModerationService _moderationService;
 
+        private static readonly HashSet<string> _nukeUsed = new(StringComparer.OrdinalIgnoreCase);
+        
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
             ICommandMediaRepository commandMediaRepository,
@@ -29,7 +31,9 @@ namespace TwitchChatBot.Core.Services
             IWatchStreakService watchStreakService,
             IHelixLookupService helixLookupService,
             ITtsService tsService,
-            IAlertHistoryService alertHistoryService)
+            IAlertHistoryService alertHistoryService,
+            ITwitchRoleService twitchRoleService,
+            IModerationService moderationService)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
@@ -39,6 +43,8 @@ namespace TwitchChatBot.Core.Services
             _helixLookupService = helixLookupService;
             _tsService = tsService;
             _alertHistoryService = alertHistoryService;
+            _twitchRoleService = twitchRoleService;
+            _moderationService = moderationService;
         }
 
         public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
@@ -51,54 +57,42 @@ namespace TwitchChatBot.Core.Services
 
             var commandTuple = ParseCommandTuple(commandText);
 
-            if (commandTuple.command == "!commands")
+            var ctx = BuildContext(username, channel, commandText, commandTuple.command, commandTuple.rawTarget, commandTuple.ttsText);
+            if (await ContinueIfIsSpecialCommandOptionsAsync(ctx, sendMessage))
             {
-                await HandleShowAvaiableCommands(channel, sendMessage);
-
-                _alertHistoryService.Add(new AlertHistoryEntry
+                var entry = await _commandMediaRepository.GetCommandMediaItemAsync(commandTuple.command);
+                if (entry == null)
                 {
-                    Type = AlertHistoryType.Cmd,
-                    Display = $"{username} ran: {commandText}",
-                    Username = username,
-                    CommandText = commandText
-                });
+                    _logger.LogDebug("❔ Unknown command: {Command}", commandTuple.command);
+                    return;
+                }
 
-                return;
-            }
+                // TEXT Command
+                if (!string.IsNullOrWhiteSpace(entry.Text))
+                {
+                    var templated = ReplaceTokens(entry.Text, ctx);
 
-            // ---- special: !tts ----
-            if (commandTuple.command.ToLower() == "!tts")
-            {
-                await DoTtsCommand(commandTuple.ttsText, username, commandText);
+                    // Supply per-command formatting args (e.g., !streak → {0} {1})
+                    var formatArgs = await GetFormatArgsForCommandAsync(commandTuple.command, ctx);
 
-                return;
-            }
+                    var message = SafeFormat(templated, formatArgs);
+                    if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        _alertHistoryService.Add(new AlertHistoryEntry
+                        {
+                            Type = AlertHistoryType.Cmd,
+                            Display = $"{username} ran: {commandText}",
+                            Username = username,
+                            CommandText = commandText,
+                            Message = message
+                        });
 
-            if(commandTuple.command.ToLower() == "!birthday")
-            {
-                await DoBirthdayCommand(commandTuple.ttsText);
-            }
+                    sendMessage(channel, message);
+                    }
+                }
 
-            var entry = await _commandMediaRepository.GetCommandMediaItemAsync(commandTuple.command);
-            if (entry == null)
-            {
-                _logger.LogDebug("❔ Unknown command: {Command}", commandTuple.command);
-                return;
-            }
-
-            var ctx = BuildContext(username, channel, commandTuple.rawTarget);
-            await DoSpecialCommandOptions(commandTuple.command, ctx);
-
-            // TEXT Command
-            if (!string.IsNullOrWhiteSpace(entry.Text))
-            {
-                var templated = ReplaceTokens(entry.Text, ctx);
-
-                // Supply per-command formatting args (e.g., !streak → {0} {1})
-                var formatArgs = await GetFormatArgsForCommandAsync(commandTuple.command, ctx);
-
-                var message = SafeFormat(templated, formatArgs);
-                if (!string.IsNullOrWhiteSpace(message))
+                // MEDIA Command
+                if (!string.IsNullOrWhiteSpace(entry.Media))
                 {
                     _alertHistoryService.Add(new AlertHistoryEntry
                     {
@@ -106,30 +100,15 @@ namespace TwitchChatBot.Core.Services
                         Display = $"{username} ran: {commandText}",
                         Username = username,
                         CommandText = commandText,
-                        Message = message
+                        MediaPath = entry.Media
                     });
 
-                    sendMessage(channel, message);
+                    _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
                 }
-            }
-
-            // MEDIA Command
-            if (!string.IsNullOrWhiteSpace(entry.Media))
-            {
-                _alertHistoryService.Add(new AlertHistoryEntry
-                {
-                    Type = AlertHistoryType.Cmd,
-                    Display = $"{username} ran: {commandText}",
-                    Username = username,
-                    CommandText = commandText,
-                    MediaPath = entry.Media
-                });
-
-                _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
             }
         }
 
-        private async Task DoTtsCommand(string ttsText, string username, string commandText)
+        private async Task HandleTtsCommandAsync(string ttsText, string username, string commandText)
         {
             var (voice, text) = ParseTtsArgs(ttsText);
             if (string.IsNullOrWhiteSpace(text))
@@ -151,19 +130,17 @@ namespace TwitchChatBot.Core.Services
             });
         }
 
-        private async Task DoBirthdayCommand(string ttsText)
-        {
-            await _tsService.SpeakAsync($"Happy Birthday {ttsText}");
-        }
-
         private sealed class CommandContext
         {
             public required string Channel { get; init; }
             public required string Username { get; init; }       // user who ran the command
-            public required string RawTarget { get; init; }      // target name without '@'
+            public required string Command { get; init; }
+            public string? RawTarget { get; init; }             // target name without '@'
+            public string? TtsText { get; init; }
+            public string? CommandText { get; set; }
             public string Target => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"@{RawTarget}";
             public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : AppSettings.TwitchUrl + $"{RawTarget}";
-            public string Game { get; set; } = string.Empty;    // TODO: fill via Helix later
+            public string Game { get; set; } = string.Empty;    
         }
 
         /// <summary>
@@ -186,7 +163,7 @@ namespace TwitchChatBot.Core.Services
             // Only commands that actually need a target should parse one out here.
             // Example: !so @user (or !so user)
             string rawTarget = string.Empty;
-            if (command is "!so" or "!raid" or "!ban" or "!timeout") // extend as needed
+            if (command is "!so" or "!raid" or "!ban" or "!nuke") // extend as needed
             {
                 var parts = remainder.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                 rawTarget = parts.Length > 0 ? parts[0].TrimStart('@') : string.Empty;
@@ -223,8 +200,8 @@ namespace TwitchChatBot.Core.Services
             return (maybeVoice, rest);
         }
 
-        private CommandContext BuildContext(string username, string channel, string rawTarget)
-            => new CommandContext { Username = username, Channel = channel, RawTarget = rawTarget };
+        private CommandContext BuildContext(string username, string channel, string? commandText, string command, string? rawTarget, string? ttsText)
+            =>  new CommandContext() { Username = username, Channel = channel, CommandText = commandText, Command = command,  RawTarget = rawTarget, TtsText = ttsText };
 
         /// <summary>
         /// Replaces your existing tokens. Keeps behavior consistent with !so.
@@ -262,25 +239,39 @@ namespace TwitchChatBot.Core.Services
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        private async Task DoSpecialCommandOptions(string command, CommandContext ctx, CancellationToken ct = default)
+        private async Task<bool> ContinueIfIsSpecialCommandOptionsAsync(CommandContext ctx, Action<string, string> sendMessage, CancellationToken ct = default)
         {
-            switch (command)
+            switch (ctx.Command)
             {
                 case "!so":
                     // Choose login to inspect: explicit target if provided, else the invoker
                     var login = string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget;
                     var userId = await _helixLookupService.GetUserIdByLoginAsync(login, ct);
                     if (string.IsNullOrEmpty(userId))
-                        return;
+                        return true;
 
                     var game = await _helixLookupService.GetLastKnownGameByUserIdAsync(userId, ct);
                     if (!string.IsNullOrWhiteSpace(game))
                         ctx.Game = game; // token replacer will drop this into $game
                     break;
+                case "!birthday":
+                    await _tsService.SpeakAsync($"Happy Birthday {ctx.TtsText}");
+                    break;
+                case "!tts":
+                    await HandleTtsCommandAsync(ctx.TtsText!, ctx.Username, ctx.CommandText!);
+                    return false;
+                case "!commands":
+                    await HandleShowAvaiableCommands(ctx.Channel, ctx.Username, ctx.CommandText!, sendMessage);
+                    return false;
+                case "!nuke":
+                    await HandleNukeCommandAsync(ctx, sendMessage);
+                    return false;
             }
+
+            return true;
         }
 
-        private async Task HandleShowAvaiableCommands(string channel, Action<string, string> sendMessage)
+        private async Task HandleShowAvaiableCommands(string channel, string username, string commandText, Action<string, string> sendMessage)
         {
             var names = await _commandMediaRepository.GetAllCommandNamesAsync();
             if (names.Count == 0)
@@ -308,7 +299,91 @@ namespace TwitchChatBot.Core.Services
                 }
             }
             if (line.Length > prefix.Length)
+            {
                 sendMessage(channel, line);
+            }
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.Cmd,
+                Display = $"{username} ran: {commandText}",
+                Username = username,
+                CommandText = commandText
+            });
+        }
+
+        private async Task HandleNukeCommandAsync(CommandContext ctx, Action<string, string> sendMessage)
+        {
+            // Normalize target
+            if (string.IsNullOrWhiteSpace(ctx.RawTarget))
+            {
+                sendMessage(ctx.Channel, "Usage: !nuke targetUser");
+                return;
+            }
+
+            var targetLogin = ctx.RawTarget.Trim().TrimStart('@');
+            if (string.IsNullOrWhiteSpace(targetLogin))
+            {
+                sendMessage(ctx.Channel, "Usage: !nuke targetUser");
+                return;
+            }
+
+            // Guards: prevent self/broadcaster/bot
+            if (targetLogin.Equals(ctx.Username, StringComparison.OrdinalIgnoreCase))
+            {
+                sendMessage(ctx.Channel, $"@{ctx.Username}, you can’t nuke yourself.");
+                return;
+            }
+            if (targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
+            {
+                sendMessage(ctx.Channel, "You can’t nuke the broadcaster.");
+                return;
+            }
+            if (targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase))
+            {
+                sendMessage(ctx.Channel, "You can’t nuke the bot.");
+                return;
+            }
+
+            // One-use-per-stream rule
+            if (!_nukeUsed.Add(ctx.Username))
+            {
+                sendMessage(ctx.Channel, $"@{ctx.Username}, you've already used your one nuke this stream.");
+                return;
+            }
+
+            // Optional: mod safety check if your GetModeratorsAsync returns logins
+            var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
+            if (mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase))
+            {
+                sendMessage(ctx.Channel, $"@{targetLogin} is a mod and cannot be nuked!");
+                return;
+            }
+
+            try
+            {
+                // Resolve target user_id
+                var targetId = await _moderationService.GetUserIdAsync(targetLogin);
+
+                // Helix timeout (10s example)
+                await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_BOT_ID!, targetId, 5);
+
+                // Announce success
+                sendMessage(ctx.Channel, $"BOOM! 💣 {targetLogin} has been nuked by @{ctx.Username}!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "NUKE Helix path failed for target {TargetLogin}", targetLogin);
+            }
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.Cmd,
+                Display = $"{ctx.Username} nuked {ctx.RawTarget}",
+                Username = ctx.Username,
+                CommandText = ctx.CommandText!,
+                Message = $"{ctx.RawTarget} nuked by {ctx.Username}"
+            });
         }
 
         /// <summary>
