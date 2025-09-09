@@ -1,10 +1,9 @@
-﻿using Amazon.Runtime.Internal.Util;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Data;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
-using TwitchLib.Client.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -329,19 +328,9 @@ namespace TwitchChatBot.Core.Services
             }
 
             // Guards: prevent self/broadcaster/bot
-            if (targetLogin.Equals(ctx.Username, StringComparison.OrdinalIgnoreCase))
-            {
-                sendMessage(ctx.Channel, $"@{ctx.Username}, you can’t nuke yourself.");
-                return;
-            }
             if (targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
             {
                 sendMessage(ctx.Channel, "You can’t nuke the broadcaster.");
-                return;
-            }
-            if (targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase))
-            {
-                sendMessage(ctx.Channel, "You can’t nuke the bot.");
                 return;
             }
 
@@ -351,25 +340,46 @@ namespace TwitchChatBot.Core.Services
                 sendMessage(ctx.Channel, $"@{ctx.Username}, you've already used your one nuke this stream.");
                 return;
             }
-
+            
             // Optional: mod safety check if your GetModeratorsAsync returns logins
             var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
-            if (mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase))
-            {
-                sendMessage(ctx.Channel, $"@{targetLogin} is a mod and cannot be nuked!");
-                return;
-            }
+            var isTargetBot = targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase);
+            var isTargetMod = !isTargetBot && mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase);
+            var useBot = (!isTargetBot && !isTargetMod);
 
             try
             {
                 // Resolve target user_id
                 var targetId = await _moderationService.GetUserIdAsync(targetLogin);
 
-                // Helix timeout (10s example)
-                await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_BOT_ID!, targetId, 5);
+                if (isTargetMod)
+                {
+                    // Helix timeout (10s example)
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_USER_ID!, targetId, 5, useBot);
 
-                // Announce success
-                sendMessage(ctx.Channel, $"BOOM! 💣 {targetLogin} has been nuked by @{ctx.Username}!");
+                    // Fun line + media for mod nukes
+                    sendMessage(ctx.Channel, $"⚠️ @{ctx.Username} is attacking the MODs… let’s see how that works out. 🔥");
+
+                    var entry = await _commandMediaRepository.GetCommandMediaItemAsync("!modNuke");
+                    _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry!.Media!));
+                }
+                else if (isTargetBot)
+                {
+                    // Helix timeout (10s example)
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_USER_ID!, targetId, 5, useBot);
+
+                    // TTS reminder to re-mod the bot afterward
+                    sendMessage(ctx.Channel, $"BOOM! 💣 @{ctx.Username} nuked the bot!");
+                    _tsService?.SpeakAsync("Hey, LegendOfSacks, you need to mod the bot again.");
+                }
+                else
+                {
+                    // Helix timeout (10s example)
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_BOT_ID!, targetId, 5, useBot);
+
+                    // Announce success
+                    sendMessage(ctx.Channel, $"BOOM! 💣 {targetLogin} has been nuked by @{ctx.Username}!");
+                }
             }
             catch (Exception ex)
             {

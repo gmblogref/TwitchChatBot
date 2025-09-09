@@ -111,29 +111,30 @@ namespace TwitchChatBot
                 client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
             });
 
-            services.AddHttpClient<IModerationService, ModerationService>("twitch-bot-helix", _ => { }); // where injected use the bot client
+            //services.AddHttpClient<IModerationService, ModerationService>("twitch-bot-helix", _ => { }); // where injected use the bot client
 
-            services.AddSingleton<IHelixLookupService, HelixLookupService>();
+            services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
 
             // 💡 WebHost
             services.TryAddSingleton<IWebHostWrapper, WebHostWrapper>();
 
             // 🧠 Register the UI Form and bridge
-            services.AddSingleton<TwitchChatBot>();
+            services.TryAddSingleton<TwitchChatBot>();
 
             // 🧠 Register ChatBotController (depends on IUiBridge)
-            services.AddSingleton<ChatBotController>();
+            services.TryAddSingleton<ChatBotController>();
 
             // 🧠 Register Tests
             services.TryAddSingleton<ITestUtilityService, TestUtilityService>();
 
-            services.AddScoped<ModerationService>(sp =>
-            {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
-                var http = factory.CreateClient("twitch-bot-helix");
+            services.TryAddScoped<IModerationService, ModerationService>();
+            //sp =>
+            //{
+            //    var factory = sp.GetRequiredService<IHttpClientFactory>();
+            //    var http = factory.CreateClient("twitch-bot-helix");
 
-                return new ModerationService(http);
-            });
+            //    return new ModerationService(http);
+            //});
 
             return services;
         }
