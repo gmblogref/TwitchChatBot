@@ -7,17 +7,11 @@ namespace TwitchChatBot.Core.Services
 {
     public class ModerationService : IModerationService
     {
-        // PROPERTIES
-        public string ClientId { get; }
-        public string BotBearer { get; } // No "oauth:" prefix
-        public HttpClient Http { get; }
+        private readonly IHttpClientFactory _httpFactory;
 
-        // PUBLIC
-        public ModerationService(HttpClient http)
+        public ModerationService(IHttpClientFactory httpFactory)
         {
-            Http = http ?? throw new ArgumentNullException(nameof(http));
-            ClientId = AppSettings.TWITCH_CLIENT_ID!;
-            BotBearer = AppSettings.TWITCH_OAUTH_TOKEN!.Substring("oauth:".Length);
+            _httpFactory = httpFactory ?? throw new ArgumentNullException(nameof(httpFactory));
         }
 
         public async Task<string> GetUserIdAsync(string login, CancellationToken ct = default)
@@ -27,12 +21,12 @@ namespace TwitchChatBot.Core.Services
                 throw new ArgumentException("Login is required.", nameof(login));
             }
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.twitch.tv/helix/users?login={login.Trim()}");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", BotBearer);
-            req.Headers.Add("Client-ID", ClientId);
+            var http = _httpFactory.CreateClient("twitch-bot-helix");
 
-            using var res = await Http.SendAsync(req, ct);
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.twitch.tv/helix/users?login={login.Trim()}");
+            using var res = await http.SendAsync(req, ct);
             var json = await res.Content.ReadAsStringAsync(ct);
+
             if (!res.IsSuccessStatusCode)
             {
                 throw new InvalidOperationException($"GetUserId failed {(int)res.StatusCode}: {json}");
@@ -51,7 +45,13 @@ namespace TwitchChatBot.Core.Services
         /// <summary>
         /// Timeouts a user via Helix moderation/bans. Requires bot to be a mod in broadcaster's channel and bot token to include moderator:manage:banned_users.
         /// </summary>
-        public async Task TimeoutAsync(string broadcasterId, string moderatorId, string targetUserId, int seconds, CancellationToken ct = default)
+        public async Task TimeoutAsync(
+            string broadcasterId, 
+            string moderatorId, 
+            string targetUserId, 
+            int seconds, 
+            bool useBot = true,
+            CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(broadcasterId))
             {
@@ -73,25 +73,29 @@ namespace TwitchChatBot.Core.Services
                 throw new ArgumentOutOfRangeException(nameof(seconds), "Duration must be > 0.");
             }
 
-            var url = $"https://api.twitch.tv/helix/moderation/bans?broadcaster_id={broadcasterId}&moderator_id={moderatorId}";
+            // Pick the right identity for Helix call
+            var http = useBot
+                ? _httpFactory.CreateClient("twitch-bot-helix")
+                : _httpFactory.CreateClient("twitch-helix");
 
-            using var req = new HttpRequestMessage(HttpMethod.Post, url);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", BotBearer);
-            req.Headers.Add("Client-ID", ClientId);
+            using var req = new HttpRequestMessage(HttpMethod.Post,
+                $"https://api.twitch.tv/helix/moderation/bans?broadcaster_id={broadcasterId}&moderator_id={moderatorId}");
 
-            var payload = new
-            {
-                data = new
-                {
-                    user_id = targetUserId,
-                    duration = seconds
-                }
-            };
-            var body = JsonSerializer.Serialize(payload);
+            // Pull tokens fresh (however you store them). Example using AppSettings:
+            var bearer = useBot
+                ? AppSettings.TWITCH_OAUTH_BEARER_BOT
+                : AppSettings.TWITCH_ACCESS_TOKEN;
+
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+            req.Headers.Remove("Client-Id");
+            req.Headers.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+
+            var body = JsonSerializer.Serialize(new { data = new { user_id = targetUserId, duration = seconds } });
             req.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-            using var res = await Http.SendAsync(req, ct);
+            using var res = await http.SendAsync(req, ct);
             var text = await res.Content.ReadAsStringAsync(ct);
+
             if (!res.IsSuccessStatusCode)
             {
                 throw new InvalidOperationException($"Helix timeout failed {(int)res.StatusCode}: {text}");
