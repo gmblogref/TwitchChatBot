@@ -327,13 +327,6 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            // Guards: prevent self/broadcaster/bot
-            if (targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
-            {
-                sendMessage(ctx.Channel, "You can’t nuke the broadcaster.");
-                return;
-            }
-
             // One-use-per-stream rule
             if (!_nukeUsed.Add(ctx.Username))
             {
@@ -343,6 +336,7 @@ namespace TwitchChatBot.Core.Services
             
             // Optional: mod safety check if your GetModeratorsAsync returns logins
             var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
+            var isTargetBroadcaster = targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase);
             var isTargetBot = targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase);
             var isTargetMod = !isTargetBot && mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase);
             var useBot = (!isTargetBot && !isTargetMod);
@@ -360,7 +354,7 @@ namespace TwitchChatBot.Core.Services
                     // Fun line + media for mod nukes
                     sendMessage(ctx.Channel, $"⚠️ @{ctx.Username} is attacking the MODs… let’s see how that works out. 🔥");
 
-                    var entry = await _commandMediaRepository.GetCommandMediaItemAsync("!modNuke");
+                    var entry = await _commandMediaRepository.GetCommandMediaItemAsync("!nukeMod");
                     _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry!.Media!));
                 }
                 else if (isTargetBot)
@@ -372,13 +366,18 @@ namespace TwitchChatBot.Core.Services
                     sendMessage(ctx.Channel, $"BOOM! 💣 @{ctx.Username} nuked the bot!");
                     _tsService?.SpeakAsync("Hey, LegendOfSacks, you need to mod the bot again.");
                 }
+                else if (isTargetBroadcaster)
+                {
+                    var entry = await _commandMediaRepository.GetCommandMediaItemAsync("!nukeSacks");
+                    _alertService.EnqueueAlert("fullscreen", "", CoreHelperMethods.ToPublicMediaPath(entry!.Media!));
+                }
                 else
                 {
                     // Helix timeout (10s example)
                     await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_BOT_ID!, targetId, 5, useBot);
 
                     // Announce success
-                    sendMessage(ctx.Channel, $"BOOM! 💣 {targetLogin} has been nuked by @{ctx.Username}!");
+                    sendMessage(ctx.Channel, $"💣 {targetLogin} bye bye!!!");
                 }
             }
             catch (Exception ex)
