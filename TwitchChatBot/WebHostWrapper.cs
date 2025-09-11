@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -42,6 +43,24 @@ namespace TwitchChatBot
                         {
                             FileProvider = new PhysicalFileProvider(AppSettings.Media.TwitchAlertsFolder!),
                             RequestPath = "/media"
+                        });
+
+                        // Enable endpoint routing
+                        app.UseRouting();
+
+                        app.UseEndpoints(endpoints =>
+                        {
+                            endpoints.MapGet("/alerts", async context =>
+                            {
+                                var file = Path.Combine(AppSettings.WebHost.WebRoot!, "alerts.html");
+                                await context.Response.SendFileAsync(file);
+                            });
+
+                            endpoints.MapGet("/fullscreen", async context =>
+                            {
+                                var file = Path.Combine(AppSettings.WebHost.WebRoot!, "fullscreen.html");
+                                await context.Response.SendFileAsync(file);
+                            });
                         });
                     });
                 })

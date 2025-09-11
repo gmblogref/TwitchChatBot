@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Twitch Alert Overlay</title>
-    <link rel="stylesheet" href="style.css?v=1" />
+    <link rel="stylesheet" href="stylefullscreen.css?v=1" />
 </head>
 <body>
     <div id="alert"></div>
@@ -20,6 +20,9 @@
             ws = new WebSocket(`ws://${location.hostname}:3000/ws`);
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
+                if (data.type !== "fullscreen") {
+                    return; // ignore fullscreen or unknown types
+                }
                 queue.push(data);
                 processQueue();
             };

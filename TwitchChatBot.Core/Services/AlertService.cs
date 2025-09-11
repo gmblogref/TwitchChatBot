@@ -10,7 +10,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IWebSocketServer _webSocketServer;
         private readonly Queue<AlertItem> _alertQueue = new();
         private bool _isProcessing = false;
-        
+
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
 
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
@@ -24,11 +24,18 @@ namespace TwitchChatBot.Core.Services
             _uiBridge = bridge;
         }
 
+        // Overload for default alert type
         public void EnqueueAlert(string message, string? mediaPath = null)
-        
+        {
+            EnqueueAlert("alert", message, mediaPath);
+        }
+
+        // New overload that lets you specify type
+        public void EnqueueAlert(string type, string message, string? mediaPath = null)
         {
             _alertQueue.Enqueue(new AlertItem
             {
+                Type = type,
                 Message = message,
                 Media = mediaPath
             });
@@ -49,12 +56,13 @@ namespace TwitchChatBot.Core.Services
 
                 var payload = new
                 {
+                    type = alert.Type,
                     message = alert.Message,
                     media = alert.Media
                 };
 
                 _webSocketServer.BroadcastAsync(payload);
-                _logger.LogInformation("📤 Alert sent: {Message}, Media: {Media}", alert.Message, alert.Media);
+                _logger.LogInformation("📤 Alert sent: {Type}, {Message}, Media: {Media}", alert.Type, alert.Message, alert.Media);
             }
             catch (Exception ex)
             {
