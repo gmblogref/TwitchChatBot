@@ -17,6 +17,9 @@ namespace TwitchChatBot.Core.Services
         {
             _logger = logger;
             _webSocketServer = webSocketServer;
+
+            // Subscribe to done events from WebSocketServer
+            _webSocketServer.OnClientDone += HandleClientDone;
         }
 
         public void SetUiBridge(IUiBridge bridge)
@@ -68,13 +71,13 @@ namespace TwitchChatBot.Core.Services
             {
                 _logger.LogError(ex, "❌ Failed to process alert.");
             }
-            finally
-            {
-                _isProcessing = false;
+        }
 
-                if (_alertQueue.Count > 0)
-                    ProcessQueue();
-            }
+        private void HandleClientDone()
+        {
+            _logger.LogInformation("✅ Client reported alert finished");
+            _isProcessing = false;
+            ProcessQueue();
         }
     }
 }

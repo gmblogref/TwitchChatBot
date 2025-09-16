@@ -6,6 +6,8 @@ namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface IWebSocketServer
     {
+        event Action? OnClientDone;
+
         void Start();
         void Stop();
         Task BroadcastAsync(object payload);

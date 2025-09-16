@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Twitch Alert Overlay</title>
-    <link rel="stylesheet" href="stylealerts.css?v=1" />
+    <link rel="stylesheet" href="style.css?v=1" />
 </head>
 <body>
     <div id="alert"></div>
@@ -12,34 +12,34 @@
     <script>
         const alertBox = document.getElementById("alert");
         const mediaBox = document.getElementById("media");
-        const queue = [];
         let playing = false;
-
         let ws;
+
         function connectWebSocket() {
             ws = new WebSocket(`ws://${location.hostname}:3000/ws`);
+
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.type !== "alert") {
-                    return; // ignore fullscreen or unknown types
-                }
-                queue.push(data);
-                processQueue();
+
+                // Only handle normal alerts here
+                if (data.type !== "alert") return;
+
+                // If already playing something, ignore (server serializes anyway)
+                if (playing) return;
+
+                playAlert(data.message, data.media);
             };
-            ws.onclose = () => setTimeout(connectWebSocket, 3000); // reconnect on close
+
+            ws.onclose = () => setTimeout(connectWebSocket, 3000); // auto-reconnect
         }
         connectWebSocket();
 
-        async function processQueue() {
-            if (playing || queue.length === 0) return;
-
+        async function playAlert(message, media) {
             playing = true;
-            const { message, media } = queue.shift();
 
-            // Show alert text
+            // Show optional text
             alertBox.textContent = message || "";
             alertBox.style.opacity = 1;
-
             mediaBox.innerHTML = "";
 
             if (media?.endsWith(".mp4")) {
@@ -47,7 +47,7 @@
                 video.src = media;
                 video.autoplay = true;
                 video.playsInline = true;
-                video.muted = false; // try false first, OBS should allow it
+                video.muted = false;
                 video.volume = 1.0;
                 mediaBox.appendChild(video);
 
@@ -59,7 +59,6 @@
                 const img = document.createElement("img");
                 img.src = media;
                 mediaBox.appendChild(img);
-
                 await sleep(5000);
                 await sleep(1000);
 
@@ -75,10 +74,15 @@
                 await sleep(1000);
             }
 
+            // Reset visuals
             alertBox.style.opacity = 0;
             mediaBox.innerHTML = "";
             playing = false;
-            processQueue();
+
+            // ✅ Notify server this alert finished
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "done" }));
+            }
         }
 
         function sleep(ms) {

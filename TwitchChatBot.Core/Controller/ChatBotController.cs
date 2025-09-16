@@ -10,6 +10,7 @@ namespace TwitchChatBot.Core.Controller
     public class ChatBotController
     {
         private readonly IAlertService _alertService;
+        private readonly ICommandAlertService _ccommandAlertService;
         private readonly IEventSubService _eventSubService;
         private readonly ILogger<ChatBotController> _logger;
         private readonly ITtsService _tsService;
@@ -21,9 +22,12 @@ namespace TwitchChatBot.Core.Controller
 
         private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
+        private Timer? _nukeResetTimer;
+        private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);
 
         public ChatBotController(
         IAlertService alertService,
+        ICommandAlertService ccommandAlertService,
         IEventSubService eventSubService,
         ILogger<ChatBotController> logger,
         ITtsService tsService,
@@ -34,6 +38,7 @@ namespace TwitchChatBot.Core.Controller
         IAppFlags appFlags)
         {
             _alertService = alertService;
+            _ccommandAlertService = ccommandAlertService;
             _eventSubService = eventSubService;
             _logger = logger;
             _twitchClient = twitchClient;
