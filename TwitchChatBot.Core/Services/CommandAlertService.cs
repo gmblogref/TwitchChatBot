@@ -19,8 +19,8 @@ namespace TwitchChatBot.Core.Services
         private readonly IAlertHistoryService _alertHistoryService;
         private readonly ITwitchRoleService _twitchRoleService;
         private readonly IModerationService _moderationService;
-
-        private static readonly HashSet<string> _nukeUsed = new(StringComparer.OrdinalIgnoreCase);
+        private readonly INukeService _nukeService;
+        private readonly IAppFlags _appFlags;
         
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
@@ -32,7 +32,9 @@ namespace TwitchChatBot.Core.Services
             ITtsService tsService,
             IAlertHistoryService alertHistoryService,
             ITwitchRoleService twitchRoleService,
-            IModerationService moderationService)
+            IModerationService moderationService,
+            INukeService nukeService,
+            IAppFlags appFlags)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
@@ -44,6 +46,8 @@ namespace TwitchChatBot.Core.Services
             _alertHistoryService = alertHistoryService;
             _twitchRoleService = twitchRoleService;
             _moderationService = moderationService;
+            _nukeService = nukeService;
+            _appFlags = appFlags;
         }
 
         public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
@@ -265,6 +269,12 @@ namespace TwitchChatBot.Core.Services
                 case "!nuke":
                     await HandleNukeCommandAsync(ctx, sendMessage);
                     return false;
+                case "!clearNukes":
+                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL!.ToLower() || ctx.Username.ToLower() == "jillybenilly")
+                    {
+                        _nukeService.ClearNukes();
+                    }
+                    return false;
             }
 
             return true;
@@ -328,7 +338,7 @@ namespace TwitchChatBot.Core.Services
             }
 
             // One-use-per-stream rule
-            if (!_nukeUsed.Add(ctx.Username))
+            if (!_appFlags.IsReplay && !!_nukeService.TryUseNuke(ctx.Username))
             {
                 sendMessage(ctx.Channel, $"@{ctx.Username}, you've already used your one nuke this stream.");
                 return;

@@ -126,6 +126,7 @@ namespace TwitchChatBot.Core.Services
                 _ = _commandAlertService.HandleCommandAsync("!ads", AppSettings.TWITCH_CHANNEL!, AppSettings.TWITCH_CHANNEL!, SendMessage);
             }, null, TimeSpan.FromSeconds(AppSettings.AdInitialMinutes), TimeSpan.FromMinutes(AppSettings.AdIntervalMinutes));
         }
+
         public void StopAdTimer()
         {
             _adTimer?.Dispose();
