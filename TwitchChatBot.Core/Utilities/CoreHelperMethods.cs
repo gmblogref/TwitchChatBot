@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Utilities
 {
@@ -37,5 +38,11 @@ namespace TwitchChatBot.Core.Utilities
 
         public static string ToPublicMediaPath(string mediaPath) =>
             "/media/" + mediaPath.Replace("\\", "/");
+
+        public static string GetTtsOutputFolder()
+            => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder!, "text_to_speech");
+
+        public static string GetWatchStreaksFile()
+            => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder, "watch_streaks.json");
     }
 }

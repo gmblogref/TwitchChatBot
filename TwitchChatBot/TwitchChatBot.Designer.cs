@@ -457,7 +457,7 @@
             buttonTestTts.Name = "buttonTestTts";
             buttonTestTts.Size = new Size(163, 40);
             buttonTestTts.TabIndex = 15;
-            buttonTestTts.Text = "Text 2 Speach";
+            buttonTestTts.Text = "Text 2 Speech";
             buttonTestTts.UseVisualStyleBackColor = true;
             buttonTestTts.Click += buttonTestTts_Click;
             // 

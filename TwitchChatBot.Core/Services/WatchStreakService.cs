@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
@@ -22,10 +23,11 @@ namespace TwitchChatBot.Core.Services
             IAppFlags appFlags)
         {
             _logger = logger;
-            var baseFolder = AppSettings.Media.TwitchAlertsFolder
-                ?? throw new InvalidOperationException("AppSettings.Media.TwitchAlertsFolder is not set.");
-            _filePath = Path.Combine(baseFolder, "watch_streaks.json");
+            _filePath = CoreHelperMethods.GetWatchStreaksFile();
 
+            var baseFolder = AppSettings.MediaBase.TwitchAlertsFolder
+                ?? throw new InvalidOperationException("AppSettings.Media.TwitchAlertsFolder is not set.");
+            
             Directory.CreateDirectory(baseFolder);
             Load();
             _excludedUsersService = excludedUsersService;

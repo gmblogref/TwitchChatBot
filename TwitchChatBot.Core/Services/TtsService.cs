@@ -5,6 +5,7 @@ using Amazon.Runtime.Credentials;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
@@ -42,7 +43,7 @@ namespace TwitchChatBot.Core.Services
             _logger = logger;
             _alertService = alertService;
 
-            _ttsOutputDir = Path.Combine(AppSettings.Media.TwitchAlertsFolder!, "text_to_speach");
+            _ttsOutputDir = CoreHelperMethods.GetTtsOutputFolder();
             Directory.CreateDirectory(_ttsOutputDir);
 
             _defaultVoice = string.IsNullOrWhiteSpace(AppSettings.TTS.DefaultSpeaker)
@@ -158,7 +159,7 @@ namespace TwitchChatBot.Core.Services
                     _currentItemCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                     try
                     {
-                        await ProcessOneAsync(polly, job.text, job.voice, _currentItemCts.Token);
+                        await ProcessTextToSpeechAsync(polly, job.text, job.voice, _currentItemCts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -186,7 +187,7 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private async Task ProcessOneAsync(AmazonPollyClient polly, string rawText, string? voiceOverride, CancellationToken ct)
+        private async Task ProcessTextToSpeechAsync(AmazonPollyClient polly, string rawText, string? voiceOverride, CancellationToken ct)
         {
             var text = Sanitize(rawText, _maxChars);
             if (string.IsNullOrWhiteSpace(text))
@@ -197,7 +198,7 @@ namespace TwitchChatBot.Core.Services
             var (voice, finalText) = ResolveVoiceAndText(voiceOverride, text);
             var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
             var mp3Path = Path.Combine(_ttsOutputDir, $"tts_{ts}.mp3");
-            var publicPath = $"/media/text_to_speach/{Path.GetFileName(mp3Path)}";
+            var publicPath = $"/media/text_to_speech/{Path.GetFileName(mp3Path)}";
 
             // Prefer Neural if supported; fallback to Standard automatically.
             var req = new SynthesizeSpeechRequest

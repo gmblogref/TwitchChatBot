@@ -41,7 +41,7 @@ namespace TwitchChatBot
 
                         app.UseStaticFiles(new StaticFileOptions
                         {
-                            FileProvider = new PhysicalFileProvider(AppSettings.Media.TwitchAlertsFolder!),
+                            FileProvider = new PhysicalFileProvider(AppSettings.MediaBase.TwitchAlertsFolder!),
                             RequestPath = "/media"
                         });
 

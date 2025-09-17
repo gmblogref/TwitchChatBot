@@ -52,9 +52,9 @@ namespace TwitchChatBot.Models
             public static string? CommandAlertMedia => GetSetting("MediaMapFiles:CommandAlertMedia");
         }
 
-        public static class Media
+        public static class MediaBase
         {
-            public static string TwitchAlertsFolder => GetSetting("Media:TwitchAlertsFolder");
+            public static string TwitchAlertsFolder => GetSetting("MediaBase:TwitchAlertsFolder");
         }
 
         public static class Chatters
