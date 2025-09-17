@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Data.Utilities
 {
@@ -30,5 +31,17 @@ namespace TwitchChatBot.Data.Utilities
                 throw;
             }
         }
+
+        public static string GetTwitchAlertMediaPath()
+            => Path.GetFullPath(AppSettings.MediaMapFiles.TwitchAlertMedia!);
+
+        public static string GetExcludedUsersMediaPath()
+            => Path.GetFullPath(AppSettings.MediaMapFiles.ExcludedUsersMedia!);
+
+        public static string GetFirstChattersMediaPath()
+            => Path.GetFullPath(AppSettings.MediaMapFiles.FirstChattersMedia!);
+
+        public static string GetCommandAlertMediaPath()
+            => Path.GetFullPath(AppSettings.MediaMapFiles.CommandAlertMedia!);
     }
 }

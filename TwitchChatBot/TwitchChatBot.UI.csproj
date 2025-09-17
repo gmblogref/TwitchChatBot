@@ -45,10 +45,6 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<Content Include="MediaMaps\**\*.json" Exclude="MediaMaps\**\*.example.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>mediaMaps\%(Filename)%(Extension)</Link>
-		</Content>
 		<Content Include="wwwroot\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>

@@ -14,7 +14,7 @@ namespace TwitchChatBot.Data
         public TwitchAlertMediaRepository(ILogger<TwitchAlertMediaRepository> logger)
         {
             _logger = logger;
-            _filePath = Path.Combine(AppContext.BaseDirectory, AppSettings.MediaMapFiles.TwitchAlertMedia!);
+            _filePath = DataHelperMethods.GetTwitchAlertMediaPath();
         }
 
         public async Task<ChannelPoints?> GetChannelPointsMapAsync(CancellationToken cancellationToken = default)
