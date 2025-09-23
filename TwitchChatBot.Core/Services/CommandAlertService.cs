@@ -269,7 +269,7 @@ namespace TwitchChatBot.Core.Services
                 case "!nuke":
                     await HandleNukeCommandAsync(ctx, sendMessage);
                     return false;
-                case "!clearNukes":
+                case "!clearnukes":
                     if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL!.ToLower() || ctx.Username.ToLower() == "jillybenilly")
                     {
                         _nukeService.ClearNukes();
@@ -338,7 +338,7 @@ namespace TwitchChatBot.Core.Services
             }
 
             // One-use-per-stream rule
-            if (!_appFlags.IsReplay && !!_nukeService.TryUseNuke(ctx.Username))
+            if (!_appFlags.IsReplay && !_nukeService.TryUseNuke(ctx.Username))
             {
                 sendMessage(ctx.Channel, $"@{ctx.Username}, you've already used your one nuke this stream.");
                 return;
