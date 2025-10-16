@@ -9,4 +9,5 @@
     Task HandleSubGiftAsync(string username, string recipient, string subTier);
     Task HandleSubMysteryGiftAsync(string username, int numOfSubs, string subTier);
     Task HandleSubscriptionAsync(string username, string subTier);
+    Task HandleWatchStreakNoticeAsync(string username, int streakCount, string? userMessage);
 }

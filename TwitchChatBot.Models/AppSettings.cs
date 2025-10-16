@@ -82,6 +82,7 @@ namespace TwitchChatBot.Models
             public static string Raid => GetSetting("TTS:Voices:Raid");
             public static string Follow => GetSetting("TTS:Voices:Follow");
             public static string SingleGiftSub => GetSetting("TTS:Voices:SingleGiftSub");
+            public static string WatchStreak => GetSetting("TTS:Voices:WatchStreak");
         }
 
         public static class Templates
@@ -93,6 +94,7 @@ namespace TwitchChatBot.Models
             public static string ReSub => GetSetting("TTS:Templates:ReSub");
             public static string MysteryGift => GetSetting("TTS:Templates:MysteryGift");
             public static string SingleGiftSub => GetSetting("TTS:Templates:SingleGiftSub");
+            public static string WatchStreak => GetSetting("TTS:Templates:WatchStreak");
         }
 
         public static class Commands

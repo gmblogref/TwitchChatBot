@@ -300,6 +300,40 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
+        public async Task HandleWatchStreakNoticeAsync(string username, int streakCount, string? userMessage)
+        {
+            _logger.LogInformation("📣 Alert triggered: {Type} by {User}, streak={Streak}", "WatchStreak", username, streakCount);
+
+            var media = await _twitchAlertMediaRepository.GetWatchStreakMediaAsync();
+            var msg = $"👀 {username} has been watching LegendOfSacks for {streakCount} streams!";
+
+            _alertHistoryService.Add(new AlertHistoryEntry
+            {
+                Type = AlertHistoryType.TwitchWatchStreak,
+                Display = $"WatchStreak: {username} ({streakCount})",
+                Username = username,
+                Count = streakCount,
+                Message = userMessage
+            });
+
+            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+
+            var voice = AppSettings.Voices.WatchStreak ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+            var template = AppSettings.Templates.Raid ?? "{raider} is storming in with {viewers} viewers!";
+
+            var text = !string.IsNullOrWhiteSpace(userMessage)
+                ? CoreHelperMethods.ForTts(userMessage)
+                : CoreHelperMethods.RenderTemplate(
+                    AppSettings.Templates.WatchStreak ?? "{username} has been watching Legend Of Sacks for {streak} streams!",
+                    new Dictionary<string, string?>
+                    {
+                        ["username"] = username,
+                        ["streak"] = streakCount.ToString()
+                    });
+
+            await _tsService.SpeakAsync(text, voice);
+        }
+
         private void EnqueueAlertWithMedia(string message, string mediaPath)
         {
             if (string.IsNullOrWhiteSpace(mediaPath))

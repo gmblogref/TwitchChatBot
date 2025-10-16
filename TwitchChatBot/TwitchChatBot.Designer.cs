@@ -73,6 +73,7 @@
             labelLogging = new Label();
             buttonTestBot = new Button();
             buttonStopBot = new Button();
+            buttonTestWatchStreak = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
             tabPageUtilities.SuspendLayout();
@@ -280,6 +281,7 @@
             // 
             // groupBoxButtonTests
             // 
+            groupBoxButtonTests.Controls.Add(buttonTestWatchStreak);
             groupBoxButtonTests.Controls.Add(labelUserName);
             groupBoxButtonTests.Controls.Add(textUserName);
             groupBoxButtonTests.Controls.Add(labelAmount);
@@ -601,6 +603,17 @@
             buttonStopBot.UseVisualStyleBackColor = false;
             buttonStopBot.Click += buttonStopBot_Click;
             // 
+            // buttonTestWatchStreak
+            // 
+            buttonTestWatchStreak.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestWatchStreak.Location = new Point(10, 249);
+            buttonTestWatchStreak.Name = "buttonTestWatchStreak";
+            buttonTestWatchStreak.Size = new Size(163, 40);
+            buttonTestWatchStreak.TabIndex = 16;
+            buttonTestWatchStreak.Text = "Watch Streak";
+            buttonTestWatchStreak.UseVisualStyleBackColor = true;
+            buttonTestWatchStreak.Click += buttonTestWatchStreak_Click;
+            // 
             // TwitchChatBot
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -679,5 +692,6 @@
         private GroupBox groupBoxAlertHistory;
         private ListView listViewAlertHistory;
         private Button buttonReplayAlert;
+        private Button buttonTestWatchStreak;
     }
 }

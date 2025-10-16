@@ -47,6 +47,9 @@ namespace TwitchChatBot.Data
         public async Task<List<string>?> GetSubscriptionMediaAsync(CancellationToken cancellationToken = default)
             => (await GetTwitchAlertMediaMapAsync(cancellationToken)).Subscription;
 
+        public async Task<List<string>?> GetWatchStreakMediaAsync(CancellationToken cancellationToken = default)
+            => (await GetTwitchAlertMediaMapAsync(cancellationToken)).WatchStreak;
+
         private async Task<TwitchAlertMediaMap> GetTwitchAlertMediaMapAsync(CancellationToken cancellationToken = default)
         {
             if (_twitchAlertMediaMap != null)

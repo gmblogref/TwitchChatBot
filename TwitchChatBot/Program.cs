@@ -81,6 +81,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<IWatchStreakService, WatchStreakService>();
             services.TryAddSingleton<IAppFlags, AppFlags>();
             services.TryAddSingleton<INukeService, NukeService>();
+            services.TryAddSingleton<IIRCNoticeService, IRCNoticeService>();
 
             services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(

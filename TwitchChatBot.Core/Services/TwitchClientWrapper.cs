@@ -19,6 +19,7 @@ namespace TwitchChatBot.Core.Services
         private IFirstChatterAlertService _firstChatterAlertService;
         private readonly ITwitchRoleService _twitchRoleService;
         private readonly IWatchStreakService _watchStreakService;
+        private readonly IIRCNoticeService _ircNoticeService;
         private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
         
@@ -38,7 +39,8 @@ namespace TwitchChatBot.Core.Services
                 IExcludedUsersService excludedUsersService,
                 IFirstChatterAlertService firstChatterAlertService,
                 ITwitchRoleService twitchRoleService,
-                IWatchStreakService watchStreakService)
+                IWatchStreakService watchStreakService,
+                IIRCNoticeService ircNoticeService)
         {
             _logger = logger;
             _commandAlertService = commandAlertService;
@@ -46,6 +48,7 @@ namespace TwitchChatBot.Core.Services
             _firstChatterAlertService = firstChatterAlertService;
             _twitchRoleService = twitchRoleService;
             _watchStreakService = watchStreakService;
+            _ircNoticeService = ircNoticeService;
 
             try
             {
@@ -186,7 +189,14 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
         {
-            var username = e.ChatMessage.Username.ToLower();
+            // ---- USERNOTICE short-circuit (watch streaks, etc.) ----
+            if (IsUserNotice(e.ChatMessage?.RawIrcMessage))
+            {
+                // ----- Remove this check here if _twitchClient.OnUserNotice method comes out
+                return;
+            }
+
+            var username = e.ChatMessage!.Username.ToLower();
             var channel = e.ChatMessage.Channel;
 
             if (await _excludedUsersService.IsUserExcludedAsync(username))
@@ -217,6 +227,64 @@ namespace TwitchChatBot.Core.Services
                 Message = e.ChatMessage.Message,
                 Color = ColorTranslator.FromHtml(e.ChatMessage.ColorHex ?? "#FFFFFF")
             });
+        }
+
+        private bool IsUserNotice(string? rawIrcMessage)
+        {
+            if (!string.IsNullOrEmpty(rawIrcMessage) &&
+                rawIrcMessage[0] == '@' &&
+                rawIrcMessage.Contains("USERNOTICE", StringComparison.OrdinalIgnoreCase))
+            {
+                var tags = ParseTags(rawIrcMessage);
+                tags.TryGetValue("system-msg", out var systemMsg);
+
+                // Forward to IRCNoticeService – it will route watch-streak and friends
+                _ircNoticeService.HandleUserNotice(tags, systemMsg);
+
+                // USERNOTICE is not a normal chat message; stop further processing
+                return true;
+            }
+
+            return false;
+        }
+
+        private static Dictionary<string, string> ParseTags(string raw)
+        {
+            var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrEmpty(raw))
+            {
+                return tags;
+            }
+
+            if (raw[0] != '@')
+            {
+                return tags;
+            }
+
+            var end = raw.IndexOf(' ');
+            if (end == -1)
+            {
+                return tags;
+            }
+
+            var prefix = raw.Substring(1, end - 1); // strip '@'
+            var pairs = prefix.Split(';');
+
+            foreach (var pair in pairs)
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length == 2)
+                {
+                    tags[kv[0]] = kv[1];
+                }
+                else if (kv.Length == 1)
+                {
+                    tags[kv[0]] = string.Empty;
+                }
+            }
+
+            return tags;
         }
     }
 }

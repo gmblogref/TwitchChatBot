@@ -128,6 +128,13 @@ namespace TwitchChatBot.Core.Services
                             e.RewardTitle ?? "Channel Point");
                         break;
 
+                    case AlertHistoryType.TwitchWatchStreak:
+                        await _twitch.HandleWatchStreakNoticeAsync(
+                            e.Username ?? "someone",
+                            e.Count ?? 0,
+                            e.Message ?? string.Empty);
+                        break;
+
                     default:
                         // Fallback: if we at least have media, replay via media queue
                         if (!string.IsNullOrWhiteSpace(e.MediaPath))

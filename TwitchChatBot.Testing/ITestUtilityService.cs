@@ -9,6 +9,7 @@
     Task TriggerSubGiftTestAsync(string userName, string recipient);
     Task TriggerSubMysteryGiftTestAsync(string userName, int subs);
     Task TriggerSubTestAsync(string userName);
+    Task TriggerWatchStreakUserNoticeTestAsync(string username, int streakCount);
 
     Task TriggerCommandTestAsync(string command);
 
