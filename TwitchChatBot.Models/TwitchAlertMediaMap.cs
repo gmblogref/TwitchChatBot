@@ -38,5 +38,9 @@ namespace TwitchChatBot.Models
 
         [JsonPropertyName("subscription")] 
         public List<string> Subscription { get; set; } = new();
+
+        [JsonPropertyName("watch_streak")]
+        public List<string> WatchStreak { get; set; } = new();
+
     }
 }

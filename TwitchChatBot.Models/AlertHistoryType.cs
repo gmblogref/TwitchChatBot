@@ -13,6 +13,7 @@
         public const string TwitchMysteryGift = "twitch:mysterygift"; // anonymous bundle
         public const string TwitchBulkGift = "twitch:bulkgift";  // named bundle
         public const string ChannelPoint = "twitch:channelpoint";
+        public const string TwitchWatchStreak = "twitch:watchstreak";
         public const string Tts = "tts";                         // direct TTS replay (rare; usually use Cmd)
     }
 }

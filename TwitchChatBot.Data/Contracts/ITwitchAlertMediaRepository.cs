@@ -14,5 +14,6 @@ namespace TwitchChatBot.Data.Contracts
         Task<List<string>?> GetSubgiftMediaAsync(CancellationToken cancellationToken = default);
         Task<SubMysteryGift?> GetSubMysteryGiftMapAsync(CancellationToken cancellationToken = default);
         Task<List<string>?> GetSubscriptionMediaAsync(CancellationToken cancellationToken = default);
+        Task<List<string>?> GetWatchStreakMediaAsync(CancellationToken cancellationToken = default);
     }
 }

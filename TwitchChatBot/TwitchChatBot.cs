@@ -258,6 +258,14 @@ namespace TwitchChatBot
             _testUtilityService.TriggerFollowTest(userName);
         }
 
+        private void buttonTestWatchStreak_Click(object sender, EventArgs e)
+        {
+            string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
+            int streak = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 5;
+
+            _testUtilityService.TriggerWatchStreakUserNoticeTestAsync(userName, streak);
+        }
+
         private void buttonClearFirst_Click(object sender, EventArgs e)
         {
             _testUtilityService.TriggerFirstChatClear();

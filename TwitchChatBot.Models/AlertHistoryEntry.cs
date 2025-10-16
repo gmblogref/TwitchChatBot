@@ -17,7 +17,7 @@
         // Twitch event specifics
         public int? Bits { get; init; }
         public int? Months { get; init; }
-        public int? Count { get; init; }                    // gift count / raid viewers
+        public int? Count { get; init; }                    // gift count / raid viewers / watched streams
         public int? Viewers { get; init; }                  // raid viewers (alias of Count for clarity)
         public string? Tier { get; init; }                  // "1000" | "2000" | "3000"
         public string? Gifter { get; init; }

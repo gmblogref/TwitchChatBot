@@ -47,6 +47,9 @@ public class TestUtilityService : ITestUtilityService
         await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, subs, "3000");
     public async Task TriggerSubTestAsync(string userName) =>
         await _twitchAlertTypesService.HandleSubscriptionAsync(userName, "");
+
+    public async Task TriggerWatchStreakUserNoticeTestAsync(string username, int streakCount) =>
+        await _twitchAlertTypesService.HandleWatchStreakNoticeAsync(username, streakCount, "This is a test watch streak share!");
     
     // Commands Test
     public async Task TriggerCommandTestAsync(string command) =>
