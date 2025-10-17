@@ -22,7 +22,6 @@ namespace TwitchChatBot.Core.Controller
 
         private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
-        private Timer? _nukeResetTimer;
         private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);
 
         public ChatBotController(

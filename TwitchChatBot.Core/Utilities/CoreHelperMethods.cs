@@ -44,5 +44,20 @@ namespace TwitchChatBot.Core.Utilities
 
         public static string GetWatchStreaksFile()
             => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder, "watch_streaks.json");
+
+        public static string UnescapeTagValue(string? v)
+        {
+            if (string.IsNullOrEmpty(v))
+            {
+                return v ?? string.Empty;
+            }
+
+            return v
+                .Replace(@"\s", " ")
+                .Replace(@"\n", "\n")
+                .Replace(@"\r", "\r")
+                .Replace(@"\:", ";")
+                .Replace(@"\\", @"\");
+        }
     }
 }

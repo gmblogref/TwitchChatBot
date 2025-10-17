@@ -3,10 +3,12 @@ using System.Drawing;
 using System.Text.Json;
 using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.Communication.Interfaces;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -57,12 +59,13 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL!);
 
                 _twitchClient.OnMessageReceived += async (s, e) => await HandleMessageReceivedAsync(e);
-                _twitchClient.OnConnected += async (s, e) => await HandelOnConnectedAsync();
+                _twitchClient.OnConnected += async (s, e) => await HandleOnConnectedAsync();
                 _twitchClient.OnJoinedChannel += (s, e) => _logger.LogInformation("✅ Successfully joined Twitch channel: {Channel}", e.Channel);
                 _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
                 _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
                 _twitchClient.OnUserJoined += async (s, e) => await HandleOnUserJoined(e.Username);
                 _twitchClient.OnUserLeft += (s, e) => HandleOnUserLeft(e.Username);
+                _twitchClient.OnLog += async (s, e) => await HandleOnLogAsync(e);
             }
             catch (Exception ex)
             {
@@ -136,12 +139,14 @@ namespace TwitchChatBot.Core.Services
             _adTimer = null;
         }
 
-        private async Task HandelOnConnectedAsync()
+        private async Task HandleOnConnectedAsync()
         {
             _logger.LogInformation("✅ Twitch connected.");
 
             try
             {
+                _twitchClient.SendRaw("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
+
                 var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
                 var vips = await _twitchRoleService.GetVipsAsync(AppSettings.TWITCH_USER_ID!);
 
@@ -189,13 +194,6 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
         {
-            // ---- USERNOTICE short-circuit (watch streaks, etc.) ----
-            if (IsUserNotice(e.ChatMessage?.RawIrcMessage))
-            {
-                // ----- Remove this check here if _twitchClient.OnUserNotice method comes out
-                return;
-            }
-
             var username = e.ChatMessage!.Username.ToLower();
             var channel = e.ChatMessage.Channel;
 
@@ -229,23 +227,61 @@ namespace TwitchChatBot.Core.Services
             });
         }
 
-        private bool IsUserNotice(string? rawIrcMessage)
+        private async Task HandleOnLogAsync(OnLogArgs e)
         {
-            if (!string.IsNullOrEmpty(rawIrcMessage) &&
-                rawIrcMessage[0] == '@' &&
-                rawIrcMessage.Contains("USERNOTICE", StringComparison.OrdinalIgnoreCase))
+            var raw = e.Data;
+            if (string.IsNullOrEmpty(raw))
             {
-                var tags = ParseTags(rawIrcMessage);
-                tags.TryGetValue("system-msg", out var systemMsg);
-
-                // Forward to IRCNoticeService – it will route watch-streak and friends
-                _ircNoticeService.HandleUserNotice(tags, systemMsg);
-
-                // USERNOTICE is not a normal chat message; stop further processing
-                return true;
+                return;
             }
 
-            return false;
+            // We only care about USERNOTICE for watch streaks
+            if (!raw.Contains("USERNOTICE", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            try
+            {
+                var tags = ParseTags(raw);
+
+                if (!tags.TryGetValue("msg-id", out var msgId))
+                {
+                    return;
+                }
+
+                if (!string.Equals(msgId, "viewermilestone", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                if (!string.Equals(tags.GetValueOrDefault("msg-param-category"), "watch-streak", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                // Unescape a few tag values we typically use
+                if (tags.TryGetValue("system-msg", out var sys))
+                {
+                    tags["system-msg"] = CoreHelperMethods.UnescapeTagValue(sys);
+                }
+                if (tags.TryGetValue("user-message", out var um))
+                {
+                    tags["user-message"] = CoreHelperMethods.UnescapeTagValue(um);
+                }
+                if (tags.TryGetValue("display-name", out var dn))
+                {
+                    tags["display-name"] = CoreHelperMethods.UnescapeTagValue(dn);
+                }
+
+                _logger.LogInformation("🌟 USERNOTICE viewermilestone/watch-streak captured.");
+
+                await _ircNoticeService.HandleUserNoticeAsync(tags, tags.GetValueOrDefault("system-msg"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process USERNOTICE watch-streak.");
+            }
         }
 
         private static Dictionary<string, string> ParseTags(string raw)

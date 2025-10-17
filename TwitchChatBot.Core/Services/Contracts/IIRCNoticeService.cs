@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-
-namespace TwitchChatBot.Core.Services.Contracts
+﻿namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface IIRCNoticeService
     {
-        void HandleUserNotice(IReadOnlyDictionary<string, string> tags, string? systemMsg);
+        Task HandleUserNoticeAsync(IReadOnlyDictionary<string, string> tags, string? systemMsg);
     }
 }

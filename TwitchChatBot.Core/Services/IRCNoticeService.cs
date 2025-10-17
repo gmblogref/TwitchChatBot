@@ -21,7 +21,7 @@ namespace TwitchChatBot.Core.Services
             _twitchAlert = twitch;
         }
 
-        public void HandleUserNotice(IReadOnlyDictionary<string, string> tags, string? systemMsg)
+        public async Task HandleUserNoticeAsync(IReadOnlyDictionary<string, string> tags, string? systemMsg)
         {
             if (!tags.TryGetValue("msg-id", out var msgId))
             {
@@ -35,7 +35,7 @@ namespace TwitchChatBot.Core.Services
                 {
                     if (string.Equals(cat, "watch-streak", StringComparison.OrdinalIgnoreCase))
                     {
-                        HandleWatchStreak(tags, systemMsg);
+                        await HandleWatchStreak(tags, systemMsg);
                         return;
                     }
                 }
@@ -44,11 +44,11 @@ namespace TwitchChatBot.Core.Services
             // Add more USERNOTICE types here later (e.g., hype chat, community moments, goals, etc.)
         }
 
-        private void HandleWatchStreak(IReadOnlyDictionary<string, string> tags, string? systemMsg)
+        private async Task HandleWatchStreak(IReadOnlyDictionary<string, string> tags, string? systemMsg)
         {
             if (!tags.TryGetValue("msg-param-value", out var valueStr))
             {
-                _logger.LogDebug("USERNOTICE watch-streak missing msg-param-value.");
+                _logger.LogDebug("USERNOTICE watch-streak missing msg-param-value. Tags: {Tags}", string.Join(",", tags.Select(kv => $"{kv.Key}={kv.Value}")));
                 return;
             }
 
@@ -62,13 +62,17 @@ namespace TwitchChatBot.Core.Services
                         (tags.TryGetValue("user-login", out var ul) ? ul : string.Empty);
 
             var display = tags.TryGetValue("display-name", out var dn) ? dn : login;
+            if (string.IsNullOrWhiteSpace(display))
+            {
+                display = "someone";
+            }
 
             // Some USERNOTICEs carry user-entered text in "user-message". If absent, fall back to system message.
             tags.TryGetValue("user-message", out var userMsg);
             var shared = !string.IsNullOrWhiteSpace(userMsg) ? userMsg : systemMsg;
 
             // Use your existing typed-alert path: server has one global queue; frontends filter on data.type
-            _twitchAlert.HandleWatchStreakNoticeAsync(display, streak, shared);
+            await _twitchAlert.HandleWatchStreakNoticeAsync(display, streak, shared);
 
             _logger.LogInformation("🌟 Watch streak: user={User} streak={Streak}", display, streak);
         }
