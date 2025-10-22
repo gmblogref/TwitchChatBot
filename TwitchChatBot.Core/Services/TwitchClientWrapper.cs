@@ -251,7 +251,7 @@ namespace TwitchChatBot.Core.Services
             {
                 var tags = ParseTags(raw);
 
-                if(IsThisAlertAlreadyProcessing(tags))
+                if(IsThisAlertAlreadyProcessing(tags, raw))
                 {
                     return;
                 }
@@ -298,7 +298,7 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private bool IsThisAlertAlreadyProcessing(Dictionary<string, string> tags)
+        private bool IsThisAlertAlreadyProcessing(Dictionary<string, string> tags, string raw)
         {
             var uniqueId =
                 tags.GetValueOrDefault("id") ??
