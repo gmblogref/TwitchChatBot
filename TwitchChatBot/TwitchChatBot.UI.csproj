@@ -8,6 +8,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<RepositoryUrl>https://github.com/gmblogref/TwitchChatBot</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
+		<ApplicationIcon>baseball_icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -48,5 +49,8 @@
 		<Content Include="wwwroot\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="baseball_icon.ico" />
 	</ItemGroup>
 </Project>
