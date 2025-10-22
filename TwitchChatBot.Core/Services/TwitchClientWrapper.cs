@@ -8,6 +8,7 @@ using TwitchChatBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.Client.Models.Internal;
 using TwitchLib.Communication.Interfaces;
 
 namespace TwitchChatBot.Core.Services
@@ -31,6 +32,11 @@ namespace TwitchChatBot.Core.Services
         private readonly HashSet<string> _modList = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _vipList = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _viewers = new(StringComparer.OrdinalIgnoreCase);
+
+        // Dedup processed USERNOTICEs (keyed by "id" or login|tmi-sent-ts)
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _seenUserNoticeIds
+            = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>();
+
 
         public event EventHandler<List<ViewerEntry>>? OnViewerListChanged;
         public event EventHandler<TwitchMessageEventArgs>? OnMessageReceived;
@@ -245,7 +251,12 @@ namespace TwitchChatBot.Core.Services
             {
                 var tags = ParseTags(raw);
 
-                if (!tags.TryGetValue("msg-id", out var msgId))
+                if(IsThisAlertAlreadyProcessing(tags))
+                {
+                    return;
+                }
+
+                if (!tags.TryGetValue("msg-id", out var msgId) || !string.Equals(msgId, "viewermilestone", StringComparison.OrdinalIgnoreCase))
                 {
                     return;
                 }
@@ -274,7 +285,10 @@ namespace TwitchChatBot.Core.Services
                     tags["display-name"] = CoreHelperMethods.UnescapeTagValue(dn);
                 }
 
-                _logger.LogInformation("🌟 USERNOTICE viewermilestone/watch-streak captured.");
+                // Log for visibility while you debug
+                _logger.LogInformation("🌟 Watch streak USERNOTICE for {User} (streak {Streak})",
+                    tags.GetValueOrDefault("display-name", tags.GetValueOrDefault("login", "someone")),
+                    tags.GetValueOrDefault("watch-streak-value", "?"));
 
                 await _ircNoticeService.HandleUserNoticeAsync(tags, tags.GetValueOrDefault("system-msg"));
             }
@@ -284,39 +298,87 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
+        private bool IsThisAlertAlreadyProcessing(Dictionary<string, string> tags)
+        {
+            var uniqueId =
+                tags.GetValueOrDefault("id") ??
+                $"{tags.GetValueOrDefault("login", "")}|{tags.GetValueOrDefault("tmi-sent-ts", "")}";
+
+            if (string.IsNullOrEmpty(uniqueId))
+            {
+                // Extremely rare: still create a stable key to prevent back-to-back duplicates
+                uniqueId = $"{tags.GetValueOrDefault("display-name", "someone")}|" + raw.GetHashCode();
+            }
+
+            // Try to add; if already there, we already handled this notice
+            if (!_seenUserNoticeIds.TryAdd(uniqueId, DateTime.UtcNow))
+            {
+                _logger.LogDebug("🔁 Duplicate USERNOTICE ignored: {UniqueId}", uniqueId);
+                return true;
+            }
+
+            return false;
+        }
+
         private static Dictionary<string, string> ParseTags(string raw)
         {
             var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
+            
             if (string.IsNullOrEmpty(raw))
             {
                 return tags;
             }
 
-            if (raw[0] != '@')
+            // Find the first '@' even if the logger added a prefix like "Received: "
+            var atIndex = raw.IndexOf('@');
+            if (atIndex < 0)
             {
                 return tags;
             }
 
-            var end = raw.IndexOf(' ');
-            if (end == -1)
+            // Tags end at the first space following the '@...;' section
+            var spaceAfterTags = raw.IndexOf(' ', atIndex);
+            if (spaceAfterTags < 0)
             {
                 return tags;
             }
 
-            var prefix = raw.Substring(1, end - 1); // strip '@'
-            var pairs = prefix.Split(';');
+            // Extract "badge-info=...;...;vip=0" (without the leading '@')
+            var tagSection = raw.Substring(atIndex + 1, spaceAfterTags - (atIndex + 1));
+            var pairs = tagSection.Split(';');
 
             foreach (var pair in pairs)
             {
-                var kv = pair.Split('=', 2);
-                if (kv.Length == 2)
+                if (string.IsNullOrEmpty(pair))
                 {
-                    tags[kv[0]] = kv[1];
+                    continue;
                 }
-                else if (kv.Length == 1)
+
+                var eqIndex = pair.IndexOf('=');
+                if (eqIndex >= 0)
                 {
-                    tags[kv[0]] = string.Empty;
+                    var key = pair.Substring(0, eqIndex);
+                    var value = (eqIndex + 1 < pair.Length) ? pair.Substring(eqIndex + 1) : string.Empty;
+                    tags[key] = value;
+                }
+                else
+                {
+                    // Key present with empty value
+                    tags[pair] = string.Empty;
+                }
+            }
+
+            // Now extract trailing message after " USERNOTICE ... :"
+            // The pattern is: ":tmi.twitch.tv USERNOTICE #channel :<trailing>"
+            var usernoticeIndex = raw.IndexOf(" USERNOTICE ", spaceAfterTags, StringComparison.OrdinalIgnoreCase);
+            if (usernoticeIndex >= 0)
+            {
+                var colonIndex = raw.IndexOf(" :", usernoticeIndex, StringComparison.Ordinal);
+                if (colonIndex >= 0 && colonIndex + 2 <= raw.Length)
+                {
+                    var key = "user-message";
+                    var value = raw.Substring(colonIndex + 2);
+                    tags[key] = value;
                 }
             }
 
