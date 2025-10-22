@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TwitchChatBot));
             buttonStartBot = new Button();
             tabControlChatBot = new TabControl();
             tabPageMainChat = new TabPage();
@@ -45,6 +46,7 @@
             buttonTtsSkip = new Button();
             tabTesting = new TabPage();
             groupBoxButtonTests = new GroupBox();
+            buttonTestWatchStreak = new Button();
             labelUserName = new Label();
             textUserName = new TextBox();
             labelAmount = new Label();
@@ -73,7 +75,6 @@
             labelLogging = new Label();
             buttonTestBot = new Button();
             buttonStopBot = new Button();
-            buttonTestWatchStreak = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
             tabPageUtilities.SuspendLayout();
@@ -300,6 +301,17 @@
             groupBoxButtonTests.TabIndex = 18;
             groupBoxButtonTests.TabStop = false;
             groupBoxButtonTests.Text = "Button Tests";
+            // 
+            // buttonTestWatchStreak
+            // 
+            buttonTestWatchStreak.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestWatchStreak.Location = new Point(10, 249);
+            buttonTestWatchStreak.Name = "buttonTestWatchStreak";
+            buttonTestWatchStreak.Size = new Size(163, 40);
+            buttonTestWatchStreak.TabIndex = 16;
+            buttonTestWatchStreak.Text = "Watch Streak";
+            buttonTestWatchStreak.UseVisualStyleBackColor = true;
+            buttonTestWatchStreak.Click += buttonTestWatchStreak_Click;
             // 
             // labelUserName
             // 
@@ -603,17 +615,6 @@
             buttonStopBot.UseVisualStyleBackColor = false;
             buttonStopBot.Click += buttonStopBot_Click;
             // 
-            // buttonTestWatchStreak
-            // 
-            buttonTestWatchStreak.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestWatchStreak.Location = new Point(10, 249);
-            buttonTestWatchStreak.Name = "buttonTestWatchStreak";
-            buttonTestWatchStreak.Size = new Size(163, 40);
-            buttonTestWatchStreak.TabIndex = 16;
-            buttonTestWatchStreak.Text = "Watch Streak";
-            buttonTestWatchStreak.UseVisualStyleBackColor = true;
-            buttonTestWatchStreak.Click += buttonTestWatchStreak_Click;
-            // 
             // TwitchChatBot
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -623,6 +624,7 @@
             Controls.Add(buttonTestBot);
             Controls.Add(tabControlChatBot);
             Controls.Add(buttonStartBot);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1168, 626);
             Name = "TwitchChatBot";
             Text = "Twitch Chat Bot";
