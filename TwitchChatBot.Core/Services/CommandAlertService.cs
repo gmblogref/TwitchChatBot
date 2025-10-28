@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Data;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
@@ -50,10 +49,13 @@ namespace TwitchChatBot.Core.Services
             _appFlags = appFlags;
         }
 
-        public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage)
+        public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage, bool isAutoCommand = false)
         {
-            if (await _excludedUsersService.IsUserExcludedAsync(username))
-                return;
+            if (!isAutoCommand)
+            {
+                if (await _excludedUsersService.IsUserExcludedAsync(username))
+                    return;
+            }
 
             if (string.IsNullOrWhiteSpace(commandText))
                 return;
