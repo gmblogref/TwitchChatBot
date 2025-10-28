@@ -1,15 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Drawing;
-using System.Text.Json;
-using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using TwitchLib.Client.Models.Internal;
-using TwitchLib.Communication.Interfaces;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -23,6 +19,7 @@ namespace TwitchChatBot.Core.Services
         private readonly ITwitchRoleService _twitchRoleService;
         private readonly IWatchStreakService _watchStreakService;
         private readonly IIRCNoticeService _ircNoticeService;
+        private readonly ITwitchAlertTypesService _twitchAlertTypesService;
         private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
         
@@ -48,7 +45,8 @@ namespace TwitchChatBot.Core.Services
                 IFirstChatterAlertService firstChatterAlertService,
                 ITwitchRoleService twitchRoleService,
                 IWatchStreakService watchStreakService,
-                IIRCNoticeService ircNoticeService)
+                IIRCNoticeService ircNoticeService,
+                ITwitchAlertTypesService twitchAlertTypesService)
         {
             _logger = logger;
             _commandAlertService = commandAlertService;
@@ -57,6 +55,7 @@ namespace TwitchChatBot.Core.Services
             _twitchRoleService = twitchRoleService;
             _watchStreakService = watchStreakService;
             _ircNoticeService = ircNoticeService;
+            _twitchAlertTypesService = twitchAlertTypesService;
 
             try
             {
@@ -72,6 +71,13 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.OnUserJoined += async (s, e) => await HandleOnUserJoined(e.Username);
                 _twitchClient.OnUserLeft += (s, e) => HandleOnUserLeft(e.Username);
                 _twitchClient.OnLog += async (s, e) => await HandleOnLogAsync(e);
+
+                _twitchClient.OnNewSubscriber += async (s, e) => { await HandleOnNewSubscriberAsync(e); };
+                _twitchClient.OnReSubscriber += async (s, e) => { await HandleOnReSubscriberAsync(e); };
+                _twitchClient.OnGiftedSubscription += async (s, e) => { await HandleOnGiftedSubscriptionAsync(e); };
+                _twitchClient.OnCommunitySubscription += async (s, e) => { await HandleOnCommunitySubscriptionAsync(e); };
+                _twitchClient.OnRaidNotification += async (s, e) => { await HandleOnRaidNotificationAsync(e); };
+
             }
             catch (Exception ex)
             {
@@ -297,6 +303,100 @@ namespace TwitchChatBot.Core.Services
                 _logger.LogWarning(ex, "Failed to process USERNOTICE watch-streak.");
             }
         }
+
+        private async Task HandleOnNewSubscriberAsync(TwitchLib.Client.Events.OnNewSubscriberArgs e)
+        {
+            var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? "someone";
+            var tier = ConvertPlanToTier(e.Subscriber?.SubscriptionPlan);
+            await _twitchAlertTypesService.HandleSubscriptionAsync(user, tier);
+        }
+
+        private async Task HandleOnReSubscriberAsync(TwitchLib.Client.Events.OnReSubscriberArgs e)
+        {
+            // DisplayName/Login
+            var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? "someone";
+
+            // Twitch sends months data as msg-param-cumulative-months / msg-param-streak-months / msg-param-months
+            // TwitchLib exposes them through MsgParam... properties
+            int months = 1;
+
+            if (int.TryParse(e.ReSubscriber?.MsgParamCumulativeMonths, out var cum))
+            {
+                months = cum;
+            }
+            else if (int.TryParse(e.ReSubscriber?.MsgParamStreakMonths, out var streak))
+            {
+                months = streak;
+            }
+            else if (e.ReSubscriber?.Months != null)
+            {
+                months = e.ReSubscriber.Months;
+            }
+
+            // Optional text message
+            var message = e.ReSubscriber?.ResubMessage ?? string.Empty;
+
+            // Tier mapping (still same SubscriptionPlan enum)
+            var tier = ConvertPlanToTier(e.ReSubscriber?.SubscriptionPlan);
+
+            await _twitchAlertTypesService.HandleResubAsync(username, months, message, tier);
+        }
+
+        private async Task HandleOnGiftedSubscriptionAsync(TwitchLib.Client.Events.OnGiftedSubscriptionArgs e)
+        {
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? "someone";
+            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? "someone";
+            var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
+            await _twitchAlertTypesService.HandleSubGiftAsync(gifter, recipient, tier);
+        }
+
+        private async Task HandleOnCommunitySubscriptionAsync(TwitchLib.Client.Events.OnCommunitySubscriptionArgs e)
+        {
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? "someone";
+            var count =
+                (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount :
+                (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount : 1;
+            var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
+            await _twitchAlertTypesService.HandleSubMysteryGiftAsync(gifter, count, tier);
+        }
+
+        private async Task HandleOnRaidNotificationAsync(TwitchLib.Client.Events.OnRaidNotificationArgs e)
+        {
+            var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? "someone";
+            int viewers = 1;
+            if (int.TryParse(e.RaidNotification?.MsgParamViewerCount, out var parsed))
+            {
+                viewers = parsed;
+            }
+
+            await _twitchAlertTypesService.HandleRaidAsync(raiderDisplay, viewers);
+
+            // Auto-!so as the bot (bypass excluded users via isSystem flag on your command service)
+            var raiderLogin = e.RaidNotification?.MsgParamLogin;
+            var handle = string.IsNullOrWhiteSpace(raiderLogin) ? raiderDisplay : raiderLogin;
+            if (!handle.StartsWith("@", StringComparison.Ordinal))
+            {
+                handle = "@" + handle;
+            }
+
+            await _commandAlertService.HandleCommandAsync(
+                $"!so {handle}",
+                AppSettings.TWITCH_BOT_USERNAME!,
+                AppSettings.TWITCH_CHANNEL!,
+                SendMessage,
+                isAutoCommand: true);
+        }
+
+        private static string ConvertPlanToTier(TwitchLib.Client.Enums.SubscriptionPlan? plan)
+        {
+            if (!plan.HasValue) { return "1000"; }
+            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Prime ||
+                plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier1) { return "1000"; }
+            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier2) { return "2000"; }
+            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier3) { return "3000"; }
+            return "1000";
+        }
+
 
         private bool IsThisAlertAlreadyProcessing(Dictionary<string, string> tags, string raw)
         {

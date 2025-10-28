@@ -174,7 +174,7 @@ namespace TwitchChatBot.UI.Services
                             string userName = "someone";
                             var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                             var eventPayload = root.GetProperty("payload").GetProperty("event");
-                            var subTier = "1000";
+                            //var subTier = "1000";
 
                             switch (subscriptionType)
                             {
@@ -189,45 +189,6 @@ namespace TwitchChatBot.UI.Services
                                     userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
                                     var rewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? "";
                                     await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(userName, rewardTitle);
-                                    break;
-
-                                case TwitchEventTypes.ChannelRaid:
-                                    var raiderName = eventPayload.GetProperty("from_broadcaster_user_login").GetString() ?? "someone";
-                                    var viewers = eventPayload.GetProperty("viewers").GetInt32();
-                                    await _twitchAlertTypesService.HandleRaidAsync(raiderName, viewers);
-                                    break;
-
-                                case TwitchEventTypes.ChannelSubscribe:
-                                    userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
-                                    subTier = GetSubTier(eventPayload);
-
-                                    await _twitchAlertTypesService.HandleSubscriptionAsync(userName, subTier);
-                                    break;
-
-                                case TwitchEventTypes.ChannelSubscriptionGift:
-                                    userName = eventPayload.GetProperty("user_name").GetString() == null ? userName : "someone";
-                                    var recipient = eventPayload.GetProperty("recipient_user_name").GetString() ?? "someone";
-                                    subTier = GetSubTier(eventPayload);
-                                    var totalGifts = eventPayload.TryGetProperty("total", out var totalVal) ? totalVal.GetInt32() : 1;
-
-                                    if (totalGifts > 1)
-                                    {
-                                        // Mystery gift bundle
-                                        await _twitchAlertTypesService.HandleSubMysteryGiftAsync(userName, totalGifts, subTier);
-                                    }
-                                    else
-                                    {
-                                        await _twitchAlertTypesService.HandleSubGiftAsync(userName, recipient, subTier!);
-                                    }
-                                    break;
-
-                               case TwitchEventTypes.ChannelSubscriptionMessage:
-                                    userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
-                                    var months = eventPayload.GetProperty("cumulative_months").GetInt32();
-                                    var resubMessage = eventPayload.GetProperty("message").GetProperty("text").GetString() ?? "";
-                                    subTier = GetSubTier(eventPayload);
-                                    
-                                    await _twitchAlertTypesService.HandleResubAsync(userName, months, resubMessage, subTier);
                                     break;
 
                                 case TwitchEventTypes.HypeTrainBegin:
@@ -297,11 +258,7 @@ namespace TwitchChatBot.UI.Services
                 TwitchEventTypes.HypeTrainBegin,
                 TwitchEventTypes.HypeTrainProgress,             // optional
                 TwitchEventTypes.HypeTrainEnd,                  // optional
-                TwitchEventTypes.ChannelRaid,
-                TwitchEventTypes.ChannelSubscribe,
-                TwitchEventTypes.ChannelSubscriptionGift,
-                TwitchEventTypes.ChannelSubscriptionMessage,
-                TwitchEventTypes.ChannelFollow                    // NEW — requires v2 + moderator_user_id
+                TwitchEventTypes.ChannelFollow                  // NEW — requires v2 + moderator_user_id
             };
 
             var http = new HttpClient();
@@ -326,11 +283,7 @@ namespace TwitchChatBot.UI.Services
                 string version = "1";
                 object condition;
 
-                if (type == TwitchEventTypes.ChannelRaid)
-                {
-                    condition = new { to_broadcaster_user_id = broadcasterId };
-                }
-                else if (type == TwitchEventTypes.ChannelFollow)
+                if (type == TwitchEventTypes.ChannelFollow)
                 {
                     if (string.IsNullOrEmpty(tokenUserId))
                     {
@@ -418,15 +371,6 @@ namespace TwitchChatBot.UI.Services
                 _logger.LogWarning(ex, "Failed to validate token for user id.");
                 return null;
             }
-        }
-
-        private string GetSubTier(JsonElement eventPayload)
-        {
-            var result = eventPayload.TryGetProperty("tier", out var t) && t.ValueKind == JsonValueKind.String
-                                        ? t.GetString()
-                                        : "1000";
-
-            return result ?? "1000";
         }
     }
 }
