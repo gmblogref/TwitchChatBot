@@ -9,9 +9,13 @@ namespace TwitchChatBot.Core.Services
         private readonly ILogger<AlertService> _logger;
         private readonly IWebSocketServer _webSocketServer;
         private readonly Queue<AlertItem> _alertQueue = new();
+        private readonly object _sync = new();
+
+        private TaskCompletionSource<bool>? _currentAlertTcs;
         private bool _isProcessing = false;
 
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
+        private static readonly TimeSpan AlertTimeout = TimeSpan.FromSeconds(15);
 
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
         {
@@ -36,27 +40,42 @@ namespace TwitchChatBot.Core.Services
         // New overload that lets you specify type
         public void EnqueueAlert(string type, string message, string? mediaPath = null)
         {
-            _alertQueue.Enqueue(new AlertItem
+            lock (_sync)
             {
-                Type = type,
-                Message = message,
-                Media = mediaPath
-            });
+                _alertQueue.Enqueue(new AlertItem
+                {
+                    Type = type,
+                    Message = message,
+                    Media = mediaPath
+                });
+            }
 
-            ProcessQueue();
+            _ = ProcessQueueAsync();
         }
 
-        private void ProcessQueue()
+        private async Task ProcessQueueAsync()
         {
-            if (_isProcessing || _alertQueue.Count == 0)
-                return;
+            lock (_sync)
+            {
+                if (_isProcessing || _alertQueue.Count == 0)
+                {
+                    return;
+                }
 
-            _isProcessing = true;
+                _isProcessing = true;
+                _currentAlertTcs = new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            AlertItem alert;
+
+            lock (_sync)
+            {
+                alert = _alertQueue.Dequeue();
+            }
 
             try
             {
-                var alert = _alertQueue.Dequeue();
-
                 var payload = new
                 {
                     type = alert.Type,
@@ -64,20 +83,42 @@ namespace TwitchChatBot.Core.Services
                     media = alert.Media
                 };
 
-                _webSocketServer.BroadcastAsync(payload);
+                await _webSocketServer.BroadcastAsync(payload);
                 _logger.LogInformation("📤 Alert sent: {Type}, {Message}, Media: {Media}", alert.Type, alert.Message, alert.Media);
+
+                var completed = await Task.WhenAny(
+                    _currentAlertTcs!.Task,
+                    Task.Delay(AlertTimeout)
+                );
+
+                if (completed != _currentAlertTcs.Task)
+                {
+                    _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion.");
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Failed to process alert.");
+            }
+            finally
+            {
+                lock (_sync)
+                {
+                    _isProcessing = false;
+                    _currentAlertTcs = null;
+                }
+
+                _ = ProcessQueueAsync();
             }
         }
 
         private void HandleClientDone()
         {
             _logger.LogInformation("✅ Client reported alert finished");
-            _isProcessing = false;
-            ProcessQueue();
+            lock (_sync)
+            {
+                _currentAlertTcs?.TrySetResult(true);
+            }
         }
     }
 }
