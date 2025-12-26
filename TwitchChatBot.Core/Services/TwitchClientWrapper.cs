@@ -223,7 +223,10 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            await _firstChatterAlertService.HandleFirstChatAsync(username, e.ChatMessage.Username);
+            if (await _firstChatterAlertService.HandleFirstChatAsync(username, e.ChatMessage.Username))
+            {
+                await _commandAlertService.TryAutoShoutOutIfStreamerAsync(username, channel, SendMessage);
+            }
 
             if (e.ChatMessage.Message.Trim().StartsWith("!"))
             {

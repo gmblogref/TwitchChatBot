@@ -20,7 +20,11 @@ namespace TwitchChatBot.Core.Services
         private readonly IModerationService _moderationService;
         private readonly INukeService _nukeService;
         private readonly IAppFlags _appFlags;
-        
+
+        private readonly object _soSync = new();
+        private readonly Dictionary<string, DateTime> _recentAutoSos = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly TimeSpan AutoSoCooldown = TimeSpan.FromMinutes(30);
+
         public CommandAlertService(
             ILogger<CommandAlertService> logger,
             ICommandMediaRepository commandMediaRepository,
@@ -111,6 +115,57 @@ namespace TwitchChatBot.Core.Services
                     _alertService.EnqueueAlert("", CoreHelperMethods.ToPublicMediaPath(entry.Media));
                 }
             }
+        }
+
+        public async Task TryAutoShoutOutIfStreamerAsync(
+            string username,
+            string channel,
+            Action<string, string> sendMessage,
+            CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return;
+            }
+
+            if (string.Equals(username, AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (string.Equals(username, AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!CanAutoSo(username))
+            {
+                return;
+            }
+
+            // streamer check = "does Helix return a game?"
+            var userId = await _helixLookupService.GetUserIdByLoginAsync(username, ct);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return;
+            }
+
+            var game = await _helixLookupService.GetLastKnownGameByUserIdAsync(userId, ct);
+            if (string.IsNullOrWhiteSpace(game))
+            {
+                // No game => assume they do not stream => skip
+                return;
+            }
+
+            MarkAutoSo(username);
+
+            // Run the SO command as an auto-command (bypass excluded user logic)
+            await HandleCommandAsync(
+                $"!so @{username}",
+                AppSettings.TWITCH_BOT_USERNAME!,
+                channel,
+                sendMessage,
+                isAutoCommand: true);
         }
 
         private async Task HandleTtsCommandAsync(string ttsText, string username, string commandText)
@@ -426,6 +481,39 @@ namespace TwitchChatBot.Core.Services
             {
                 _logger.LogWarning(ex, "Command template format mismatch. Template: {Template}", template);
                 return template; // fallback so the bot still replies
+            }
+        }
+
+        /// <summary>
+        /// Can we shout out this users
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
+        private bool CanAutoSo(string username)
+        {
+            lock (_soSync)
+            {
+                if (_recentAutoSos.TryGetValue(username, out var last))
+                {
+                    if (DateTime.UtcNow - last < AutoSoCooldown)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Mak the user as shouted out
+        /// </summary>
+        /// <param name="username"></param>
+        private void MarkAutoSo(string username)
+        {
+            lock (_soSync)
+            {
+                _recentAutoSos[username] = DateTime.UtcNow;
             }
         }
     }
