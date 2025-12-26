@@ -43,19 +43,19 @@ namespace TwitchChatBot.Core.Services
             _firstChatters?.Clear();
         }
 
-        public async Task HandleFirstChatAsync(string username, string displayName, bool isReplay = false)
+        public async Task<bool> HandleFirstChatAsync(string username, string displayName, bool isReplay = false)
         {
             if (!isReplay)
             {
                 if (await _excludedUsersService.IsUserExcludedAsync(username))
                 {
                     _logger.LogInformation("⛔ Ignored first chatter alert for excluded user or non eligible user: {User}", username);
-                    return;
+                    return false;
                 }
 
                 if (HasAlreadyChatted(username))
                 {
-                    return;
+                    return false;
                 }
 
                 await _watchStreakService.MarkAttendanceAsync(username);
@@ -76,11 +76,15 @@ namespace TwitchChatBot.Core.Services
                 });
 
                 _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaFileName));
+
+                return true;
             }
             else
             {
                 _sendMessage(AppSettings.TWITCH_CHANNEL!, message);
             }
+
+            return false;
         }
 
         private bool HasAlreadyChatted(string username)
