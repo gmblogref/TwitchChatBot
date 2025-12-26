@@ -23,6 +23,8 @@ namespace TwitchChatBot.Models
         public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes");
         public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
 
+        public static int AlertTimeOut => GetIntSetting("AppSettings:AlertTimeOut");
+
         public static class WebHost
         {
             public static string? BaseUrl => GetSetting("Webhost:BaseUrl");
