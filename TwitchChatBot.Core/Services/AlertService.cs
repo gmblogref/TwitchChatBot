@@ -15,7 +15,7 @@ namespace TwitchChatBot.Core.Services
         private bool _isProcessing = false;
 
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
-        private static readonly TimeSpan AlertTimeout = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan AlertTimeout = TimeSpan.FromSeconds(AppSettings.AlertTimeOut);
 
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
         {
