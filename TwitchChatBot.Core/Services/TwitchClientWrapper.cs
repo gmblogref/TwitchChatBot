@@ -20,9 +20,10 @@ namespace TwitchChatBot.Core.Services
         private readonly IWatchStreakService _watchStreakService;
         private readonly IIRCNoticeService _ircNoticeService;
         private readonly ITwitchAlertTypesService _twitchAlertTypesService;
+        private readonly IHelixLookupService _helixLookupService;
         private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
-        
+
         private readonly HashSet<string> _connectedUsers = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _mods = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _vips = new(StringComparer.OrdinalIgnoreCase);
@@ -46,7 +47,8 @@ namespace TwitchChatBot.Core.Services
                 ITwitchRoleService twitchRoleService,
                 IWatchStreakService watchStreakService,
                 IIRCNoticeService ircNoticeService,
-                ITwitchAlertTypesService twitchAlertTypesService)
+                ITwitchAlertTypesService twitchAlertTypesService,
+                IHelixLookupService helixLookupService)
         {
             _logger = logger;
             _commandAlertService = commandAlertService;
@@ -56,6 +58,7 @@ namespace TwitchChatBot.Core.Services
             _watchStreakService = watchStreakService;
             _ircNoticeService = ircNoticeService;
             _twitchAlertTypesService = twitchAlertTypesService;
+            _helixLookupService = helixLookupService;
 
             try
             {
@@ -63,21 +66,49 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient = new TwitchClient();
                 _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL!);
 
-                _twitchClient.OnMessageReceived += async (s, e) => await HandleMessageReceivedAsync(e);
-                _twitchClient.OnConnected += async (s, e) => await HandleOnConnectedAsync();
+                // Non async wire ups
                 _twitchClient.OnJoinedChannel += (s, e) => _logger.LogInformation("✅ Successfully joined Twitch channel: {Channel}", e.Channel);
                 _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
                 _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
-                _twitchClient.OnUserJoined += async (s, e) => await HandleOnUserJoined(e.Username);
                 _twitchClient.OnUserLeft += (s, e) => HandleOnUserLeft(e.Username);
-                _twitchClient.OnLog += async (s, e) => await HandleOnLogAsync(e);
 
-                _twitchClient.OnNewSubscriber += async (s, e) => { await HandleOnNewSubscriberAsync(e); };
-                _twitchClient.OnReSubscriber += async (s, e) => { await HandleOnReSubscriberAsync(e); };
-                _twitchClient.OnGiftedSubscription += async (s, e) => { await HandleOnGiftedSubscriptionAsync(e); };
-                _twitchClient.OnCommunitySubscription += async (s, e) => { await HandleOnCommunitySubscriptionAsync(e); };
-                _twitchClient.OnRaidNotification += async (s, e) => { await HandleOnRaidNotificationAsync(e); };
-
+                // Safe async wire ups
+                _twitchClient.OnMessageReceived += (s, e) =>
+                {
+                    RunSafe(() => HandleMessageReceivedAsync(e), "OnMessageReceived");
+                };
+                _twitchClient.OnConnected += (s, e) =>
+                {
+                    RunSafe(HandleOnConnectedAsync, "OnConnected");
+                };
+                _twitchClient.OnUserJoined += (s, e) =>
+                {
+                    RunSafe(() => HandleOnUserJoined(e.Username), "OnUserJoined");
+                };
+                _twitchClient.OnLog += (s, e) =>
+                {
+                    RunSafe(() => HandleOnLogAsync(e), "OnLog");
+                };
+                _twitchClient.OnNewSubscriber += (s, e) =>
+                {
+                    RunSafe(() => HandleOnNewSubscriberAsync(e), "OnNewSubscriber");
+                };
+                _twitchClient.OnReSubscriber += (s, e) =>
+                {
+                    RunSafe(() => HandleOnReSubscriberAsync(e), "OnReSubscriber");
+                };
+                _twitchClient.OnGiftedSubscription += (s, e) =>
+                {
+                    RunSafe(() => HandleOnGiftedSubscriptionAsync(e), "OnGiftedSubscription");
+                };
+                _twitchClient.OnCommunitySubscription += (s, e) =>
+                {
+                    RunSafe(() => HandleOnCommunitySubscriptionAsync(e), "OnCommunitySubscription");
+                };
+                _twitchClient.OnRaidNotification += (s, e) =>
+                {
+                    RunSafe(() => HandleOnRaidNotificationAsync(e), "OnRaidNotification");
+                };
             }
             catch (Exception ex)
             {
@@ -102,7 +133,7 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("🛑 GetGroupedViewers called.");
             var result = new List<ViewerEntry>();
 
-            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL!, Role = "Broadcaster" }); 
+            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL!, Role = "Broadcaster" });
 
             foreach (var name in _mods.OrderBy(x => x))
                 result.Add(new ViewerEntry { Username = name, Role = "mod" });
@@ -175,8 +206,9 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnUserJoined(string username)
         {
-            await _watchStreakService.MarkAttendanceAsync(username);
-            
+            var userId = (await _helixLookupService.GetUserIdByLoginAsync(username)) ?? string.Empty;
+            await _watchStreakService.MarkAttendanceAsync(userId, username);
+
             if (!_connectedUsers.Add(username))
                 return;
 
@@ -184,7 +216,7 @@ namespace TwitchChatBot.Core.Services
                 _mods.Add(username);
             else if (_vipList.Contains(username))
                 _vips.Add(username);
-            else if(username != AppSettings.TWITCH_CHANNEL)
+            else if (username != AppSettings.TWITCH_CHANNEL)
                 _viewers.Add(username);
 
             _logger.LogInformation("👤 Joined: {User}", username);
@@ -207,15 +239,17 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
         {
             var username = e.ChatMessage!.Username.ToLower();
+            var displayName = e.ChatMessage.Username;
+            var userId = e.ChatMessage.UserId;
             var channel = e.ChatMessage.Channel;
 
-            if (await _excludedUsersService.IsUserExcludedAsync(username))
+            if (await _excludedUsersService.IsUserExcludedAsync(userId, username))
             {
                 _logger.LogInformation("🙈 Ignoring message from excluded user: {Username}", username);
                 return;
             }
 
-            if (e.ChatMessage.Message.Trim().ToLower() == "!clearfirst" && username == AppSettings.TWITCH_CHANNEL!.ToLower())
+            if (e.ChatMessage.Message.Trim().Equals("!clearfirst", StringComparison.InvariantCultureIgnoreCase) && userId == AppSettings.TWITCH_USER_ID!)
             {
                 _firstChatterAlertService.ClearFirstChatters();
                 _logger.LogInformation("✅ First chatters list cleared by {User}", username);
@@ -223,14 +257,14 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            if (await _firstChatterAlertService.HandleFirstChatAsync(username, e.ChatMessage.Username))
+            if (await _firstChatterAlertService.HandleFirstChatAsync(userId, username, e.ChatMessage.Username))
             {
                 await _commandAlertService.TryAutoShoutOutIfStreamerAsync(username, channel, SendMessage);
             }
 
             if (e.ChatMessage.Message.Trim().StartsWith("!"))
             {
-                await _commandAlertService.HandleCommandAsync(e.ChatMessage.Message.Trim(), username, channel, SendMessage);
+                await _commandAlertService.HandleCommandAsync(e.ChatMessage.Message.Trim(), userId, username, channel, SendMessage);
             }
 
             OnMessageReceived?.Invoke(this, new TwitchMessageEventArgs
@@ -260,7 +294,7 @@ namespace TwitchChatBot.Core.Services
             {
                 var tags = ParseTags(raw);
 
-                if(IsThisAlertAlreadyProcessing(tags, raw))
+                if (IsThisAlertAlreadyProcessing(tags, raw))
                 {
                     return;
                 }
@@ -366,6 +400,7 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleOnRaidNotificationAsync(TwitchLib.Client.Events.OnRaidNotificationArgs e)
         {
             var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? "someone";
+            var raiderUserId = e.RaidNotification?.UserId ?? string.Empty;
             int viewers = 1;
             if (int.TryParse(e.RaidNotification?.MsgParamViewerCount, out var parsed))
             {
@@ -384,6 +419,7 @@ namespace TwitchChatBot.Core.Services
 
             await _commandAlertService.HandleCommandAsync(
                 $"!so {handle}",
+                raiderUserId,
                 AppSettings.TWITCH_BOT_USERNAME!,
                 AppSettings.TWITCH_CHANNEL!,
                 SendMessage,
@@ -426,7 +462,7 @@ namespace TwitchChatBot.Core.Services
         private static Dictionary<string, string> ParseTags(string raw)
         {
             var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             if (string.IsNullOrEmpty(raw))
             {
                 return tags;
@@ -486,6 +522,21 @@ namespace TwitchChatBot.Core.Services
             }
 
             return tags;
+        }
+
+        private void RunSafe(Func<Task> action, string context)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await action();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Unhandled exception in {Context}", context);
+                }
+            });
         }
     }
 }

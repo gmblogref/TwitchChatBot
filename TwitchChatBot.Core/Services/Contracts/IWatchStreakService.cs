@@ -7,11 +7,8 @@ namespace TwitchChatBot.Core.Services.Contracts
         void BeginStream();
         void EndStream();
 
-        Task MarkAttendanceAsync(string userName);
-        Task MarkAttendanceBatchAsync(IEnumerable<string> userLogins);
+        Task MarkAttendanceAsync(string userId, string userName);
 
-        IReadOnlyList<WatchUserStats> TopByConsecutive(int take = 10);
-        IReadOnlyList<WatchUserStats> TopByTotal(int take = 10);
-        Task<(int Consecutive, int Total)> GetStatsTupleAsync(string username);
+        Task<(int Consecutive, int Total)> GetStatsTupleAsync(string userId, string username);
     }
 }

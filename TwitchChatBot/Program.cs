@@ -65,6 +65,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<IExcludedUsersRepository, ExcludedUsersRepository>();
             services.TryAddSingleton<IFirstChatterMediaRepository, FirstChatterMediaRepository>();
             services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
+            services.TryAddSingleton<IWatchStreakRepository, WatchStreakRepository>();
 
             // ⚙️ Core Services
             services.TryAddSingleton<IAlertService, AlertService>();

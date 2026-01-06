@@ -49,14 +49,14 @@ namespace TwitchChatBot.Core.Services
                 {
                     case AlertHistoryType.First:
                         if (!string.IsNullOrWhiteSpace(e.Username))
-                            await _firstChatter.HandleFirstChatAsync(e.Username, e.Display, true);
+                            await _firstChatter.HandleFirstChatAsync(e.UserId, e.Username, e.Display, true);
                         else
                             _logger.LogWarning("Replay First: missing Username.");
                         break;
 
                     case AlertHistoryType.Cmd:
                         if (!string.IsNullOrWhiteSpace(e.CommandText))
-                            await _command.HandleCommandAsync(e.CommandText, e.Username ?? "someone", AppSettings.TWITCH_CHANNEL!, _twitchClient.SendMessage);
+                            await _command.HandleCommandAsync(e.CommandText, e.UserId, e.Username ?? "someone", AppSettings.TWITCH_CHANNEL!, _twitchClient.SendMessage);
                         else
                             _logger.LogWarning("Replay Cmd: missing CommandText.");
                         break;

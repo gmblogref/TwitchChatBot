@@ -14,6 +14,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IAlertService _alertService;
         private readonly IWatchStreakService _watchStreakService;
         private readonly IAlertHistoryService _alertHistoryService;
+        private readonly IHelixLookupService _helixLookupService;
         private readonly Action<string, string> _sendMessage;
         private HashSet<string> _firstChatters = [];
 
@@ -27,6 +28,7 @@ namespace TwitchChatBot.Core.Services
             IAlertService alertService,
             IWatchStreakService watchStreakService,
             IAlertHistoryService alertHistoryService,
+            IHelixLookupService helixLookupService,
             Action<string, string> sendMessage)
         {
             _logger = logger;
@@ -35,6 +37,7 @@ namespace TwitchChatBot.Core.Services
             _alertService = alertService;
             _watchStreakService = watchStreakService;
             _alertHistoryService = alertHistoryService;
+            _helixLookupService = helixLookupService;
             _sendMessage = sendMessage;
         }
 
@@ -43,39 +46,40 @@ namespace TwitchChatBot.Core.Services
             _firstChatters?.Clear();
         }
 
-        public async Task<bool> HandleFirstChatAsync(string username, string displayName, bool isReplay = false)
+        public async Task<bool> HandleFirstChatAsync(string userId, string username, string displayName, bool isReplay = false)
         {
             if (!isReplay)
             {
-                if (await _excludedUsersService.IsUserExcludedAsync(username))
+                if (await _excludedUsersService.IsUserExcludedAsync(userId, username))
                 {
                     _logger.LogInformation("⛔ Ignored first chatter alert for excluded user or non eligible user: {User}", username);
                     return false;
                 }
 
-                if (HasAlreadyChatted(username))
+                if (HasAlreadyChatted(userId))
                 {
                     return false;
                 }
 
-                await _watchStreakService.MarkAttendanceAsync(username);
-                MarkAsChatted(username);
+                await _watchStreakService.MarkAttendanceAsync(userId, username);
+                MarkAsChatted(userId);
             }
 
-            var mediaFileName = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(username);
+            var firstChatterMediaItem = await _firstChatterMediaRepository.GetFirstChatterMediaAsync(userId, username);
             var message = UniversalMessage.Replace("[userName]", displayName);
 
-            if (mediaFileName != null && CanPlayChatterMedia(username))
+            if (firstChatterMediaItem != null && firstChatterMediaItem.Media != null && CanPlayChatterMedia(firstChatterMediaItem))
             {
                 _alertHistoryService.Add(new AlertHistoryEntry
                 {
                     Type = AlertHistoryType.First,
+                    UserId = userId,
                     Display = $"First Chatter: {username}",
                     Username = username,
                     DisplayName = displayName,
                 });
 
-                _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaFileName));
+                _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(firstChatterMediaItem.Media));
 
                 return true;
             }
@@ -87,32 +91,30 @@ namespace TwitchChatBot.Core.Services
             return false;
         }
 
-        private bool HasAlreadyChatted(string username)
+        private bool HasAlreadyChatted(string userId)
         {
-            return _firstChatters?.Contains(username) ?? false;
+            return _firstChatters?.Contains(userId) ?? false;
         }
 
-        private void MarkAsChatted(string username)
+        private void MarkAsChatted(string userId)
         {
-            _firstChatters.Add(username);
+            _firstChatters.Add(userId);
         }
 
-        private async Task<bool> IsEligibleForFirstChatAsync(string username)
+        private bool CanPlayChatterMedia(FirstChatterMediaItem firstChatterMediaItem)
         {
-            return await _firstChatterMediaRepository.IsEligibleForFirstChatAsync(username);
-        }
+            if (firstChatterMediaItem == null)
+            {
+                return false;
+            }
 
-        private bool CanPlayChatterMedia(string username)
-        {
-            // Move this list to Config if it gets bigger than 2 users
-            if (!string.Equals(username, "whynot7058", StringComparison.OrdinalIgnoreCase) ||
-                (string.Equals(username, "whynot7058", StringComparison.OrdinalIgnoreCase) &&
-                DateTime.Now.DayOfWeek == DayOfWeek.Wednesday))
+            if (firstChatterMediaItem.AllowedDaysOfWeek == null ||
+                firstChatterMediaItem.AllowedDaysOfWeek.Count == 0)
             {
                 return true;
             }
 
-            return false;
+            return firstChatterMediaItem.AllowedDaysOfWeek.Contains(DateTime.Now.DayOfWeek);
         }
     }
 }

@@ -53,11 +53,11 @@ namespace TwitchChatBot.Core.Services
             _appFlags = appFlags;
         }
 
-        public async Task HandleCommandAsync(string commandText, string username, string channel, Action<string, string> sendMessage, bool isAutoCommand = false)
+        public async Task HandleCommandAsync(string commandText, string userId, string username, string channel, Action<string, string> sendMessage, bool isAutoCommand = false)
         {
             if (!isAutoCommand)
             {
-                if (await _excludedUsersService.IsUserExcludedAsync(username))
+                if (await _excludedUsersService.IsUserExcludedAsync(userId, username))
                     return;
             }
 
@@ -66,7 +66,7 @@ namespace TwitchChatBot.Core.Services
 
             var commandTuple = ParseCommandTuple(commandText);
 
-            var ctx = BuildContext(username, channel, commandText, commandTuple.command, commandTuple.rawTarget, commandTuple.ttsText);
+            var ctx = BuildContext(userId, username, channel, commandText, commandTuple.command, commandTuple.rawTarget, commandTuple.ttsText);
             if (await ContinueIfIsSpecialCommandOptionsAsync(ctx, sendMessage))
             {
                 var entry = await _commandMediaRepository.GetCommandMediaItemAsync(commandTuple.command);
@@ -90,13 +90,14 @@ namespace TwitchChatBot.Core.Services
                         _alertHistoryService.Add(new AlertHistoryEntry
                         {
                             Type = AlertHistoryType.Cmd,
+                            UserId = userId,
                             Display = $"{username} ran: {commandText}",
                             Username = username,
                             CommandText = commandText,
                             Message = message
                         });
 
-                    sendMessage(channel, message);
+                    sendMessage(ctx.Channel, message);
                     }
                 }
 
@@ -106,6 +107,7 @@ namespace TwitchChatBot.Core.Services
                     _alertHistoryService.Add(new AlertHistoryEntry
                     {
                         Type = AlertHistoryType.Cmd,
+                        UserId = userId,
                         Display = $"{username} ran: {commandText}",
                         Username = username,
                         CommandText = commandText,
@@ -162,15 +164,16 @@ namespace TwitchChatBot.Core.Services
             // Run the SO command as an auto-command (bypass excluded user logic)
             await HandleCommandAsync(
                 $"!so @{username}",
+                userId,
                 AppSettings.TWITCH_BOT_USERNAME!,
                 channel,
                 sendMessage,
                 isAutoCommand: true);
         }
 
-        private async Task HandleTtsCommandAsync(string ttsText, string username, string commandText)
+        private async Task HandleTtsCommandAsync(CommandContext ctx)
         {
-            var (voice, text) = ParseTtsArgs(ttsText);
+            var (voice, text) = ParseTtsArgs(ctx.TtsText!);
             if (string.IsNullOrWhiteSpace(text))
             {
                 return;
@@ -183,8 +186,9 @@ namespace TwitchChatBot.Core.Services
             _alertHistoryService.Add(new AlertHistoryEntry
             {
                 Type = AlertHistoryType.Tts,
-                Display = $"{username} ran: {commandText}",
-                Username = username,
+                UserId = ctx.UserId ?? string.Empty,
+                Display = $"{ctx.Username} ran: {ctx.CommandText}",
+                Username = ctx.Username,
                 Voice = voice,
                 Message = text
             });
@@ -195,6 +199,7 @@ namespace TwitchChatBot.Core.Services
             public required string Channel { get; init; }
             public required string Username { get; init; }       // user who ran the command
             public required string Command { get; init; }
+            public string? UserId { get; set; }
             public string? RawTarget { get; init; }             // target name without '@'
             public string? TtsText { get; init; }
             public string? CommandText { get; set; }
@@ -260,8 +265,8 @@ namespace TwitchChatBot.Core.Services
             return (maybeVoice, rest);
         }
 
-        private CommandContext BuildContext(string username, string channel, string? commandText, string command, string? rawTarget, string? ttsText)
-            =>  new CommandContext() { Username = username, Channel = channel, CommandText = commandText, Command = command,  RawTarget = rawTarget, TtsText = ttsText };
+        private CommandContext BuildContext(string userId, string username, string channel, string? commandText, string command, string? rawTarget, string? ttsText)
+            =>  new CommandContext() { UserId = userId, Username = username, Channel = channel, CommandText = commandText, Command = command,  RawTarget = rawTarget, TtsText = ttsText };
 
         /// <summary>
         /// Replaces your existing tokens. Keeps behavior consistent with !so.
@@ -286,7 +291,7 @@ namespace TwitchChatBot.Core.Services
             switch (command)
             {
                 case "!streak":
-                    var statsTuple = await _watchStreakService.GetStatsTupleAsync(ctx.Username);
+                    var statsTuple = await _watchStreakService.GetStatsTupleAsync(ctx.UserId!, ctx.Username);
                     return new object[] { statsTuple.Consecutive, statsTuple.Total };
 
                 default:
@@ -318,10 +323,10 @@ namespace TwitchChatBot.Core.Services
                     await _tsService.SpeakAsync($"Happy Birthday {ctx.TtsText}");
                     break;
                 case "!tts":
-                    await HandleTtsCommandAsync(ctx.TtsText!, ctx.Username, ctx.CommandText!);
+                    await HandleTtsCommandAsync(ctx);
                     return false;
                 case "!commands":
-                    await HandleShowAvaiableCommands(ctx.Channel, ctx.Username, ctx.CommandText!, sendMessage);
+                    await HandleShowAvaiableCommands(ctx, sendMessage);
                     return false;
                 case "!nuke":
                     await HandleNukeCommandAsync(ctx, sendMessage);
@@ -337,12 +342,12 @@ namespace TwitchChatBot.Core.Services
             return true;
         }
 
-        private async Task HandleShowAvaiableCommands(string channel, string username, string commandText, Action<string, string> sendMessage)
+        private async Task HandleShowAvaiableCommands(CommandContext ctx, Action<string, string> sendMessage)
         {
             var names = await _commandMediaRepository.GetAllCommandNamesAsync();
             if (names.Count == 0)
             {
-                sendMessage(channel, "No commands configured.");
+                sendMessage(ctx.Channel, "No commands configured.");
                 return;
             }
 
@@ -356,7 +361,7 @@ namespace TwitchChatBot.Core.Services
                 var next = (line.Length == prefix.Length) ? name : ", " + name;
                 if ((line.Length + next.Length) > maxLen)
                 {
-                    sendMessage(channel, line);
+                    sendMessage(ctx.Channel, line);
                     line = prefix + name;
                 }
                 else
@@ -366,15 +371,16 @@ namespace TwitchChatBot.Core.Services
             }
             if (line.Length > prefix.Length)
             {
-                sendMessage(channel, line);
+                sendMessage(ctx.Channel, line);
             }
 
             _alertHistoryService.Add(new AlertHistoryEntry
             {
                 Type = AlertHistoryType.Cmd,
-                Display = $"{username} ran: {commandText}",
-                Username = username,
-                CommandText = commandText
+                UserId = ctx.UserId ?? string.Empty,
+                Display = $"{ctx.Username} ran: {ctx.CommandText}",
+                Username = ctx.Username,
+                CommandText = ctx.CommandText
             });
         }
 
@@ -455,6 +461,7 @@ namespace TwitchChatBot.Core.Services
             _alertHistoryService.Add(new AlertHistoryEntry
             {
                 Type = AlertHistoryType.Cmd,
+                UserId = ctx.UserId ?? string.Empty,
                 Display = $"{ctx.Username} nuked {ctx.RawTarget}",
                 Username = ctx.Username,
                 CommandText = ctx.CommandText!,

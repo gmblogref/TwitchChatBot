@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TwitchChatBot.Models
+﻿namespace TwitchChatBot.Models
 {
-    public class WatchUserStats
+    public class WatchStreakUserStats
     {
+        public string UserId { get; set; } = "";
         public string UserName { get; set; } = "";
+        public int FailedUserIdLookups { get; set; }
         public int TotalStreams { get; set; }
         public int Consecutive { get; set; }
         public int LastAttendedIndex { get; set; }

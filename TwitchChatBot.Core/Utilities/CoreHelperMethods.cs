@@ -42,9 +42,6 @@ namespace TwitchChatBot.Core.Utilities
         public static string GetTtsOutputFolder()
             => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder!, "text_to_speech");
 
-        public static string GetWatchStreaksFile()
-            => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder, "watch_streaks.json");
-
         public static string UnescapeTagValue(string? v)
         {
             if (string.IsNullOrEmpty(v))

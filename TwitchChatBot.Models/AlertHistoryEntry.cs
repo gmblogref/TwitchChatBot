@@ -6,6 +6,7 @@
         public DateTime Timestamp { get; init; } = DateTime.Now;
         public string Type { get; init; } = string.Empty;   // see AlertHistoryType
         public string Display { get; init; } = string.Empty; // nice one-liner for UI list
+        public string UserId { get; set; } = string.Empty; 
         public string? Username { get; init; }              // actor / primary user
         public string? DisplayName { get; init; }              // Twitch display name
 
