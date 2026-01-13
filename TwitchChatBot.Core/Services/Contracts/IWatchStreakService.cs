@@ -4,14 +4,11 @@ namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface IWatchStreakService
     {
-        void BeginStream();
-        void EndStream();
+        Task BeginStreamAsync();
+        Task EndStreamAsync();
 
-        Task MarkAttendanceAsync(string userName);
-        Task MarkAttendanceBatchAsync(IEnumerable<string> userLogins);
+        Task MarkAttendanceAsync(string userId, string userName);
 
-        IReadOnlyList<WatchUserStats> TopByConsecutive(int take = 10);
-        IReadOnlyList<WatchUserStats> TopByTotal(int take = 10);
-        Task<(int Consecutive, int Total)> GetStatsTupleAsync(string username);
+        Task<(int Consecutive, int Total)> GetStatsTupleAsync(string userId, string username);
     }
 }

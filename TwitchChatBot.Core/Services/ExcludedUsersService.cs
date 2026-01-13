@@ -15,7 +15,7 @@ namespace TwitchChatBot.Core.Services
             _logger = logger;
         }
 
-        public async Task<bool> IsUserExcludedAsync(string username)
+        public async Task<bool> IsUserExcludedAsync(string userId, string username)
         {
             return await _excludedUsersRepository.IsUserExcludedAsync(username.ToLower());
         }

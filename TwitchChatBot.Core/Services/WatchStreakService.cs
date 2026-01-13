@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using TwitchChatBot.Core.Services.Contracts;
-using TwitchChatBot.Core.Utilities;
+using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
@@ -12,34 +10,39 @@ namespace TwitchChatBot.Core.Services
         private readonly ILogger<WatchStreakService> _logger;
         private readonly IExcludedUsersService _excludedUsersService;
         private readonly IAppFlags _appFlags;
-        private readonly string _filePath;
-        private readonly object _sync = new();
-        private bool _streamOpen;
-        private State _state = new();
-        private readonly HashSet<string> _attendeesThisStream = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IWatchStreakRepository _watchStreakRepository;
 
-        public WatchStreakService(ILogger<WatchStreakService> logger,
+        private readonly SemaphoreSlim _gate = new(1, 1);
+        private bool _streamOpen;
+        private WatchStreakState? _watchStreakState;
+        private readonly HashSet<string> _attendeesThisStream = new(StringComparer.OrdinalIgnoreCase); // tracked by UserId since it doesn't change
+
+
+        public WatchStreakService(
+            ILogger<WatchStreakService> logger,
             IExcludedUsersService excludedUsersService,
-            IAppFlags appFlags)
+            IAppFlags appFlags,
+            IWatchStreakRepository watchStreakRepository)
         {
             _logger = logger;
-            _filePath = CoreHelperMethods.GetWatchStreaksFile();
-
-            var baseFolder = AppSettings.MediaBase.TwitchAlertsFolder
-                ?? throw new InvalidOperationException("AppSettings.Media.TwitchAlertsFolder is not set.");
-            
-            Directory.CreateDirectory(baseFolder);
-            Load();
             _excludedUsersService = excludedUsersService;
             _appFlags = appFlags;
+            _watchStreakRepository = watchStreakRepository;
         }
 
-        public void BeginStream()
+        public async Task BeginStreamAsync()
         {
-            lock (_sync)
+            WatchStreakState? snapshotToSave = null;
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
+
                 if (_streamOpen && _appFlags.IsTesting)
+                {
                     return;
+                }
 
                 _streamOpen = true;
                 _attendeesThisStream.Clear();
@@ -47,230 +50,300 @@ namespace TwitchChatBot.Core.Services
                 if (_appFlags.IsTesting)
                 {
                     _logger.LogInformation("🧪 Stream started (TESTING). Stats will not be updated.");
-                }
-                else
-                {
-                    _state.CurrentStreamIndex += 1;
-                    _logger.LogInformation("📡 Stream started (LIVE). Index now {Index}.", _state.CurrentStreamIndex);
+                    return;
                 }
 
-                Save();
+                _watchStreakState!.CurrentStreamIndex += 1;
+                _logger.LogInformation("📡 Stream started (LIVE). Index now {Index}.", _watchStreakState.CurrentStreamIndex);
+
+                snapshotToSave = _watchStreakState;
             }
+            finally
+            {
+                _gate.Release();
+            }
+
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
         }
 
-        public void EndStream()
+        public async Task EndStreamAsync()
         {
-            lock (_sync)
+            WatchStreakState? snapshotToSave = null;
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
+
                 if (!_streamOpen || _appFlags.IsTesting)
+                {
                     return;
+                }
 
                 _streamOpen = false;
                 _attendeesThisStream.Clear();
-                Save();
+
+                snapshotToSave = _watchStreakState;
             }
+            finally
+            {
+                _gate.Release();
+            }
+
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
         }
 
-        public async Task MarkAttendanceAsync(string userName)
+        public async Task MarkAttendanceAsync(string userId, string userName)
         {
-            if (string.IsNullOrWhiteSpace(userName) ||
-                await _excludedUsersService.IsUserExcludedAsync(userName) ||
-                !_streamOpen ||
-                _appFlags.IsTesting)
+            userId = userId?.Trim() ?? "";
+            userName = userName?.Trim() ?? "";
+
+            if (!_streamOpen || _appFlags.IsTesting)
             {
                 return;
             }
 
-            lock (_sync)
+            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userName))
             {
-                if (!_attendeesThisStream.Add(userName)) 
-                    return;
+                return;
+            }
 
-                if (!_state.Users.TryGetValue(userName, out var u))
+            if (await _excludedUsersService.IsUserExcludedAsync(userId, userName).ConfigureAwait(false))
+            {
+                _logger.LogInformation("🙈 Ignoring attendance for excluded user: {Username}", userName);
+                return;
+            }
+
+            WatchStreakState? snapshotToSave = null;
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
+
+                if (!_streamOpen || _appFlags.IsTesting)
                 {
-                    u = new UserStats { UserName = userName, FirstSeenUtc = DateTimeOffset.UtcNow };
-                    _state.Users[userName] = u;
+                    return;
                 }
 
-                if (u.LastAttendedIndex == _state.CurrentStreamIndex - 1)
+                var identityKey = GetIdentityKey(userId, userName);
+
+                // Only count once per stream
+                if (!_attendeesThisStream.Add(identityKey))
+                {
+                    return;
+                }
+
+                // Get-or-create stats keyed by userId (preferred), with legacy username-key migration
+                var u = GetOrCreateUserStats_LegacyMigration(userId, userName);
+
+                if (u.LastAttendedIndex == _watchStreakState!.CurrentStreamIndex - 1)
+                {
                     u.Consecutive += 1;
+                }
                 else
+                {
                     u.Consecutive = 1;
+                }
 
                 u.TotalStreams += 1;
-                u.LastAttendedIndex = _state.CurrentStreamIndex;
+                u.LastAttendedIndex = _watchStreakState.CurrentStreamIndex;
                 u.LastSeenUtc = DateTimeOffset.UtcNow;
 
-                Save();
+                snapshotToSave = _watchStreakState;
+            }
+            finally
+            {
+                _gate.Release();
+            }
+
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
+        }
+
+
+        public async Task<(int Consecutive, int Total)> GetStatsTupleAsync(string userId, string userName)
+        {
+            userId = userId?.Trim() ?? "";
+            userName = userName?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userName))
+            {
+                return (0, 0);
+            }
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    if (_watchStreakState!.Users.TryGetValue(userId, out var sById))
+                    {
+                        return (sById.Consecutive, sById.TotalStreams);
+                    }
+                }
+
+                // Fallback: legacy username lookup (in case something still calls by username)
+                var legacy = FindLegacyByUserName_NoAlloc(userName);
+                if (legacy != null)
+                {
+                    return (legacy.Consecutive, legacy.TotalStreams);
+                }
+
+                return (0, 0);
+            }
+            finally
+            {
+                _gate.Release();
             }
         }
 
-        public async Task MarkAttendanceBatchAsync(IEnumerable<string> userNames)
+        private static string GetIdentityKey(string userId, string userName)
         {
-            if (userNames == null ||
-                !_streamOpen ||
-                _appFlags.IsTesting)
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                return userId;
+            }
+
+            return userName;
+        }
+
+        private async Task EnsureStateLoadedAsync()
+        {
+            if (_watchStreakState != null)
             {
                 return;
             }
 
-            // 1) Do async filtering outside the lock
-            var toMark = new List<string>();
-            foreach (var user in userNames)
+            // Repo handles "file missing -> new state" via LoadOrCreateAsync
+            // We block here to keep the service API unchanged (BeginStream is sync).
+            _watchStreakState = await _watchStreakRepository.GetStateAsync();
+
+            if (_watchStreakState.Users == null)
             {
-                if (string.IsNullOrWhiteSpace(user) || await _excludedUsersService.IsUserExcludedAsync(user))
+                _watchStreakState.Users = new Dictionary<string, WatchStreakUserStats>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private WatchStreakUserStats GetOrCreateUserStats_LegacyMigration(string userId, string userName)
+        {
+            // Preferred: already keyed correctly by userId
+            if (_watchStreakState!.Users.TryGetValue(userId, out var existingById))
+            {
+                // Keep latest known username for display
+                if (!string.Equals(existingById.UserName, userName, StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
+                    existingById.UserName = userName;
                 }
 
-                toMark.Add(user);
-            }
-
-            // 2) Lock only while mutating shared state
-            lock (_sync)
-            {
-                foreach (var user in toMark)
+                if (string.IsNullOrWhiteSpace(existingById.UserId))
                 {
-                    if (string.IsNullOrWhiteSpace(user))
-                    {
-                        continue;
-                    }
-
-                    var name = user.Trim();
-                    if (!_attendeesThisStream.Add(name)) continue;
-
-                    if (!_state.Users.TryGetValue(name, out var u))
-                    {
-                        u = new UserStats { UserName = name, FirstSeenUtc = DateTimeOffset.UtcNow };
-                        _state.Users[name] = u;
-                    }
-
-                    if (u.LastAttendedIndex == _state.CurrentStreamIndex - 1)
-                        u.Consecutive += 1;
-                    else
-                        u.Consecutive = 1;
-
-                    u.TotalStreams += 1;
-                    u.LastAttendedIndex = _state.CurrentStreamIndex;
-                    u.LastSeenUtc = DateTimeOffset.UtcNow;
+                    existingById.UserId = userId;
                 }
 
-                Save();
+                return existingById;
             }
-        }
 
-        public IReadOnlyList<WatchUserStats> TopByConsecutive(int take = 10)
-        {
-            lock (_sync)
+            // Legacy migration path:
+            // Old files likely have dictionary key == username, stats.UserId empty.
+            // We search for a record matching username and move it under userId.
+            var legacyKey = FindLegacyKeyByUserName(userName);
+            if (!string.IsNullOrWhiteSpace(legacyKey) && _watchStreakState.Users.TryGetValue(legacyKey, out var legacy))
             {
-                return _state.Users.Values
-                    .OrderByDescending(u => u.Consecutive)
-                    .ThenBy(u => u.UserName, StringComparer.OrdinalIgnoreCase)
-                    .Take(take)
-                    .Select(ToPublic)
-                    .ToList();
-            }
-        }
+                _watchStreakState.Users.Remove(legacyKey);
 
-        public IReadOnlyList<WatchUserStats> TopByTotal(int take = 10)
-        {
-            lock (_sync)
+                legacy.UserId = userId;
+                legacy.UserName = userName;
+
+                if (legacy.FirstSeenUtc == null)
+                {
+                    legacy.FirstSeenUtc = DateTimeOffset.UtcNow;
+                }
+
+                _watchStreakState.Users[userId] = legacy;
+
+                _logger.LogInformation("🔁 Migrated watch streak stats from legacy key '{LegacyKey}' to UserId '{UserId}'.", legacyKey, userId);
+
+                return legacy;
+            }
+
+            // Brand new user
+            var u = new WatchStreakUserStats
             {
-                return _state.Users.Values
-                    .OrderByDescending(u => u.TotalStreams)
-                    .ThenBy(u => u.UserName, StringComparer.OrdinalIgnoreCase)
-                    .Take(take)
-                    .Select(ToPublic)
-                    .ToList();
-            }
+                UserId = userId,
+                UserName = userName,
+                FirstSeenUtc = DateTimeOffset.UtcNow
+            };
+
+            _watchStreakState.Users[userId] = u;
+            return u;
         }
 
-        public Task<(int Consecutive, int Total)> GetStatsTupleAsync(string username)
+        private string? FindLegacyKeyByUserName(string userName)
         {
-            if (string.IsNullOrWhiteSpace(username))
-                return Task.FromResult((0, 0));
-
-            lock (_sync)
+            if (string.IsNullOrWhiteSpace(userName))
             {
-                if (_state.Users.TryGetValue(username, out var s))
-                    return Task.FromResult((s.Consecutive, s.TotalStreams));
+                return null;
             }
 
-            return Task.FromResult((0, 0));
+            foreach (var kvp in _watchStreakState!.Users)
+            {
+                var key = kvp.Key;
+                var value = kvp.Value;
+
+                // Legacy: key was username and/or UserId was not set yet
+                if (string.Equals(key, userName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return key;
+                }
+
+                if (!string.IsNullOrWhiteSpace(value?.UserName) &&
+                    string.Equals(value.UserName, userName, StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrWhiteSpace(value.UserId) || !string.Equals(key, value.UserId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return key;
+                }
+            }
+
+            return null;
         }
 
-        private void Load()
+        private WatchStreakUserStats? FindLegacyByUserName_NoAlloc(string userName)
         {
+            if (string.IsNullOrWhiteSpace(userName))
+            {
+                return null;
+            }
+
+            foreach (var kvp in _watchStreakState!.Users)
+            {
+                if (kvp.Value != null &&
+                    !string.IsNullOrWhiteSpace(kvp.Value.UserName) &&
+                    string.Equals(kvp.Value.UserName, userName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return kvp.Value;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task SaveStateAsync(WatchStreakState? state, CancellationToken ct = default)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
             try
             {
-                if (!File.Exists(_filePath))
-                {
-                    _state = new State();
-                    _logger.LogInformation("🆕 No streak file found. Starting fresh at {Path}", _filePath);
-                    return;
-                }
-
-                var json = File.ReadAllText(_filePath);
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                _state = JsonSerializer.Deserialize<State>(json, opts) ?? new State();
-                if (_state.Users == null) _state.Users = new(StringComparer.OrdinalIgnoreCase);
-
-                _logger.LogInformation("📖 Loaded watch streaks from {Path}. Users: {Count}, Index: {Index}",
-                    _filePath, _state.Users.Count, _state.CurrentStreamIndex);
+                await _watchStreakRepository.SaveAsync(state, ct);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️ Failed to load watch streak file. Using empty state.");
-                _state = new State();
+                _logger.LogWarning(ex, "⚠️ Failed to save watch streak state.");
             }
-        }
-
-        private void Save()
-        {
-            try
-            {
-                var dir = Path.GetDirectoryName(_filePath);
-                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-                var opts = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                };
-                var json = JsonSerializer.Serialize(_state, opts);
-                File.WriteAllText(_filePath, json);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "⚠️ Failed to save watch streaks to {Path}", _filePath);
-            }
-        }
-
-        private static WatchUserStats ToPublic(UserStats u) => new()
-        {
-            UserName = u.UserName,
-            TotalStreams = u.TotalStreams,
-            Consecutive = u.Consecutive,
-            LastAttendedIndex = u.LastAttendedIndex,
-            LastSeenUtc = u.LastSeenUtc,
-            FirstSeenUtc = u.FirstSeenUtc
-        };
-
-        private class State
-        {
-            public int Version { get; set; } = 1;
-            public int CurrentStreamIndex { get; set; }
-            public Dictionary<string, UserStats> Users { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        }
-
-        private class UserStats
-        {
-            public string UserName { get; set; } = "";
-            public int TotalStreams { get; set; }
-            public int Consecutive { get; set; }
-            public int LastAttendedIndex { get; set; }
-            public DateTimeOffset? LastSeenUtc { get; set; }
-            public DateTimeOffset? FirstSeenUtc { get; set; }
         }
     }
 }

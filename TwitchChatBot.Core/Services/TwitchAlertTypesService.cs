@@ -3,7 +3,6 @@ using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
-using TwitchLib.Client.Extensions;
 
 namespace TwitchChatBot.Core.Services
 {

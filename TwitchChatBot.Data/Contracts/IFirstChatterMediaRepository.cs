@@ -1,8 +1,14 @@
-﻿namespace TwitchChatBot.Data.Contracts
+﻿using TwitchChatBot.Models;
+
+namespace TwitchChatBot.Data.Contracts
 {
     public interface IFirstChatterMediaRepository
     {
-        Task<bool> IsEligibleForFirstChatAsync(string username, CancellationToken cancellationToken = default);
-        Task<string?> GetFirstChatterMediaAsync(string username, CancellationToken cancellationToken = default);
+        Task<FirstChatterMediaItem?> GetFirstChatterMediaAsync(
+        string userId,
+        string username,
+        CancellationToken cancellationToken = default);
+
+        Task SaveAsync(CancellationToken cancellationToken = default);
     }
 }

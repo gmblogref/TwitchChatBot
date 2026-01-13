@@ -7,7 +7,11 @@
 
     public class FirstChatterMediaItem
     {
-        public string Username { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public string CurrentUserName { get; set; } = string.Empty;
         public string Media { get; set; } = string.Empty;
+
+        // Empty or null = allowed any day
+        public List<DayOfWeek> AllowedDaysOfWeek { get; set; } = new();
     }
 }

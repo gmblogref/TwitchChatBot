@@ -2,6 +2,6 @@
 {
     public interface IExcludedUsersService
     {
-        Task<bool> IsUserExcludedAsync(string username);
+        Task<bool> IsUserExcludedAsync(string userId, string username);
     }
 }
