@@ -11,7 +11,7 @@ namespace TwitchChatBot.Data
         private readonly ILogger<FirstChatterMediaRepository> _logger;
         private readonly string _filePath;
 
-        private readonly object _sync = new();
+        private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _isLoaded;
         private FirstChatterMediaMap? _firstChattersMediaMap;
 
@@ -26,18 +26,22 @@ namespace TwitchChatBot.Data
             string username,
             CancellationToken cancellationToken = default)
         {
-            await EnsureLoadedAsync(cancellationToken);
+            userId = userId?.Trim() ?? "";
+            username = username?.Trim() ?? "";
 
-            if (_firstChattersMediaMap == null || _firstChattersMediaMap.FirstChatterMediaItems.Count == 0)
-            {
-                return null;
-            }
+            await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
 
             FirstChatterMediaItem? item = null;
             var shouldSave = false;
 
-            lock (_sync)
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
+                if (_firstChattersMediaMap == null || _firstChattersMediaMap.FirstChatterMediaItems.Count == 0)
+                {
+                    return null;
+                }
+
                 // 1) Prefer userId match (stable)
                 if (!string.IsNullOrWhiteSpace(userId))
                 {
@@ -53,13 +57,11 @@ namespace TwitchChatBot.Data
                             item.CurrentUserName = username;
                             shouldSave = true;
                         }
-
-                        return item;
                     }
                 }
 
                 // 2) Fallback username match (legacy / pre-backfill)
-                if (!string.IsNullOrWhiteSpace(username))
+                if (item == null && !string.IsNullOrWhiteSpace(username))
                 {
                     item = _firstChattersMediaMap.FirstChatterMediaItems
                         .FirstOrDefault(x => string.Equals(x.CurrentUserName, username, StringComparison.OrdinalIgnoreCase));
@@ -73,15 +75,17 @@ namespace TwitchChatBot.Data
                             item.UserId = userId;
                             shouldSave = true;
                         }
-
-                        return item;
                     }
                 }
+            }
+            finally
+            {
+                _gate.Release();
             }
 
             if (shouldSave)
             {
-                await SaveAsync(cancellationToken);
+                await SaveAsync(cancellationToken).ConfigureAwait(false);
             }
 
             return item;
@@ -91,9 +95,14 @@ namespace TwitchChatBot.Data
         {
             FirstChatterMediaMap? snapshot;
 
-            lock (_sync)
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
                 snapshot = _firstChattersMediaMap;
+            }
+            finally
+            {
+                _gate.Release();
             }
 
             if (snapshot == null)
@@ -108,7 +117,7 @@ namespace TwitchChatBot.Data
                     snapshot,
                     _logger,
                     AppSettings.MediaMapFiles.FirstChattersMedia!,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -118,7 +127,8 @@ namespace TwitchChatBot.Data
 
         private async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
         {
-            lock (_sync)
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
                 if (_isLoaded)
                 {
@@ -127,36 +137,45 @@ namespace TwitchChatBot.Data
 
                 _isLoaded = true;
             }
-
-            // Try load new format
-            var map = await TryLoadNewFormatAsync(cancellationToken);
-            if (map != null)
+            finally
             {
-                lock (_sync)
-                {
-                    _firstChattersMediaMap = map;
-                }
-
-                return;
+                _gate.Release();
             }
 
-            // If new format isn't there yet, try legacy dictionary and migrate
-            var migrated = await TryLoadAndMigrateLegacyAsync(cancellationToken);
-            if (migrated != null)
-            {
-                lock (_sync)
-                {
-                    _firstChattersMediaMap = migrated;
-                }
+            // Load outside the gate (no long awaits while holding the gate)
+            FirstChatterMediaMap? map = null;
 
-                await SaveAsync(cancellationToken);
-                return;
+            map = await TryLoadNewFormatAsync(cancellationToken).ConfigureAwait(false);
+            if (map == null)
+            {
+                map = await TryLoadAndMigrateLegacyAsync(cancellationToken).ConfigureAwait(false);
+
+                if (map != null)
+                {
+                    // Save migrated result once
+                    await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        _firstChattersMediaMap = map;
+                    }
+                    finally
+                    {
+                        _gate.Release();
+                    }
+
+                    await SaveAsync(cancellationToken).ConfigureAwait(false);
+                    return;
+                }
             }
 
-            // Default empty map
-            lock (_sync)
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                _firstChattersMediaMap = new FirstChatterMediaMap();
+                _firstChattersMediaMap = map ?? new FirstChatterMediaMap();
+            }
+            finally
+            {
+                _gate.Release();
             }
         }
 

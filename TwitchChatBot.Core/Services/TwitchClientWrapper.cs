@@ -172,8 +172,19 @@ namespace TwitchChatBot.Core.Services
             _adTimer = new Timer(_ =>
             {
                 _logger.LogInformation("⏰ Ad reminder timer fired. Sending !ads command internally.");
-                _ = _commandAlertService.HandleCommandAsync("!ads", AppSettings.TWITCH_CHANNEL!, AppSettings.TWITCH_CHANNEL!, SendMessage);
-            }, null, TimeSpan.FromSeconds(AppSettings.AdInitialMinutes), TimeSpan.FromMinutes(AppSettings.AdIntervalMinutes));
+
+                _ = _commandAlertService.HandleCommandAsync(
+                    "!ads",
+                    AppSettings.TWITCH_BOT_ID!,
+                    AppSettings.TWITCH_BOT_USERNAME!,
+                    AppSettings.TWITCH_CHANNEL!,
+                    SendMessage
+                );
+
+            },
+            null,
+            TimeSpan.FromMinutes(AppSettings.AdInitialMinutes),
+            TimeSpan.FromMinutes(AppSettings.AdIntervalMinutes));
         }
 
         public void StopAdTimer()
@@ -237,6 +248,7 @@ namespace TwitchChatBot.Core.Services
         }
 
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
+        
         {
             var username = e.ChatMessage!.Username.ToLower();
             var displayName = e.ChatMessage.Username;

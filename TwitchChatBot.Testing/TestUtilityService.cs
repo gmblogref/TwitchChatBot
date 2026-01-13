@@ -55,13 +55,14 @@ public class TestUtilityService : ITestUtilityService
     public async Task TriggerCommandTestAsync(string command) =>
         await _commandAlertService.HandleCommandAsync(
             "!" + command, 
-            "TestUser", 
+            AppSettings.TWITCH_BOT_ID!,
+            "TestUser",
             AppSettings.TWITCH_CHANNEL!,
             (channel, message) => _twitchClient.SendMessage(channel, message));
 
     // First Chatter Test
     public async Task TriggerFirstChatTestAsync(string username) =>
-        await _firstChatterAlertService.HandleFirstChatAsync(username, username);
+        await _firstChatterAlertService.HandleFirstChatAsync(AppSettings.TWITCH_BOT_ID!, username, username);
 
     public void TriggerFirstChatClear() =>
         _firstChatterAlertService.ClearFirstChatters();

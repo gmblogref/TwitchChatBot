@@ -40,6 +40,20 @@ namespace TwitchChatBot.Core.Services
         // New overload that lets you specify type
         public void EnqueueAlert(string type, string message, string? mediaPath = null)
         {
+            // If media is not found do not try to play it
+            if (!string.IsNullOrWhiteSpace(mediaPath))
+            {
+                if (!File.Exists(mediaPath))
+                {
+                    _logger.LogWarning(
+                        "⚠️ Alert skipped — media file not found. Type={Type} MediaPath={MediaPath}",
+                        type,
+                        mediaPath);
+
+                    return;
+                }
+            }
+
             lock (_sync)
             {
                 _alertQueue.Enqueue(new AlertItem

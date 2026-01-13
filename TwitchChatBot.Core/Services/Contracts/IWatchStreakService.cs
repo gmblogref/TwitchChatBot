@@ -4,8 +4,8 @@ namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface IWatchStreakService
     {
-        void BeginStream();
-        void EndStream();
+        Task BeginStreamAsync();
+        Task EndStreamAsync();
 
         Task MarkAttendanceAsync(string userId, string userName);
 

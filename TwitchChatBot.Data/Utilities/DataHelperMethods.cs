@@ -17,10 +17,15 @@ namespace TwitchChatBot.Data.Utilities
                 }
 
                 var json = await File.ReadAllTextAsync(filePath, cancellationToken);
-                var result = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
+                var options = new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                };
+                options.Converters.Add(new JsonStringEnumConverter());
+
+                var result = JsonSerializer.Deserialize<T>(json, options);
 
                 if (result == null)
                 {
@@ -50,10 +55,15 @@ namespace TwitchChatBot.Data.Utilities
                 }
 
                 var json = await File.ReadAllTextAsync(filePath, cancellationToken);
-                var result = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
+                var options = new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                };
+                options.Converters.Add(new JsonStringEnumConverter());
+
+                var result = JsonSerializer.Deserialize<T>(json, options);
 
                 if (result == null)
                 {
@@ -91,6 +101,7 @@ namespace TwitchChatBot.Data.Utilities
                     WriteIndented = true,
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                 };
+                options.Converters.Add(new JsonStringEnumConverter());
 
                 var json = JsonSerializer.Serialize(data, options);
 

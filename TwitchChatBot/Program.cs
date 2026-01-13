@@ -83,6 +83,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<IAppFlags, AppFlags>();
             services.TryAddSingleton<INukeService, NukeService>();
             services.TryAddSingleton<IIRCNoticeService, IRCNoticeService>();
+            services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
 
             services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(
@@ -92,6 +93,7 @@ namespace TwitchChatBot
                 sp.GetRequiredService<IAlertService>(),
                 sp.GetRequiredService<IWatchStreakService>(),
                 sp.GetRequiredService<IAlertHistoryService>(),
+                sp.GetRequiredService<IHelixLookupService>(),
                 (channel, message) =>
                 {
                     var twitchClient = sp.GetRequiredService<ITwitchClientWrapper>();
@@ -116,9 +118,6 @@ namespace TwitchChatBot
 
             services.TryAddScoped<IModerationService, ModerationService>();
 
-            services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
-
-            // 💡 WebHost
             services.TryAddSingleton<IWebHostWrapper, WebHostWrapper>();
 
             // 🧠 Register the UI Form and bridge

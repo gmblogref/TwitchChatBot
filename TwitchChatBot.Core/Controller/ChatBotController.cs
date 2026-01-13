@@ -93,7 +93,7 @@ namespace TwitchChatBot.Core.Controller
                 await _eventSubService.StartAsync(cancellationToken);
                 _logger.LogInformation("✅ EventSub WebSocket started.");
 
-                _watchStreakService.BeginStream();
+                await _watchStreakService.BeginStreamAsync();
 
                 _logger.LogInformation("🎉 ChatBotController started successfully.");
             }
@@ -121,7 +121,7 @@ namespace TwitchChatBot.Core.Controller
 
             try { (_tsService as IDisposable)?.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose TTS"); }
 
-            try { _watchStreakService.EndStream(); } catch (Exception ex) { _logger.LogWarning(ex, "End stream"); }
+            try { await _watchStreakService.EndStreamAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "End stream"); }
 
             _logger.LogInformation("🏁 ChatBotController stopped.");
         }

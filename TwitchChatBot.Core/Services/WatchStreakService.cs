@@ -12,7 +12,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IAppFlags _appFlags;
         private readonly IWatchStreakRepository _watchStreakRepository;
 
-        private readonly object _sync = new();
+        private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _streamOpen;
         private WatchStreakState? _watchStreakState;
         private readonly HashSet<string> _attendeesThisStream = new(StringComparer.OrdinalIgnoreCase); // tracked by UserId since it doesn't change
@@ -30,13 +30,14 @@ namespace TwitchChatBot.Core.Services
             _watchStreakRepository = watchStreakRepository;
         }
 
-        public void BeginStream()
+        public async Task BeginStreamAsync()
         {
             WatchStreakState? snapshotToSave = null;
 
-            lock (_sync)
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                EnsureStateLoaded_NoAwait();
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
 
                 if (_streamOpen && _appFlags.IsTesting)
                 {
@@ -57,17 +58,22 @@ namespace TwitchChatBot.Core.Services
 
                 snapshotToSave = _watchStreakState;
             }
+            finally
+            {
+                _gate.Release();
+            }
 
-            _ = SaveStateAsync(snapshotToSave);
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
         }
 
-        public void EndStream()
+        public async Task EndStreamAsync()
         {
             WatchStreakState? snapshotToSave = null;
 
-            lock (_sync)
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                EnsureStateLoaded_NoAwait();
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
 
                 if (!_streamOpen || _appFlags.IsTesting)
                 {
@@ -79,23 +85,30 @@ namespace TwitchChatBot.Core.Services
 
                 snapshotToSave = _watchStreakState;
             }
+            finally
+            {
+                _gate.Release();
+            }
 
-            _ = SaveStateAsync(snapshotToSave);
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
         }
 
         public async Task MarkAttendanceAsync(string userId, string userName)
         {
-            if (string.IsNullOrWhiteSpace(userId) ||
-                string.IsNullOrWhiteSpace(userName) ||
-                !_streamOpen ||
-                _appFlags.IsTesting)
+            userId = userId?.Trim() ?? "";
+            userName = userName?.Trim() ?? "";
+
+            if (!_streamOpen || _appFlags.IsTesting)
             {
                 return;
             }
 
-            userName = userName.Trim();
+            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userName))
+            {
+                return;
+            }
 
-            if (await _excludedUsersService.IsUserExcludedAsync(userId, userName))
+            if (await _excludedUsersService.IsUserExcludedAsync(userId, userName).ConfigureAwait(false))
             {
                 _logger.LogInformation("🙈 Ignoring attendance for excluded user: {Username}", userName);
                 return;
@@ -103,18 +116,25 @@ namespace TwitchChatBot.Core.Services
 
             WatchStreakState? snapshotToSave = null;
 
-            lock (_sync)
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                EnsureStateLoaded_NoAwait();
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
 
-                // Only count the user once per stream
-                if (!_attendeesThisStream.Add(userId))
+                if (!_streamOpen || _appFlags.IsTesting)
                 {
                     return;
                 }
 
-                // Get-or-create stats keyed by userId
-                // With legacy username-key migration
+                var identityKey = GetIdentityKey(userId, userName);
+
+                // Only count once per stream
+                if (!_attendeesThisStream.Add(identityKey))
+                {
+                    return;
+                }
+
+                // Get-or-create stats keyed by userId (preferred), with legacy username-key migration
                 var u = GetOrCreateUserStats_LegacyMigration(userId, userName);
 
                 if (u.LastAttendedIndex == _watchStreakState!.CurrentStreamIndex - 1)
@@ -132,26 +152,35 @@ namespace TwitchChatBot.Core.Services
 
                 snapshotToSave = _watchStreakState;
             }
-
-            await SaveStateAsync(snapshotToSave);
-        }
-
-        public Task<(int Consecutive, int Total)> GetStatsTupleAsync(string userId, string userName)
-        {
-            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userName))
+            finally
             {
-                return Task.FromResult((0, 0));
+                _gate.Release();
             }
 
-            lock (_sync)
+            await SaveStateAsync(snapshotToSave).ConfigureAwait(false);
+        }
+
+
+        public async Task<(int Consecutive, int Total)> GetStatsTupleAsync(string userId, string userName)
+        {
+            userId = userId?.Trim() ?? "";
+            userName = userName?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userName))
             {
-                EnsureStateLoaded_NoAwait();
+                return (0, 0);
+            }
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await EnsureStateLoadedAsync().ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(userId))
                 {
                     if (_watchStreakState!.Users.TryGetValue(userId, out var sById))
                     {
-                        return Task.FromResult((sById.Consecutive, sById.TotalStreams));
+                        return (sById.Consecutive, sById.TotalStreams);
                     }
                 }
 
@@ -159,14 +188,28 @@ namespace TwitchChatBot.Core.Services
                 var legacy = FindLegacyByUserName_NoAlloc(userName);
                 if (legacy != null)
                 {
-                    return Task.FromResult((legacy.Consecutive, legacy.TotalStreams));
+                    return (legacy.Consecutive, legacy.TotalStreams);
                 }
-            }
 
-            return Task.FromResult((0, 0));
+                return (0, 0);
+            }
+            finally
+            {
+                _gate.Release();
+            }
         }
 
-        private void EnsureStateLoaded_NoAwait()
+        private static string GetIdentityKey(string userId, string userName)
+        {
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                return userId;
+            }
+
+            return userName;
+        }
+
+        private async Task EnsureStateLoadedAsync()
         {
             if (_watchStreakState != null)
             {
@@ -175,7 +218,7 @@ namespace TwitchChatBot.Core.Services
 
             // Repo handles "file missing -> new state" via LoadOrCreateAsync
             // We block here to keep the service API unchanged (BeginStream is sync).
-            _watchStreakState = _watchStreakRepository.GetStateAsync().GetAwaiter().GetResult();
+            _watchStreakState = await _watchStreakRepository.GetStateAsync();
 
             if (_watchStreakState.Users == null)
             {
