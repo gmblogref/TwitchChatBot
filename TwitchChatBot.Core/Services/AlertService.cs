@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
@@ -43,12 +44,14 @@ namespace TwitchChatBot.Core.Services
             // If media is not found do not try to play it
             if (!string.IsNullOrWhiteSpace(mediaPath))
             {
-                if (!File.Exists(mediaPath))
+                var absPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath);
+
+                if (!File.Exists(absPath))
                 {
                     _logger.LogWarning(
                         "⚠️ Alert skipped — media file not found. Type={Type} MediaPath={MediaPath}",
                         type,
-                        mediaPath);
+                        absPath);
 
                     return;
                 }
