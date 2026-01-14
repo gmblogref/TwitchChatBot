@@ -176,7 +176,7 @@ namespace TwitchChatBot.Core.Services
                 _ = _commandAlertService.HandleCommandAsync(
                     "!ads",
                     AppSettings.TWITCH_BOT_ID!,
-                    AppSettings.TWITCH_BOT_USERNAME!,
+                    AppSettings.TWITCH_CHANNEL!,
                     AppSettings.TWITCH_CHANNEL!,
                     SendMessage
                 );

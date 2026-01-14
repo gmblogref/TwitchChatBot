@@ -36,6 +36,21 @@ namespace TwitchChatBot.Core.Utilities
             return text.Replace("[userName]", username);
         }
 
+        public static string ToAbsoluteMediaPath(string mediaPath)
+        {
+            if (string.IsNullOrWhiteSpace(mediaPath))
+            {
+                return string.Empty;
+            }
+
+            var cleaned = mediaPath.Replace("media", "").TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString());
+
+            return Path.Combine(
+                AppSettings.MediaBase.TwitchAlertsFolder!,
+                cleaned
+            );
+        }
+
         public static string ToPublicMediaPath(string mediaPath) =>
             "/media/" + mediaPath.Replace("\\", "/");
 
