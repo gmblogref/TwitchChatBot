@@ -72,70 +72,97 @@ namespace TwitchChatBot.Core.Services
 
         private async Task ProcessQueueAsync()
         {
-            lock (_sync)
+            while (true)
             {
-                if (_isProcessing || _alertQueue.Count == 0)
-                {
-                    return;
-                }
+                AlertItem? alert = null;
+                TaskCompletionSource<bool>? tcs = null;
 
-                _isProcessing = true;
-                _currentAlertTcs = new TaskCompletionSource<bool>(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-            }
-
-            AlertItem alert;
-
-            lock (_sync)
-            {
-                alert = _alertQueue.Dequeue();
-            }
-
-            try
-            {
-                var payload = new
-                {
-                    type = alert.Type,
-                    message = alert.Message,
-                    media = alert.Media
-                };
-
-                await _webSocketServer.BroadcastAsync(payload);
-                _logger.LogInformation("📤 Alert sent: {Type}, {Message}, Media: {Media}", alert.Type, alert.Message, alert.Media);
-
-                var completed = await Task.WhenAny(
-                    _currentAlertTcs!.Task,
-                    Task.Delay(AlertTimeout)
-                );
-
-                if (completed != _currentAlertTcs.Task)
-                {
-                    _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Failed to process alert.");
-            }
-            finally
-            {
                 lock (_sync)
                 {
-                    _isProcessing = false;
-                    _currentAlertTcs = null;
+                    if (_isProcessing)
+                    {
+                        return;
+                    }
+
+                    if (_alertQueue.Count == 0)
+                    {
+                        return;
+                    }
+
+                    _isProcessing = true;
+
+                    alert = _alertQueue.Dequeue();
+
+                    _currentAlertTcs = new TaskCompletionSource<bool>(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+
+                    tcs = _currentAlertTcs;
                 }
 
-                _ = ProcessQueueAsync();
+                try
+                {
+                    var payload = new
+                    {
+                        type = alert!.Type,
+                        message = alert.Message,
+                        media = alert.Media
+                    };
+
+                    await _webSocketServer.BroadcastAsync(payload).ConfigureAwait(false);
+
+                    _logger.LogInformation(
+                        "📤 Alert sent: {Type}, {Message}, Media: {Media}",
+                        alert.Type,
+                        alert.Message,
+                        alert.Media);
+
+                    var completed = await Task.WhenAny(
+                        tcs!.Task,
+                        Task.Delay(AlertTimeout)
+                    ).ConfigureAwait(false);
+
+                    if (completed != tcs.Task)
+                    {
+                        _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion.");
+                        // IMPORTANT: complete it so this alert is “done” even if overlay is late
+                        tcs.TrySetResult(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Failed to process alert.");
+                }
+                finally
+                {
+                    lock (_sync)
+                    {
+                        _isProcessing = false;
+
+                        // Only clear the TCS if it’s still the same one we created.
+                        // This prevents a late DONE from completing the wrong alert.
+                        if (ReferenceEquals(_currentAlertTcs, tcs))
+                        {
+                            _currentAlertTcs = null;
+                        }
+                    }
+                }
+
+                // Loop again to process next item (if any)
             }
         }
 
         private void HandleClientDone()
         {
             _logger.LogInformation("✅ Client reported alert finished");
+
+            TaskCompletionSource<bool>? tcs;
+
             lock (_sync)
             {
-                _currentAlertTcs?.TrySetResult(true);
+                tcs = _currentAlertTcs;
             }
+
+            tcs?.TrySetResult(true);
         }
     }
 }
