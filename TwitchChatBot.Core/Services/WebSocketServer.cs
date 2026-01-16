@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -14,6 +13,9 @@ namespace TwitchChatBot.Core.Services
         private readonly ILogger<WebSocketServer> _logger;
         private readonly ConcurrentDictionary<WebSocket, byte> _sockets = new();
 
+        private CancellationTokenSource? _keepAliveCts;
+        private Task? _keepAliveTask;
+
         public event Action? OnClientDone;
 
         public WebSocketServer(ILogger<WebSocketServer> logger)
@@ -23,23 +25,45 @@ namespace TwitchChatBot.Core.Services
 
         public void Start()
         {
-            // Hook into Startup middleware manually if needed
+            if (_keepAliveCts != null)
+            {
+                return;
+            }
+
+            _keepAliveCts = new CancellationTokenSource();
+            _keepAliveTask = Task.Run(() => KeepAliveLoopAsync(_keepAliveCts.Token));
         }
 
         public void Stop()
         {
-            foreach (var socket in _sockets.Keys)
+            try
             {
-                if (socket.State == WebSocketState.Open)
+                if (_keepAliveCts != null)
                 {
-                    try
+                    _keepAliveCts.Cancel();
+                    _keepAliveCts.Dispose();
+                    _keepAliveCts = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ Failed stopping KeepAlive loop.");
+            }
+
+            foreach (var socket in _sockets.Keys.ToList())
+            {
+                try
+                {
+                    SafeRemoveSocket(socket);
+
+                    if (socket.State == WebSocketState.Open || socket.State == WebSocketState.CloseReceived)
                     {
-                        socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server shutting down", CancellationToken.None).Wait();
+                        socket.Abort(); // immediate teardown, no deadlocks
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "❌ Failed to close WebSocket connection.");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ Failed to close WebSocket connection.");
                 }
             }
             _logger.LogInformation("🛑 All WebSocket connections closed.");
@@ -48,24 +72,40 @@ namespace TwitchChatBot.Core.Services
         public async Task BroadcastAsync(object payload)
         {
             var json = JsonSerializer.Serialize(payload);
-            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            var bytes = Encoding.UTF8.GetBytes(json);
 
-            foreach (var socket in _sockets.Keys.ToList())
+            var socketsSnapshot = _sockets.Keys.ToList();
+            _logger.LogDebug("📣 Broadcasting to {Count} websocket client(s). Payload bytes={Bytes}", socketsSnapshot.Count, bytes.Length);
+
+            foreach (var socket in socketsSnapshot)
             {
-                if (socket.State == WebSocketState.Open)
+                if (socket.State != WebSocketState.Open)
                 {
+                    SafeRemoveSocket(socket);
+                    continue;
+                }
+
+                try
+                {
+                    await socket.SendAsync(
+                        new ArraySegment<byte>(bytes),
+                        WebSocketMessageType.Text,
+                        endOfMessage: true,
+                        cancellationToken: CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ WebSocket send failed. Removing client.");
+                    SafeRemoveSocket(socket);
+
                     try
                     {
-                        await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                        socket.Abort();
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        _logger.LogError(ex, "❌ Failed to send WebSocket message.");
+                        // ignore
                     }
-                }
-                else
-                {
-                    _sockets.TryRemove(socket, out _); // Clean up closed sockets
                 }
             }
         }
@@ -75,38 +115,136 @@ namespace TwitchChatBot.Core.Services
             _sockets.TryAdd(webSocket, 0);
             _logger.LogInformation("🔌 WebSocket connected. Total: {Count}", _sockets.Count);
 
-            var buffer = new byte[1024 * 4];
-
             try
             {
-                while (webSocket.State == WebSocketState.Open)
-                {
-                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
-                        break;
-                    }
-
-                    if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                        if (message.Contains("\"type\":\"done\"", StringComparison.OrdinalIgnoreCase))
-                        {
-                            OnClientDone?.Invoke();
-                        }
-                    }
-                }
+                await ReceiveLoopAsync(webSocket);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ WebSocket receive loop crashed.");
             }
             finally
             {
-                lock (_sockets)
+                SafeRemoveSocket(webSocket);
+
+                try
                 {
-                    _sockets.TryRemove(webSocket, out _);
+                    if (webSocket.State == WebSocketState.Open || webSocket.State == WebSocketState.CloseReceived)
+                    {
+                        webSocket.Abort();
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                _logger.LogInformation("🔌 WebSocket disconnected. Total: {Count}", _sockets.Count);
+            }
+        }
+
+        private async Task ReceiveLoopAsync(WebSocket webSocket)
+        {
+            var buffer = new byte[8 * 1024];
+
+            while (webSocket.State == WebSocketState.Open)
+            {
+                var sb = new StringBuilder();
+                WebSocketReceiveResult result;
+
+                do
+                {
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        try
+                        {
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+
+                        return;
+                    }
+
+                    if (result.MessageType == WebSocketMessageType.Binary)
+                    {
+                        // Ignore binary messages
+                        continue;
+                    }
+
+                    if (result.Count > 0)
+                    {
+                        sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    }
+                }
+                while (!result.EndOfMessage);
+
+                var message = sb.ToString();
+                if (string.IsNullOrWhiteSpace(message))
+                {
+                    continue;
+                }
+
+                if (IsDoneMessage(message))
+                {
+                    OnClientDone?.Invoke();
                 }
             }
+        }
+
+        private bool IsDoneMessage(string message)
+        {
+            // More robust than Contains(). Handles whitespace/order differences.
+            try
+            {
+                using var doc = JsonDocument.Parse(message);
+                if (doc.RootElement.TryGetProperty("type", out var typeProp))
+                {
+                    var type = typeProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(type) &&
+                        string.Equals(type, "done", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // If it's malformed, don't crash the loop
+            }
+
+            return false;
+        }
+
+        private async Task KeepAliveLoopAsync(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), ct);
+
+                    // lightweight ping that also helps you see "is overlay alive"
+                    await BroadcastAsync(new { type = "ping", utc = DateTimeOffset.UtcNow });
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ KeepAlive loop error.");
+                }
+            }
+        }
+
+        private void SafeRemoveSocket(WebSocket socket)
+        {
+            _sockets.TryRemove(socket, out _);
         }
     }
 }

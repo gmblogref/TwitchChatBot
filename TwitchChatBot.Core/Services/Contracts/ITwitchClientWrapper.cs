@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TwitchChatBot.Core.Services.Contracts
+﻿namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface ITwitchClientWrapper : IDisposable
     {

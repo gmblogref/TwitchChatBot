@@ -1,15 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
-using TwitchLib.Communication.Interfaces;
-using static TwitchChatBot.Models.AppSettings;
 
 namespace TwitchChatBot.Core.Controller
 {
     public class ChatBotController
     {
-        private readonly IAlertService _alertService;
         private readonly ICommandAlertService _ccommandAlertService;
         private readonly IEventSubService _eventSubService;
         private readonly ILogger<ChatBotController> _logger;
@@ -25,7 +20,6 @@ namespace TwitchChatBot.Core.Controller
         private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);
 
         public ChatBotController(
-        IAlertService alertService,
         ICommandAlertService ccommandAlertService,
         IEventSubService eventSubService,
         ILogger<ChatBotController> logger,
@@ -36,7 +30,6 @@ namespace TwitchChatBot.Core.Controller
         IWatchStreakService watchStreakService,
         IAppFlags appFlags)
         {
-            _alertService = alertService;
             _ccommandAlertService = ccommandAlertService;
             _eventSubService = eventSubService;
             _logger = logger;
