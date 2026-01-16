@@ -318,8 +318,7 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.WatchStreak ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
-            var template = AppSettings.Templates.Raid ?? "{raider} is storming in with {viewers} viewers!";
-
+            
             var text = !string.IsNullOrWhiteSpace(userMessage)
                 ? CoreHelperMethods.ForTts(userMessage)
                 : CoreHelperMethods.RenderTemplate(
@@ -329,6 +328,8 @@ namespace TwitchChatBot.Core.Services
                         ["username"] = username,
                         ["streak"] = streakCount.ToString()
                     });
+
+            _logger.LogInformation("TTS WatchStreak text: {Text}", text);
 
             await _tsService.SpeakAsync(text, voice);
         }
