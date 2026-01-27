@@ -2,10 +2,11 @@
 {
     public interface ITwitchClientWrapper : IDisposable
     {
-        void Connect();
-        void Disconnect();
-        void SendMessage(string channel, string message);
+        Task ConnectAsync();
+        Task DisconnectAsync();
+        Task SendMessageAsync(string channel, string message);
         List<ViewerEntry> GetGroupedViewers();
+        void SendMessage(string channel, string message); 
         void StartAdTimer();
         void StopAdTimer();
 

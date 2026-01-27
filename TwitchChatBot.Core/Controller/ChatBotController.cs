@@ -63,7 +63,7 @@ namespace TwitchChatBot.Core.Controller
                 await _webHostWrapper.StartAsync(cancellationToken);
 
                 // Connect to Twitch
-                _twitchClient.Connect();
+                await _twitchClient.ConnectAsync();
                 _logger.LogInformation("✅ Connected to Twitch.");
 
                 _twitchClient.OnMessageReceived += (s, e) =>
@@ -110,7 +110,7 @@ namespace TwitchChatBot.Core.Controller
 
             try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
 
-            try { _twitchClient.Disconnect(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
+            try { await _twitchClient.DisconnectAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
 
             try { (_tsService as IDisposable)?.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose TTS"); }
 

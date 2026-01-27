@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Drawing;
+using System.Threading.Channels;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
@@ -9,7 +10,7 @@ using TwitchLib.Client.Models;
 
 namespace TwitchChatBot.Core.Services
 {
-    public class TwitchClientWrapper : ITwitchClientWrapper, IDisposable
+    public class TwitchClientWrapper : ITwitchClientWrapper, IDisposable, IAsyncDisposable
     {
         private readonly TwitchClient _twitchClient;
         private readonly ILogger<TwitchClientWrapper> _logger;
@@ -67,47 +68,63 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL!);
 
                 // Non async wire ups
-                _twitchClient.OnJoinedChannel += (s, e) => _logger.LogInformation("✅ Successfully joined Twitch channel: {Channel}", e.Channel);
-                _twitchClient.OnDisconnected += (s, e) => _logger.LogWarning("⚠️ Twitch disconnected.");
-                _twitchClient.OnConnectionError += (s, e) => _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
-                _twitchClient.OnUserLeft += (s, e) => HandleOnUserLeft(e.Username);
+                _twitchClient.OnJoinedChannel += (s, e) =>
+                {
+                    _logger.LogInformation("✅ Successfully joined Twitch channel: {Channel}", e.Channel);
+                    return Task.CompletedTask;
+                };
+                _twitchClient.OnDisconnected += (s, e) =>
+                {
+                    _logger.LogWarning("⚠️ Twitch disconnected.");
+                    return Task.CompletedTask;
+                };
+                _twitchClient.OnConnectionError += (s, e) => 
+                { 
+                    _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message); 
+                    return Task.CompletedTask; 
+                };
+                _twitchClient.OnUserLeft += (s, e) => 
+                { 
+                    HandleOnUserLeft(e.Username); 
+                    return Task.CompletedTask; 
+                };
 
                 // Safe async wire ups
                 _twitchClient.OnMessageReceived += (s, e) =>
                 {
-                    RunSafe(() => HandleMessageReceivedAsync(e), "OnMessageReceived");
+                    return RunSafeAsync(() => HandleMessageReceivedAsync(e), "OnMessageReceived");
                 };
                 _twitchClient.OnConnected += (s, e) =>
                 {
-                    RunSafe(HandleOnConnectedAsync, "OnConnected");
+                    return RunSafeAsync(HandleOnConnectedAsync, "OnConnected");
                 };
                 _twitchClient.OnUserJoined += (s, e) =>
                 {
-                    RunSafe(() => HandleOnUserJoined(e.Username), "OnUserJoined");
+                    return RunSafeAsync(() => HandleOnUserJoined(e.Username), "OnUserJoined");
                 };
-                _twitchClient.OnLog += (s, e) =>
+                _twitchClient.OnSendReceiveData += (s, e) =>
                 {
-                    RunSafe(() => HandleOnLogAsync(e), "OnLog");
+                    return RunSafeAsync(() => HandleSendReceiveDataAsync(e), "OnSendReceiveData");
                 };
                 _twitchClient.OnNewSubscriber += (s, e) =>
                 {
-                    RunSafe(() => HandleOnNewSubscriberAsync(e), "OnNewSubscriber");
+                    return RunSafeAsync(() => HandleOnNewSubscriberAsync(e), "OnNewSubscriber");
                 };
                 _twitchClient.OnReSubscriber += (s, e) =>
                 {
-                    RunSafe(() => HandleOnReSubscriberAsync(e), "OnReSubscriber");
+                    return RunSafeAsync(() => HandleOnReSubscriberAsync(e), "OnReSubscriber");
                 };
                 _twitchClient.OnGiftedSubscription += (s, e) =>
                 {
-                    RunSafe(() => HandleOnGiftedSubscriptionAsync(e), "OnGiftedSubscription");
+                    return RunSafeAsync(() => HandleOnGiftedSubscriptionAsync(e), "OnGiftedSubscription");
                 };
                 _twitchClient.OnCommunitySubscription += (s, e) =>
                 {
-                    RunSafe(() => HandleOnCommunitySubscriptionAsync(e), "OnCommunitySubscription");
+                    return RunSafeAsync(() => HandleOnCommunitySubscriptionAsync(e), "OnCommunitySubscription");
                 };
                 _twitchClient.OnRaidNotification += (s, e) =>
                 {
-                    RunSafe(() => HandleOnRaidNotificationAsync(e), "OnRaidNotification");
+                    return RunSafeAsync(() => HandleOnRaidNotificationAsync(e), "OnRaidNotification");
                 };
             }
             catch (Exception ex)
@@ -117,13 +134,13 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        public void Connect() => _twitchClient.Connect();
+        public async Task ConnectAsync() => await _twitchClient.ConnectAsync();
 
-        public void Disconnect()
+        public async Task DisconnectAsync()
         {
             if (_twitchClient.IsConnected)
             {
-                _twitchClient.Disconnect();
+                await _twitchClient.DisconnectAsync();
                 _logger.LogInformation("🛑 Twitch client disconnected.");
             }
         }
@@ -149,10 +166,15 @@ namespace TwitchChatBot.Core.Services
 
         public void SendMessage(string channel, string message)
         {
+            _ = RunSafeAsync(() => SendMessageAsync(channel, message), "SendMessage");
+        }
+
+        public async Task SendMessageAsync(string channel, string message)
+        {
             if (_twitchClient.IsConnected &&
                 _twitchClient.JoinedChannels.Any(c => c.Channel.Equals(channel, StringComparison.OrdinalIgnoreCase)))
             {
-                _twitchClient.SendMessage(channel, message);
+                await _twitchClient.SendMessageAsync(channel, message);
             }
             else
             {
@@ -163,7 +185,33 @@ namespace TwitchChatBot.Core.Services
         public void Dispose()
         {
             if (_disposed) return;
-            Disconnect();
+
+            // Best-effort sync shutdown
+            try
+            {
+                _ = DisconnectAsync();
+            }
+            catch
+            {
+                // swallow — Dispose must not throw
+            }
+
+            _disposed = true;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_disposed) return;
+
+            try
+            {
+                await DisconnectAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error during async dispose.");
+            }
+
             _disposed = true;
         }
 
@@ -199,7 +247,7 @@ namespace TwitchChatBot.Core.Services
 
             try
             {
-                _twitchClient.SendRaw("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
+                await _twitchClient.SendRawAsync("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
 
                 var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
                 var vips = await _twitchRoleService.GetVipsAsync(AppSettings.TWITCH_USER_ID!);
@@ -265,7 +313,7 @@ namespace TwitchChatBot.Core.Services
             {
                 _firstChatterAlertService.ClearFirstChatters();
                 _logger.LogInformation("✅ First chatters list cleared by {User}", username);
-                SendMessage(e.ChatMessage.Channel, "✅ First chatters list has been cleared.");
+                await SendMessageAsync(e.ChatMessage.Channel, "✅ First chatters list has been cleared.");
                 return;
             }
 
@@ -284,11 +332,11 @@ namespace TwitchChatBot.Core.Services
                 Channel = channel,
                 Username = username,
                 Message = e.ChatMessage.Message,
-                Color = ColorTranslator.FromHtml(e.ChatMessage.ColorHex ?? "#FFFFFF")
+                Color = ColorTranslator.FromHtml(e.ChatMessage.HexColor ?? "#FFFFFF")
             });
         }
 
-        private async Task HandleOnLogAsync(OnLogArgs e)
+        private async Task HandleSendReceiveDataAsync(OnSendReceiveDataArgs e)
         {
             var raw = e.Data;
             if (string.IsNullOrEmpty(raw))
@@ -356,7 +404,7 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleOnNewSubscriberAsync(TwitchLib.Client.Events.OnNewSubscriberArgs e)
         {
             var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? "someone";
-            var tier = ConvertPlanToTier(e.Subscriber?.SubscriptionPlan);
+            var tier = ConvertPlanToTier(e.Subscriber?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubscriptionAsync(user, tier);
         }
 
@@ -367,26 +415,15 @@ namespace TwitchChatBot.Core.Services
 
             // Twitch sends months data as msg-param-cumulative-months / msg-param-streak-months / msg-param-months
             // TwitchLib exposes them through MsgParam... properties
-            int months = 1;
-
-            if (int.TryParse(e.ReSubscriber?.MsgParamCumulativeMonths, out var cum))
-            {
-                months = cum;
-            }
-            else if (int.TryParse(e.ReSubscriber?.MsgParamStreakMonths, out var streak))
-            {
-                months = streak;
-            }
-            else if (e.ReSubscriber?.Months != null)
-            {
-                months = e.ReSubscriber.Months;
-            }
+            int months = e.ReSubscriber?.MsgParamCumulativeMonths
+                ?? e.ReSubscriber?.MsgParamStreakMonths
+                ?? 1;
 
             // Optional text message
             var message = e.ReSubscriber?.ResubMessage ?? string.Empty;
 
             // Tier mapping (still same SubscriptionPlan enum)
-            var tier = ConvertPlanToTier(e.ReSubscriber?.SubscriptionPlan);
+            var tier = ConvertPlanToTier(e.ReSubscriber?.MsgParamSubPlan);
 
             await _twitchAlertTypesService.HandleResubAsync(username, months, message, tier);
         }
@@ -536,19 +573,16 @@ namespace TwitchChatBot.Core.Services
             return tags;
         }
 
-        private void RunSafe(Func<Task> action, string context)
+        private async Task RunSafeAsync(Func<Task> action, string context)
         {
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await action();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "❌ Unhandled exception in {Context}", context);
-                }
-            });
+                await action();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Unhandled exception in {Context}", context);
+            }
         }
     }
 }
