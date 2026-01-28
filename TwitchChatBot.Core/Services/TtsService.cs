@@ -48,11 +48,11 @@ namespace TwitchChatBot.Core.Services
 
             _defaultVoice = string.IsNullOrWhiteSpace(AppSettings.TTS.DefaultSpeaker)
                 ? "Matthew"
-                : AppSettings.TTS.DefaultSpeaker!;
+                : AppSettings.TTS.DefaultSpeaker;
 
             var regionName = string.IsNullOrWhiteSpace(AppSettings.TTS.PollyRegion)
                 ? "us-east-1"
-                : AppSettings.TTS.PollyRegion!;
+                : AppSettings.TTS.PollyRegion;
             _region = RegionEndpoint.GetBySystemName(regionName);
 
             _maxChars = AppSettings.TTS.MaxChars > 0 ? AppSettings.TTS.MaxChars : 350;

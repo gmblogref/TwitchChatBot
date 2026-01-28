@@ -165,7 +165,7 @@ namespace TwitchChatBot.Core.Services
             await HandleCommandAsync(
                 $"!so @{username}",
                 userId,
-                AppSettings.TWITCH_BOT_USERNAME!,
+                AppSettings.TWITCH_BOT_USERNAME,
                 channel,
                 sendMessage,
                 isAutoCommand: true);
@@ -192,20 +192,6 @@ namespace TwitchChatBot.Core.Services
                 Voice = voice,
                 Message = text
             });
-        }
-
-        private sealed class CommandContext
-        {
-            public required string Channel { get; init; }
-            public required string Username { get; init; }       // user who ran the command
-            public required string Command { get; init; }
-            public string? UserId { get; set; }
-            public string? RawTarget { get; init; }             // target name without '@'
-            public string? TtsText { get; init; }
-            public string? CommandText { get; set; }
-            public string Target => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"@{RawTarget}";
-            public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : AppSettings.TwitchUrl + $"{RawTarget}";
-            public string Game { get; set; } = string.Empty;    
         }
 
         /// <summary>
@@ -332,7 +318,7 @@ namespace TwitchChatBot.Core.Services
                     await HandleNukeCommandAsync(ctx, sendMessage);
                     return false;
                 case "!clearnukes":
-                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL!.ToLower() || ctx.Username.ToLower() == "jillybenilly")
+                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL.ToLower() || AppSettings.Moderation.ClearNukeUsers.Contains(ctx.Username.ToLower()))
                     {
                         _nukeService.ClearNukes();
                     }
@@ -408,7 +394,7 @@ namespace TwitchChatBot.Core.Services
             }
             
             // Optional: mod safety check if your GetModeratorsAsync returns logins
-            var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
+            var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID);
             var isTargetBroadcaster = targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase);
             var isTargetBot = targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase);
             var isTargetMod = !isTargetBot && mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase);
@@ -422,7 +408,7 @@ namespace TwitchChatBot.Core.Services
                 if (isTargetMod)
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_USER_ID!, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_USER_ID, targetId, 5, useBot);
 
                     // Fun line + media for mod nukes
                     sendMessage(ctx.Channel, $"⚠️ @{ctx.Username} is attacking the MODs… let’s see how that works out. 🔥");
@@ -433,7 +419,7 @@ namespace TwitchChatBot.Core.Services
                 else if (isTargetBot)
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_USER_ID!, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_USER_ID, targetId, 5, useBot);
 
                     // TTS reminder to re-mod the bot afterward
                     sendMessage(ctx.Channel, $"BOOM! 💣 @{ctx.Username} nuked the bot!");
@@ -447,7 +433,7 @@ namespace TwitchChatBot.Core.Services
                 else
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID!, AppSettings.TWITCH_BOT_ID!, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_BOT_ID, targetId, 5, useBot);
 
                     // Announce success
                     sendMessage(ctx.Channel, $"💣 {targetLogin} bye bye!!!");

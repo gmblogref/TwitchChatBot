@@ -31,7 +31,7 @@ namespace TwitchChatBot.Data
             _excludedUsers = await DataHelperMethods.LoadAsync<HashSet<string>>(
                 _filePath,
                 _logger,
-                AppSettings.MediaMapFiles.ExcludedUsersMedia!,
+                AppSettings.MediaMapFiles.ExcludedUsersMedia,
                 cancellationToken
             );
         }

@@ -121,18 +121,18 @@ namespace TwitchChatBot.Data.Utilities
         }
 
         public static string GetTwitchAlertMediaPath()
-            => Path.GetFullPath(AppSettings.MediaMapFiles.TwitchAlertMedia!);
+            => Path.GetFullPath(AppSettings.MediaMapFiles.TwitchAlertMedia);
 
         public static string GetExcludedUsersMediaPath()
-            => Path.GetFullPath(AppSettings.MediaMapFiles.ExcludedUsersMedia!);
+            => Path.GetFullPath(AppSettings.MediaMapFiles.ExcludedUsersMedia);
 
         public static string GetFirstChattersMediaPath()
-            => Path.GetFullPath(AppSettings.MediaMapFiles.FirstChattersMedia!);
+            => Path.GetFullPath(AppSettings.MediaMapFiles.FirstChattersMedia);
 
         public static string GetCommandAlertMediaPath()
-            => Path.GetFullPath(AppSettings.MediaMapFiles.CommandAlertMedia!);
+            => Path.GetFullPath(AppSettings.MediaMapFiles.CommandAlertMedia);
 
         public static string GetUserWatchStreakMediaPath()
-            => Path.GetFullPath(AppSettings.MediaMapFiles.UserWatchStreakMedia!);
+            => Path.GetFullPath(AppSettings.MediaMapFiles.UserWatchStreakMedia);
     }
 }

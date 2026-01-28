@@ -243,7 +243,7 @@ namespace TwitchChatBot.Core.Services
         {
             _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "Many Gift Subs", username);
 
-            username = username ?? "someone";
+            username = username ?? AppSettings.DefaultUserName;
             var msg = $"🎁 {username} is dropping {numOfSubs} gift subs!";
 
             var giftSubMedia = await _twitchAlertMediaRepository.GetSubMysteryGiftMapAsync();

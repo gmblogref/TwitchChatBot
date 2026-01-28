@@ -49,7 +49,7 @@ namespace TwitchChatBot.UI.Services
                 _socket = new ClientWebSocket();
                 _cts = new CancellationTokenSource();
 
-                var uri = new Uri(AppSettings.EventSub.Uri!);
+                var uri = new Uri(AppSettings.EventSub.Uri);
                 await _socket.ConnectAsync(uri, cancellationToken);
                 _logger.LogInformation("✅ Connected to Twitch EventSub WebSocket.");
 
@@ -171,7 +171,7 @@ namespace TwitchChatBot.UI.Services
                             break;
 
                         case "notification":
-                            string userName = "someone";
+                            string userName = AppSettings.DefaultUserName;
                             var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                             var eventPayload = root.GetProperty("payload").GetProperty("event");
                             //var subTier = "1000";
@@ -201,9 +201,9 @@ namespace TwitchChatBot.UI.Services
                                         ? uName.GetString()
                                         : (eventPayload.TryGetProperty("user_login", out var uLogin) && uLogin.ValueKind == JsonValueKind.String
                                             ? uLogin.GetString()
-                                            : "someone");
+                                            : AppSettings.DefaultUserName);
 
-                                    await _twitchAlertTypesService.HandleFollowAsync(followerName ?? "someone");
+                                    await _twitchAlertTypesService.HandleFollowAsync(followerName ?? AppSettings.DefaultUserName);
                                     break;
                                 default:
                                     _logger.LogDebug($"Unhandled subscription type: {subscriptionType}");

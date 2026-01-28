@@ -85,7 +85,7 @@ namespace TwitchChatBot.Core.Services
             }
             else
             {
-                _sendMessage(AppSettings.TWITCH_CHANNEL!, message);
+                _sendMessage(AppSettings.TWITCH_CHANNEL, message);
             }
 
             return false;

@@ -46,7 +46,7 @@ namespace TwitchChatBot.Data
                 _filePath,
                 _watchStreakState,
                 _logger,
-                AppSettings.MediaMapFiles.UserWatchStreakMedia!,
+                AppSettings.MediaMapFiles.UserWatchStreakMedia,
                 cancellationToken
             );
         }
@@ -64,7 +64,7 @@ namespace TwitchChatBot.Data
             var loaded = await DataHelperMethods.LoadAsync<WatchStreakState>(
                 _filePath,
                 _logger,
-                AppSettings.MediaMapFiles.UserWatchStreakMedia!,
+                AppSettings.MediaMapFiles.UserWatchStreakMedia,
                 cancellationToken
             );
 
