@@ -18,8 +18,8 @@ namespace TwitchChatBot
             _host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls(AppSettings.WebHost.BaseUrl!);
-                    webBuilder.UseWebRoot(AppSettings.WebHost.WebRoot!);
+                    webBuilder.UseUrls(AppSettings.WebHost.BaseUrl);
+                    webBuilder.UseWebRoot(AppSettings.WebHost.WebRoot);
                     webBuilder.Configure(app =>
                     {
                         app.UseWebSockets();
@@ -41,7 +41,7 @@ namespace TwitchChatBot
 
                         app.UseStaticFiles(new StaticFileOptions
                         {
-                            FileProvider = new PhysicalFileProvider(AppSettings.MediaBase.TwitchAlertsFolder!),
+                            FileProvider = new PhysicalFileProvider(AppSettings.MediaBase.TwitchAlertsFolder),
                             RequestPath = "/media"
                         });
 
@@ -52,13 +52,13 @@ namespace TwitchChatBot
                         {
                             endpoints.MapGet("/alerts", async context =>
                             {
-                                var file = Path.Combine(AppSettings.WebHost.WebRoot!, "alerts.html");
+                                var file = Path.Combine(AppSettings.WebHost.WebRoot, "alerts.html");
                                 await context.Response.SendFileAsync(file);
                             });
 
                             endpoints.MapGet("/fullscreen", async context =>
                             {
-                                var file = Path.Combine(AppSettings.WebHost.WebRoot!, "fullscreen.html");
+                                var file = Path.Combine(AppSettings.WebHost.WebRoot, "fullscreen.html");
                                 await context.Response.SendFileAsync(file);
                             });
                         });

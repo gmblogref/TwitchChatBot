@@ -46,7 +46,7 @@ namespace TwitchChatBot.Core.Utilities
             var cleaned = mediaPath.Replace("media", "").TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString());
 
             return Path.Combine(
-                AppSettings.MediaBase.TwitchAlertsFolder!,
+                AppSettings.MediaBase.TwitchAlertsFolder,
                 cleaned
             );
         }
@@ -55,7 +55,7 @@ namespace TwitchChatBot.Core.Utilities
             "/media/" + mediaPath.Replace("\\", "/");
 
         public static string GetTtsOutputFolder()
-            => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder!, "text_to_speech");
+            => Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder, "text_to_speech");
 
         public static string UnescapeTagValue(string? v)
         {

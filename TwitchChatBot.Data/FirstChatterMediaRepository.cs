@@ -116,7 +116,7 @@ namespace TwitchChatBot.Data
                     _filePath,
                     snapshot,
                     _logger,
-                    AppSettings.MediaMapFiles.FirstChattersMedia!,
+                    AppSettings.MediaMapFiles.FirstChattersMedia,
                     cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -186,7 +186,7 @@ namespace TwitchChatBot.Data
                 var map = await DataHelperMethods.LoadAsync<FirstChatterMediaMap>(
                     _filePath,
                     _logger,
-                    AppSettings.MediaMapFiles.FirstChattersMedia!,
+                    AppSettings.MediaMapFiles.FirstChattersMedia,
                     cancellationToken);
 
                 if (map != null && map.FirstChatterMediaItems != null)

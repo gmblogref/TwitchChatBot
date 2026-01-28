@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Services.Contracts;
+using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -59,7 +60,7 @@ namespace TwitchChatBot.Core.Services
             var display = tags.TryGetValue("display-name", out var dn) ? dn : login;
             if (string.IsNullOrWhiteSpace(display))
             {
-                display = "someone";
+                display = AppSettings.DefaultUserName;
             }
 
             // Some USERNOTICEs carry user-entered text in "user-message". If absent, fall back to system message.

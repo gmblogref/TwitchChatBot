@@ -63,9 +63,9 @@ namespace TwitchChatBot.Core.Services
 
             try
             {
-                var credentials = new ConnectionCredentials(AppSettings.TWITCH_BOT_USERNAME!, AppSettings.TWITCH_OAUTH_TOKEN!);
+                var credentials = new ConnectionCredentials(AppSettings.TWITCH_BOT_USERNAME, AppSettings.TWITCH_OAUTH_TOKEN);
                 _twitchClient = new TwitchClient();
-                _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL!);
+                _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL);
 
                 // Non async wire ups
                 _twitchClient.OnJoinedChannel += (s, e) =>
@@ -150,7 +150,7 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("🛑 GetGroupedViewers called.");
             var result = new List<ViewerEntry>();
 
-            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL!, Role = "Broadcaster" });
+            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL, Role = "Broadcaster" });
 
             foreach (var name in _mods.OrderBy(x => x))
                 result.Add(new ViewerEntry { Username = name, Role = "mod" });
@@ -223,9 +223,9 @@ namespace TwitchChatBot.Core.Services
 
                 _ = _commandAlertService.HandleCommandAsync(
                     "!ads",
-                    AppSettings.TWITCH_BOT_ID!,
-                    AppSettings.TWITCH_CHANNEL!,
-                    AppSettings.TWITCH_CHANNEL!,
+                    AppSettings.TWITCH_BOT_ID,
+                    AppSettings.TWITCH_CHANNEL,
+                    AppSettings.TWITCH_CHANNEL,
                     SendMessage
                 );
 
@@ -249,8 +249,8 @@ namespace TwitchChatBot.Core.Services
             {
                 await _twitchClient.SendRawAsync("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
 
-                var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID!);
-                var vips = await _twitchRoleService.GetVipsAsync(AppSettings.TWITCH_USER_ID!);
+                var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID);
+                var vips = await _twitchRoleService.GetVipsAsync(AppSettings.TWITCH_USER_ID);
 
                 _modList.UnionWith(mods);
                 _vipList.UnionWith(vips);
@@ -309,7 +309,7 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            if (e.ChatMessage.Message.Trim().Equals("!clearfirst", StringComparison.InvariantCultureIgnoreCase) && userId == AppSettings.TWITCH_USER_ID!)
+            if (e.ChatMessage.Message.Trim().Equals("!clearfirst", StringComparison.InvariantCultureIgnoreCase) && userId == AppSettings.TWITCH_USER_ID)
             {
                 _firstChatterAlertService.ClearFirstChatters();
                 _logger.LogInformation("✅ First chatters list cleared by {User}", username);
@@ -390,7 +390,7 @@ namespace TwitchChatBot.Core.Services
 
                 // Log for visibility while you debug
                 _logger.LogInformation("🌟 Watch streak USERNOTICE for {User} (streak {Streak})",
-                    tags.GetValueOrDefault("display-name", tags.GetValueOrDefault("login", "someone")),
+                    tags.GetValueOrDefault("display-name", tags.GetValueOrDefault("login", AppSettings.DefaultUserName)),
                     tags.GetValueOrDefault("watch-streak-value", "?"));
 
                 await _ircNoticeService.HandleUserNoticeAsync(tags, tags.GetValueOrDefault("system-msg"));
@@ -403,7 +403,7 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnNewSubscriberAsync(TwitchLib.Client.Events.OnNewSubscriberArgs e)
         {
-            var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? "someone";
+            var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? AppSettings.DefaultUserName;
             var tier = ConvertPlanToTier(e.Subscriber?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubscriptionAsync(user, tier);
         }
@@ -411,7 +411,7 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleOnReSubscriberAsync(TwitchLib.Client.Events.OnReSubscriberArgs e)
         {
             // DisplayName/Login
-            var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? "someone";
+            var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? AppSettings.DefaultUserName;
 
             // Twitch sends months data as msg-param-cumulative-months / msg-param-streak-months / msg-param-months
             // TwitchLib exposes them through MsgParam... properties
@@ -430,15 +430,15 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnGiftedSubscriptionAsync(TwitchLib.Client.Events.OnGiftedSubscriptionArgs e)
         {
-            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? "someone";
-            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? "someone";
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.DefaultUserName;
+            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? AppSettings.DefaultUserName;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubGiftAsync(gifter, recipient, tier);
         }
 
         private async Task HandleOnCommunitySubscriptionAsync(TwitchLib.Client.Events.OnCommunitySubscriptionArgs e)
         {
-            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? "someone";
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.DefaultUserName;
             var count =
                 (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount :
                 (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount : 1;
@@ -448,7 +448,7 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnRaidNotificationAsync(TwitchLib.Client.Events.OnRaidNotificationArgs e)
         {
-            var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? "someone";
+            var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? AppSettings.DefaultUserName;
             var raiderUserId = e.RaidNotification?.UserId ?? string.Empty;
             int viewers = 1;
             if (int.TryParse(e.RaidNotification?.MsgParamViewerCount, out var parsed))
@@ -469,8 +469,8 @@ namespace TwitchChatBot.Core.Services
             await _commandAlertService.HandleCommandAsync(
                 $"!so {handle}",
                 raiderUserId,
-                AppSettings.TWITCH_BOT_USERNAME!,
-                AppSettings.TWITCH_CHANNEL!,
+                AppSettings.TWITCH_BOT_USERNAME,
+                AppSettings.TWITCH_CHANNEL,
                 SendMessage,
                 isAutoCommand: true);
         }
@@ -495,7 +495,7 @@ namespace TwitchChatBot.Core.Services
             if (string.IsNullOrEmpty(uniqueId))
             {
                 // Extremely rare: still create a stable key to prevent back-to-back duplicates
-                uniqueId = $"{tags.GetValueOrDefault("display-name", "someone")}|" + raw.GetHashCode();
+                uniqueId = $"{tags.GetValueOrDefault("display-name", AppSettings.DefaultUserName)}|" + raw.GetHashCode();
             }
 
             // Try to add; if already there, we already handled this notice

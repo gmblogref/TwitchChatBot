@@ -58,7 +58,7 @@ namespace TwitchChatBot.Data
             _twitchAlertMediaMap = await DataHelperMethods.LoadAsync<TwitchAlertMediaMap>(
                 _filePath,
                 _logger,
-                AppSettings.MediaMapFiles.CommandAlertMedia!,
+                AppSettings.MediaMapFiles.CommandAlertMedia,
                 cancellationToken
             );
 
