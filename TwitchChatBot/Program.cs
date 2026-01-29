@@ -83,6 +83,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<INukeService, NukeService>();
             services.TryAddSingleton<IIRCNoticeService, IRCNoticeService>();
             services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
+            services.TryAddSingleton<IAiTextService, AiTextService>();
 
             services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(

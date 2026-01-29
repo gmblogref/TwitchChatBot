@@ -23,9 +23,7 @@ namespace TwitchChatBot.Models
         public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
         public static int AlertTimeOut => GetIntSetting("AppSettings:AlertTimeOut");
         public static string DefaultUserName => GetStringSetting("AppSettings:DefaultUserName");
-        public static string DefaultAlertTone => GetStringSetting("AppSettings:DefaultAlertTone");
-        public static int DefaultAlertMaxWords => GetIntSetting("AppSettings:DefaultAlertMaxWords");
-
+        
 
         public static class WebHost
         {
@@ -115,7 +113,18 @@ namespace TwitchChatBot.Models
         {
             public static HashSet<string> ClearNukeUsers => GetListStringSetting("Moderation:ClearNukeUsers");
         }
-        
+
+        public static class OpenAI
+        {
+            public static string BaseUrl => GetStringSetting("OpenAI:BaseUrl");
+            public static string ApiKey => GetStringSetting("OpenAI:ApiKey");
+            public static string Model => GetStringSetting("OpenAI:Model") ?? "gpt-4o-mini";
+            public static string DefaultAlertTone => GetStringSetting("OpenAI:DefaultAlertTone");
+            public static int DefaultAlertMaxWords => GetIntSetting("OpenAI:DefaultAlertMaxWords");
+            public static int WatchStreakThreshold => GetIntSetting("OpenAI:WatchStreakThreshold");
+            public static int GiftSubThreshold => GetIntSetting("OpenAI:GiftSubThreshold");
+        }
+
         public static string GetStringSetting(string key)
         {
             var value = Configuration![key];

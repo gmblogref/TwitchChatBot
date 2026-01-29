@@ -3,6 +3,7 @@ using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -13,19 +14,22 @@ namespace TwitchChatBot.Core.Services
         private readonly IAlertService _alertService;
         private readonly ITtsService _tsService;
         private readonly IAlertHistoryService _alertHistoryService;
+        private readonly IAiTextService _aiTextService;
 
         public TwitchAlertTypesService(
             ILogger<TwitchAlertTypesService> logger, 
             ITwitchAlertMediaRepository twitchAlertMediaRepository,
             IAlertService alertService,
             ITtsService tsService,
-            IAlertHistoryService alertHistoryService)
+            IAlertHistoryService alertHistoryService,
+            IAiTextService aiTextService)
         {
             _logger = logger;
             _twitchAlertMediaRepository = twitchAlertMediaRepository;
             _alertService = alertService;
             _tsService = tsService;
             _alertHistoryService = alertHistoryService;
+            _aiTextService = aiTextService;
         }
 
         public async Task HandleCheerAsync(string username, int bits, string message)
@@ -136,14 +140,40 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.Raid ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
-            var template = AppSettings.Templates.Raid ?? "{raider} is storming in with {viewers} viewers!";
-            var text = CoreHelperMethods.RenderTemplate(template, new Dictionary<string, string?>
-            {
-                ["raider"] = username,
-                ["viewers"] = viewers.ToString()
-            });
 
-            await _tsService.SpeakAsync(text, voice);
+            // Try AI first (Step 2: raids only)
+            string? aiText = null;
+            try
+            {
+                var context = new AlertContext
+                {
+                    AiType = AlertAiType.Raid,
+                    Username = username,
+                    ViewerCount = viewers,
+                    Tone = AppSettings.OpenAI.DefaultAlertTone,
+                    MaxWords = AppSettings.OpenAI.DefaultAlertMaxWords
+                };
+
+                aiText = await _aiTextService.GenerateAlertLineAsync(context);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AI raid text generation failed. Falling back to template.");
+            }
+
+            // Fallback to your existing template if AI returns null/empty
+            if (string.IsNullOrWhiteSpace(aiText))
+            {
+                var template = AppSettings.Templates.Raid ?? "{raider} is storming in with {viewers} viewers!";
+                aiText = CoreHelperMethods.RenderTemplate(template, new Dictionary<string, string?>
+                {
+                    ["raider"] = username,
+                    ["viewers"] = viewers.ToString()
+                });
+            }
+
+            _logger.LogInformation("TTS Raid text: {aiText}", aiText);
+            await _tsService.SpeakAsync(aiText, voice);
         }
 
         public async Task HandleSubscriptionAsync(string username, string subTier)
@@ -209,7 +239,7 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "ReSub", username);
 
             var media = await _twitchAlertMediaRepository.GetResubMediaAsync();
-            var msg = $"💜 {username} resubscribed for {months} months! {userMessage}";
+            var msg = $"💜 {username} resubscribed for {months} months!";
 
             _alertHistoryService.Add(new AlertHistoryEntry
             {
@@ -225,18 +255,49 @@ namespace TwitchChatBot.Core.Services
 
             var voice = AppSettings.Voices.SubscriptionMessage ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
 
-            var text = !string.IsNullOrWhiteSpace(userMessage)
-                ? CoreHelperMethods.ForTts(userMessage)
-                : CoreHelperMethods.RenderTemplate(
-                    AppSettings.Templates.ReSub ?? "{username} is back for {months} months at tier {tier} —thank you!",
-                    new Dictionary<string, string?>
+            if (months >= 12 && months % 12 == 0)
+            {
+                try
+                {
+                    var context = new AlertContext
                     {
-                        ["username"] = username,
-                        ["months"] = months.ToString(),
-                        ["tier"] = GetNiceTierString(subTier)
-                    });
+                        AiType = AlertAiType.ResubMilestone,
+                        Username = username,
+                        Months = months,
+                        Tier = subTier,
+                        Tone = AppSettings.OpenAI.DefaultAlertTone,
+                        MaxWords = AppSettings.OpenAI.DefaultAlertMaxWords
+                    };
 
-            await _tsService.SpeakAsync(text, voice);
+                    var aiText = await _aiTextService.GenerateAlertLineAsync(context);
+
+                    if (!string.IsNullOrWhiteSpace(aiText))
+                    {
+                        _logger.LogInformation("TTS ResubMilestone AI text: {Text}", aiText);
+                        await _tsService.SpeakAsync(aiText, voice);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "AI resub milestone text generation failed. Continuing with user message/template.");
+                }
+            }
+            else
+            {
+                var text = !string.IsNullOrWhiteSpace(userMessage)
+                    ? CoreHelperMethods.ForTts(userMessage)
+                    : CoreHelperMethods.RenderTemplate(
+                        AppSettings.Templates.ReSub ?? "{username} is back for {months} months at tier {tier} —thank you!",
+                        new Dictionary<string, string?>
+                        {
+                            ["username"] = username,
+                            ["months"] = months.ToString(),
+                            ["tier"] = GetNiceTierString(subTier)
+                        });
+
+                _logger.LogInformation("TTS Resub text: {Text}", text);
+                await _tsService.SpeakAsync(text, voice);
+            }
         }
 
         public async Task HandleSubMysteryGiftAsync(string username, int numOfSubs, string subTier)
@@ -262,15 +323,48 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, tier?.Media ?? giftSubMedia.Default);
 
             var voice = AppSettings.Voices.GiftSubs ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
-            var template = AppSettings.Templates.MysteryGift ?? "{username} just dropped {numOfSubs} tier {tier} gift subs! Thank your gift sub daddy!";
-            var text = CoreHelperMethods.RenderTemplate(template, new Dictionary<string, string?>
-            {
-                ["username"] = username,
-                ["numOfSubs"] = numOfSubs.ToString(),
-                ["tier"] = GetNiceTierString(subTier)
-            });
 
-            await _tsService.SpeakAsync(text, voice);
+            // AI first for big drops (threshold configurable)
+            if (numOfSubs >= AppSettings.OpenAI.GiftSubThreshold)
+            {
+                try
+                {
+                    var context = new AlertContext
+                    {
+                        AiType = AlertAiType.GiftSubBomb,
+                        Username = username,
+                        GiftCount = numOfSubs,
+                        Tier = GetNiceTierString(subTier),
+                        Tone = AppSettings.OpenAI.DefaultAlertTone,
+                        MaxWords = AppSettings.OpenAI.DefaultAlertMaxWords
+                    };
+
+                    var aiText = await _aiTextService.GenerateAlertLineAsync(context);
+
+                    if (!string.IsNullOrWhiteSpace(aiText))
+                    {
+                        _logger.LogInformation("TTS GiftSubBomb AI text: {Text}", aiText);
+                        await _tsService.SpeakAsync(aiText, voice);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "AI gift subs text generation failed. Continuing with template.");
+                }
+            }
+            else
+            {
+                var template = AppSettings.Templates.MysteryGift ?? "{username} just dropped {numOfSubs} tier {tier} gift subs! Thank your gift sub daddy!";
+                var text = CoreHelperMethods.RenderTemplate(template, new Dictionary<string, string?>
+                {
+                    ["username"] = username,
+                    ["numOfSubs"] = numOfSubs.ToString(),
+                    ["tier"] = GetNiceTierString(subTier)
+                });
+
+                _logger.LogInformation("TTS MysteryGift text: {Text}", text);
+                await _tsService.SpeakAsync(text, voice);
+            }
         }
 
         public async Task HandleChannelPointRedemptionAsync(string username, string rewardTitle)
@@ -318,20 +412,48 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.WatchStreak ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
-            
-            var text = !string.IsNullOrWhiteSpace(userMessage)
-                ? CoreHelperMethods.ForTts(userMessage)
-                : CoreHelperMethods.RenderTemplate(
-                    AppSettings.Templates.WatchStreak ?? "{username} has been watching Legend Of Sacks for {streak} streams!",
-                    new Dictionary<string, string?>
+
+            if (streakCount >= AppSettings.OpenAI.WatchStreakThreshold)
+            {
+                try
+                {
+                    var context = new AlertContext
                     {
-                        ["username"] = username,
-                        ["streak"] = streakCount.ToString()
-                    });
+                        AiType = AlertAiType.WatchStreak,
+                        Username = username,
+                        StreakCount = streakCount,
+                        Tone = AppSettings.OpenAI.DefaultAlertTone,
+                        MaxWords = AppSettings.OpenAI.DefaultAlertMaxWords,
+                    };
 
-            _logger.LogInformation("TTS WatchStreak text: {Text}", text);
+                    var aiText = await _aiTextService.GenerateAlertLineAsync(context);
 
-            await _tsService.SpeakAsync(text, voice);
+                    if (!string.IsNullOrWhiteSpace(aiText))
+                    {
+                        _logger.LogInformation("TTS WatchStreak AI text: {Text}", aiText);
+                        await _tsService.SpeakAsync(aiText, voice);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "AI watch streak text generation failed. Continuing with user message/template.");
+                }
+            }
+            else
+            {
+                var text = !string.IsNullOrWhiteSpace(userMessage)
+                    ? CoreHelperMethods.ForTts(userMessage)
+                    : CoreHelperMethods.RenderTemplate(
+                        AppSettings.Templates.WatchStreak ?? "{username} has been watching Legend Of Sacks for {streak} streams!",
+                        new Dictionary<string, string?>
+                        {
+                            ["username"] = username,
+                            ["streak"] = streakCount.ToString()
+                        });
+
+                _logger.LogInformation("TTS WatchStreak text: {Text}", text);
+                await _tsService.SpeakAsync(text, voice);
+            }
         }
 
         private void EnqueueAlertWithMedia(string message, string mediaPath)
