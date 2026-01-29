@@ -13,6 +13,9 @@ namespace TwitchChatBot.Models
         [JsonPropertyName("message")]
         public string Message { get; set; } = string.Empty;
 
+        [JsonPropertyName("ttsMessage")]
+        public string TtsMessage { get; set; } = string.Empty;
+
         [JsonPropertyName("min")] 
         public int? Min { get; set; }
 

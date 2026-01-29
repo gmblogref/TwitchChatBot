@@ -30,13 +30,26 @@ namespace TwitchChatBot.Core.Services
         private DateTime _lastCredCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CredRecheckInterval = TimeSpan.FromMinutes(10);
 
-        // Allow‑list of Polly voices. Add any you want to permit.
-        private static readonly HashSet<string> PollyVoices = new(StringComparer.OrdinalIgnoreCase)
+        private static HashSet<string>? _pollyVoices;
+        private static HashSet<string> PollyVoices
         {
-            "Matthew","Joanna","Brian","Emma","Justin","Kimberly",
-            "Amy","Russell","Nicole","Olivia","Stephen",
-            "Salli","Joey","Ivy","Kendra"
-        };
+            get
+            {
+                if (_pollyVoices == null)
+                {
+                    _pollyVoices = new HashSet<string>(
+                        AppSettings.TTS.AllowedVoices,
+                        StringComparer.OrdinalIgnoreCase);
+                }
+
+                if (_pollyVoices.Count == 0)
+                {
+                    _pollyVoices.Add("Matthew");
+                }
+
+                return _pollyVoices;
+            }
+        }
 
         public TtsService(ILogger<TtsService> logger, IAlertService alertService)
         {
