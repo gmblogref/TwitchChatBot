@@ -74,6 +74,7 @@ namespace TwitchChatBot.Models
             public static string PollyRegion => GetStringSetting("TTS:PollyRegion");
             public static string DefaultSpeaker => GetStringSetting("TTS:DefaultSpeaker");
             public static int MaxChars => GetIntSetting("TTS:MaxChars");
+            public static IReadOnlyCollection<string> AllowedVoices => GetListStringSetting("TTS:AllowedVoices");
         }
 
         public static class Voices
@@ -86,6 +87,7 @@ namespace TwitchChatBot.Models
             public static string Follow => GetStringSetting("TTS:Voices:Follow");
             public static string SingleGiftSub => GetStringSetting("TTS:Voices:SingleGiftSub");
             public static string WatchStreak => GetStringSetting("TTS:Voices:WatchStreak");
+            public static string ChannelPoints => GetStringSetting("TTS:Voices:ChannelPoints");
         }
 
         public static class Templates

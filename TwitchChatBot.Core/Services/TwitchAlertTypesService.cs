@@ -3,7 +3,6 @@ using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Data.Contracts;
 using TwitchChatBot.Models;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace TwitchChatBot.Core.Services
 {
@@ -16,8 +15,10 @@ namespace TwitchChatBot.Core.Services
         private readonly IAlertHistoryService _alertHistoryService;
         private readonly IAiTextService _aiTextService;
 
+        private readonly HashSet<string> _limitedChannelPointTts = new(StringComparer.OrdinalIgnoreCase);
+
         public TwitchAlertTypesService(
-            ILogger<TwitchAlertTypesService> logger, 
+            ILogger<TwitchAlertTypesService> logger,
             ITwitchAlertMediaRepository twitchAlertMediaRepository,
             IAlertService alertService,
             ITtsService tsService,
@@ -111,7 +112,7 @@ namespace TwitchChatBot.Core.Services
 
             await _tsService.SpeakAsync(text, voice);
         }
-        
+
         public async Task HandleHypeTrainAsync()
         {
             _logger.LogInformation("📣 Alert triggered: {Type}", "HypeTrain");
@@ -388,8 +389,29 @@ namespace TwitchChatBot.Core.Services
             }
             else if (channelPointTextMedia!.Tiers.Exists(x => x.Title.ToLower() == rewardTitle.ToLower()))
             {
-                var fixedMessage = CoreHelperMethods.ReplacePlaceholders(channelPointTextMedia!.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower()).Message, username);
+                // Should not be null here since we found it in the IF
+                var textTier = channelPointTextMedia.Tiers.First(x => x.Title.ToLower() == rewardTitle.ToLower());
+
+                var fixedMessage = CoreHelperMethods.ReplacePlaceholders(textTier.Message, username);
                 _alertService.EnqueueAlert(fixedMessage, null);
+
+                // Optional TTS message
+                if (!string.IsNullOrWhiteSpace(textTier.TtsMessage) && CheckIfTextMediaIsLimited(textTier))
+                {
+                    var ttsRaw = CoreHelperMethods.ReplacePlaceholders(textTier.TtsMessage, username);
+
+                    // Optional: strip emotes/special chars for speech cleanliness
+                    var ttsText = CoreHelperMethods.ForTts(ttsRaw);
+
+                    var voice = AppSettings.Voices.ChannelPoints ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+
+                    _logger.LogInformation("TTS ChannelPoint text: {Text}", ttsText);
+
+                    if (!string.IsNullOrWhiteSpace(ttsText))
+                    {
+                        await _tsService.SpeakAsync(ttsText, voice);
+                    }
+                }
             }
         }
 
@@ -472,6 +494,21 @@ namespace TwitchChatBot.Core.Services
                 "2000" => "2",
                 _ => "1"
             };
+        }
+
+        private bool CheckIfTextMediaIsLimited(Tier tier)
+        {
+            if (string.Equals(tier.Title, "350th", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_limitedChannelPointTts.Contains(tier.Title))
+                {
+                    return true;
+                }
+
+                _limitedChannelPointTts.Add(tier.Title);
+            }
+
+            return false;
         }
     }
 }
