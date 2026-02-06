@@ -1,0 +1,42 @@
+name: Version bump check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  version-check:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify version was bumped (csproj)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # TODO: change this path to your actual WinForms .csproj
+          $proj = "TwitchChatBot.UI/TwitchChatBot.UI.csproj"
+
+          git fetch origin main --depth=1
+
+          $base = git show "origin/main:$proj"
+          $head = Get-Content $proj -Raw
+
+          $baseVersion = ([regex]::Match($base, "<Version>([^<]+)</Version>")).Groups[1].Value
+          $headVersion = ([regex]::Match($head, "<Version>([^<]+)</Version>")).Groups[1].Value
+
+          if ([string]::IsNullOrWhiteSpace($baseVersion) -or [string]::IsNullOrWhiteSpace($headVersion)) {
+            Write-Error "Could not find <Version> in $proj. Add <Version>x.y.z</Version> to the csproj."
+          }
+
+          if ($baseVersion -eq $headVersion) {
+            Write-Error "Version was not bumped. Base=$baseVersion Head=$headVersion"
+          }
+
+          Write-Host "OK: Version bumped from $baseVersion to $headVersion"
