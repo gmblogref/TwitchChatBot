@@ -216,6 +216,7 @@ namespace TwitchChatBot.Core.Services
             {
                 using var doc = JsonDocument.Parse(message);
 
+
                 if (_sockets.TryGetValue(webSocket, out var state))
                 {
                     state.LastPongUtc = DateTime.UtcNow;
