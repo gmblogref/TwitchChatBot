@@ -20,6 +20,7 @@ namespace TwitchChatBot.Core.Services
         private readonly IModerationService _moderationService;
         private readonly INukeService _nukeService;
         private readonly IAppFlags _appFlags;
+        private readonly IFirstChatterAlertService _firstChatterAlertService;
 
         private readonly object _soSync = new();
         private readonly Dictionary<string, DateTime> _recentAutoSos = new(StringComparer.OrdinalIgnoreCase);
@@ -37,7 +38,8 @@ namespace TwitchChatBot.Core.Services
             ITwitchRoleService twitchRoleService,
             IModerationService moderationService,
             INukeService nukeService,
-            IAppFlags appFlags)
+            IAppFlags appFlags,
+            IFirstChatterAlertService firstChatterAlertService)
         {
             _logger = logger;
             _commandMediaRepository = commandMediaRepository;
@@ -51,10 +53,19 @@ namespace TwitchChatBot.Core.Services
             _moderationService = moderationService;
             _nukeService = nukeService;
             _appFlags = appFlags;
+            _firstChatterAlertService = firstChatterAlertService;
         }
 
         public async Task HandleCommandAsync(string commandText, string userId, string username, string channel, Action<string, string> sendMessage, bool isAutoCommand = false)
         {
+            if (commandText.Trim().Equals("!clearfirst", StringComparison.InvariantCultureIgnoreCase) && AppSettings.Moderation.ClearSpecialAlertUsers.Contains(username.ToLower()))
+            {
+                _firstChatterAlertService.ClearFirstChatters();
+                _logger.LogInformation("✅ First chatters list cleared by {User}", username);
+                sendMessage(channel, "✅ First chatters list has been cleared.");
+                return;
+            }
+
             if (!isAutoCommand)
             {
                 if (await _excludedUsersService.IsUserExcludedAsync(userId, username))
@@ -318,7 +329,7 @@ namespace TwitchChatBot.Core.Services
                     await HandleNukeCommandAsync(ctx, sendMessage);
                     return false;
                 case "!clearnukes":
-                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL.ToLower() || AppSettings.Moderation.ClearNukeUsers.Contains(ctx.Username.ToLower()))
+                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL.ToLower() || AppSettings.Moderation.ClearSpecialAlertUsers.Contains(ctx.Username.ToLower()))
                     {
                         _nukeService.ClearNukes();
                     }
