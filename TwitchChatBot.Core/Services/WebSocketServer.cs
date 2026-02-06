@@ -240,9 +240,9 @@ namespace TwitchChatBot.Core.Services
 
                 if (string.Equals(type, "pong", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (_sockets.TryGetValue(webSocket, out var state))
+                    if (_sockets.TryGetValue(webSocket, out var socketState2))
                     {
-                        state.LastPongUtc = DateTime.UtcNow;
+                        socketState2.LastPongUtc = DateTime.UtcNow;
                     }
                     return true;
                 }
