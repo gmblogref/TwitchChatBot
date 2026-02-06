@@ -113,7 +113,7 @@ namespace TwitchChatBot.Models
 
         public static class Moderation
         {
-            public static HashSet<string> ClearNukeUsers => GetListStringSetting("Moderation:ClearNukeUsers");
+            public static HashSet<string> ClearSpecialAlertUsers => GetListStringSetting("Moderation:ClearSpecialAlertUsers");
         }
 
         public static class OpenAI

@@ -296,7 +296,6 @@ namespace TwitchChatBot.Core.Services
         }
 
         private async Task HandleMessageReceivedAsync(OnMessageReceivedArgs e)
-        
         {
             var username = e.ChatMessage!.Username.ToLower();
             var displayName = e.ChatMessage.Username;
@@ -306,14 +305,6 @@ namespace TwitchChatBot.Core.Services
             if (await _excludedUsersService.IsUserExcludedAsync(userId, username))
             {
                 _logger.LogInformation("🙈 Ignoring message from excluded user: {Username}", username);
-                return;
-            }
-
-            if (e.ChatMessage.Message.Trim().Equals("!clearfirst", StringComparison.InvariantCultureIgnoreCase) && userId == AppSettings.TWITCH_USER_ID)
-            {
-                _firstChatterAlertService.ClearFirstChatters();
-                _logger.LogInformation("✅ First chatters list cleared by {User}", username);
-                await SendMessageAsync(e.ChatMessage.Channel, "✅ First chatters list has been cleared.");
                 return;
             }
 
@@ -477,14 +468,24 @@ namespace TwitchChatBot.Core.Services
 
         private static string ConvertPlanToTier(TwitchLib.Client.Enums.SubscriptionPlan? plan)
         {
-            if (!plan.HasValue) { return "1000"; }
-            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Prime ||
-                plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier1) { return "1000"; }
-            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier2) { return "2000"; }
-            if (plan.Value == TwitchLib.Client.Enums.SubscriptionPlan.Tier3) { return "3000"; }
-            return "1000";
-        }
+            if(plan == null)
+            {
+                return "1000"; // Default to Tier 1 if plan is missing
+            }
 
+            switch(plan.Value)
+            {
+                case TwitchLib.Client.Enums.SubscriptionPlan.Prime:
+                case TwitchLib.Client.Enums.SubscriptionPlan.Tier1:
+                    return "1000";
+                case TwitchLib.Client.Enums.SubscriptionPlan.Tier2:
+                    return "2000";
+                case TwitchLib.Client.Enums.SubscriptionPlan.Tier3:
+                    return "3000";
+                default:
+                    return "1000";
+            }
+        }
 
         private bool IsThisAlertAlreadyProcessing(Dictionary<string, string> tags, string raw)
         {
