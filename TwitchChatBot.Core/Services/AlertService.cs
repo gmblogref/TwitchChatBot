@@ -13,10 +13,13 @@ namespace TwitchChatBot.Core.Services
         private readonly object _sync = new();
 
         private TaskCompletionSource<bool>? _currentAlertTcs;
+        private TaskCompletionSource<bool>? _currentAckTcs;
         private bool _isProcessing = false;
+        private string? _currentAlertId;
 
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
         private static readonly TimeSpan AlertTimeout = TimeSpan.FromSeconds(AppSettings.AlertTimeOut);
+        private static readonly TimeSpan AckTimeout = TimeSpan.FromSeconds(3);
 
         public AlertService(ILogger<AlertService> logger, IWebSocketServer webSocketServer)
         {
@@ -25,6 +28,7 @@ namespace TwitchChatBot.Core.Services
 
             // Subscribe to done events from WebSocketServer
             _webSocketServer.OnClientDone += HandleClientDone;
+            _webSocketServer.OnClientAck += HandleClientAck;
         }
 
         public void SetUiBridge(IUiBridge bridge)
@@ -75,7 +79,9 @@ namespace TwitchChatBot.Core.Services
             while (true)
             {
                 AlertItem? alert = null;
-                TaskCompletionSource<bool>? tcs = null;
+                TaskCompletionSource<bool>? alertTcs = null;
+                TaskCompletionSource<bool>? ackTcs = null;
+                string? alertId = null;
 
                 lock (_sync)
                 {
@@ -93,10 +99,17 @@ namespace TwitchChatBot.Core.Services
 
                     alert = _alertQueue.Dequeue();
 
+                    alertId = Guid.NewGuid().ToString("N");
+                    _currentAlertId = alertId;
+
+                    _currentAckTcs = new TaskCompletionSource<bool>(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+
                     _currentAlertTcs = new TaskCompletionSource<bool>(
                         TaskCreationOptions.RunContinuationsAsynchronously);
 
-                    tcs = _currentAlertTcs;
+                    ackTcs = _currentAckTcs;
+                    alertTcs = _currentAlertTcs;
                 }
 
                 try
@@ -104,6 +117,7 @@ namespace TwitchChatBot.Core.Services
                     var payload = new
                     {
                         type = alert!.Type,
+                        alertId,
                         message = alert.Message,
                         media = alert.Media
                     };
@@ -116,16 +130,28 @@ namespace TwitchChatBot.Core.Services
                         alert.Message,
                         alert.Media);
 
+                    var ackCompleted = await Task.WhenAny(
+                        ackTcs!.Task,
+                        Task.Delay(AckTimeout)
+                        ).ConfigureAwait(false);
+
+                    if (ackCompleted != ackTcs.Task)
+                    {
+                        _logger.LogWarning("⚠️ Alert not ACKed by overlay within {Seconds}s. Skipping. AlertId={AlertId}", AckTimeout.TotalSeconds, alertId);
+                        ackTcs.TrySetResult(false);
+                        continue;
+                    }
+
                     var completed = await Task.WhenAny(
-                        tcs!.Task,
+                        alertTcs!.Task,
                         Task.Delay(AlertTimeout)
                     ).ConfigureAwait(false);
 
-                    if (completed != tcs.Task)
+                    if (completed != alertTcs.Task)
                     {
                         _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion.");
                         // IMPORTANT: complete it so this alert is “done” even if overlay is late
-                        tcs.TrySetResult(false);
+                        alertTcs.TrySetResult(false);
                     }
                 }
                 catch (Exception ex)
@@ -136,13 +162,19 @@ namespace TwitchChatBot.Core.Services
                 {
                     lock (_sync)
                     {
-                        _isProcessing = false;
-
-                        // Only clear the TCS if it’s still the same one we created.
-                        // This prevents a late DONE from completing the wrong alert.
-                        if (ReferenceEquals(_currentAlertTcs, tcs))
+                        if (ReferenceEquals(_currentAlertTcs, alertTcs))
                         {
                             _currentAlertTcs = null;
+                        }
+
+                        if (ReferenceEquals(_currentAckTcs, ackTcs))
+                        {
+                            _currentAckTcs = null;
+                        }
+
+                        if (string.Equals(_currentAlertId, alertId, StringComparison.Ordinal))
+                        {
+                            _currentAlertId = null;
                         }
                     }
                 }
@@ -151,17 +183,45 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private void HandleClientDone()
+        private void HandleClientDone(string? alertId)
         {
-            _logger.LogInformation("✅ Client reported alert finished");
-
             TaskCompletionSource<bool>? tcs;
+            string? currentId;
 
             lock (_sync)
             {
                 tcs = _currentAlertTcs;
+                currentId = _currentAlertId;
             }
 
+            if (!string.IsNullOrWhiteSpace(alertId) && !string.Equals(alertId, currentId, StringComparison.Ordinal))
+            {
+                _logger.LogWarning("⚠️ DONE ignored for non-current alert. DoneAlertId={DoneAlertId} CurrentAlertId={CurrentAlertId}", alertId, currentId);
+                return;
+            }
+
+            _logger.LogInformation("✅ Client reported alert finished. AlertId={AlertId}", alertId ?? currentId);
+            tcs?.TrySetResult(true);
+        }
+
+        private void HandleClientAck(string? alertId)
+        {
+            TaskCompletionSource<bool>? tcs;
+            string? currentId;
+
+            lock (_sync)
+            {
+                tcs = _currentAckTcs;
+                currentId = _currentAlertId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(alertId) && !string.Equals(alertId, currentId, StringComparison.Ordinal))
+            {
+                _logger.LogWarning("⚠️ ACK ignored for non-current alert. AckAlertId={AckAlertId} CurrentAlertId={CurrentAlertId}", alertId, currentId);
+                return;
+            }
+
+            _logger.LogDebug("📥 Client ACK received. AlertId={AlertId}", alertId ?? currentId);
             tcs?.TrySetResult(true);
         }
     }

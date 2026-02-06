@@ -17,7 +17,9 @@ namespace TwitchChatBot.UI.Services
         private CancellationTokenSource _cts;
         private Task? _listenerTask;
         private int _reconnectAttempts = 0;
+        private volatile string? _pendingReconnectUrl;
         private volatile string? _currentSessionId;
+        private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
         public EventSubSocketService(
             ILogger<EventSubSocketService> logger,
@@ -44,73 +46,25 @@ namespace TwitchChatBot.UI.Services
 
         private async Task ConnectAsync(CancellationToken cancellationToken)
         {
+            await _reconnectLock.WaitAsync(cancellationToken);
             try
             {
                 _socket = new ClientWebSocket();
                 _cts = new CancellationTokenSource();
 
-                var uri = new Uri(AppSettings.EventSub.Uri);
+                var targetUrl = !string.IsNullOrWhiteSpace(_pendingReconnectUrl)
+                    ? _pendingReconnectUrl
+                    : AppSettings.EventSub.Uri;
+
+                _pendingReconnectUrl = null;
+
+                var uri = new Uri(targetUrl!);
                 await _socket.ConnectAsync(uri, cancellationToken);
-                _logger.LogInformation("✅ Connected to Twitch EventSub WebSocket.");
-
-                var buffer = new byte[8192];
-                var sb = new StringBuilder();
-
-                while (!_cts.Token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        WebSocketReceiveResult result;
-                        do
-                        {
-                            result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
-                            if (result.MessageType == WebSocketMessageType.Close)
-                            {
-                                _logger.LogWarning("⚠️ EventSub WebSocket closed.");
-                                await AttemptReconnectAsync(_cts.Token);
-                                return;
-                            }
-
-                            sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
-                        }
-                        while (!result.EndOfMessage);
-
-                        var json = sb.ToString();
-                        sb.Clear();
-
-                        await HandleMessageAsync(json);
-                    }
-                    catch (WebSocketException ex)
-                    {
-                        _logger.LogError(ex, "❌ WebSocket exception caught.");
-                        await AttemptReconnectAsync(_cts.Token);
-                        return;
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        _logger.LogInformation("Receive loop canceled.");
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "❌ Unexpected error in receive loop.");
-                        await AttemptReconnectAsync(_cts.Token);
-                        return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error in EventSub WebSocket connection.");
-                await AttemptReconnectAsync(cancellationToken);
+                _logger.LogInformation("✅ Connected to Twitch EventSub WebSocket: {Uri}", uri);
             }
             finally
             {
-                if (_socket.State != WebSocketState.Open)
-                {
-                    _logger.LogWarning("🔌 WebSocket no longer open. Attempting reconnect...");
-                    await AttemptReconnectAsync(cancellationToken);
-                }
+                _reconnectLock.Release();
             }
         }
 
@@ -142,19 +96,12 @@ namespace TwitchChatBot.UI.Services
                                 var reconnectUrl = root.GetProperty("payload").GetProperty("session").GetProperty("reconnect_url").GetString();
                                 _logger.LogInformation("🔁 EventSub session_reconnect → {Url}", reconnectUrl);
 
-                                // Close and reconnect to the new URL; DO NOT resubscribe
-                                try { _cts.Cancel(); } catch { }
-                                _ = Task.Run(async () =>
+                                if (!string.IsNullOrWhiteSpace(reconnectUrl))
                                 {
-                                    // fresh CTS and socket
-                                    _socket?.Dispose();
-                                    _socket = new ClientWebSocket();
-                                    _cts = new CancellationTokenSource();
-                                    await _socket.ConnectAsync(new Uri(reconnectUrl!), _cts.Token);
-                                    _logger.LogInformation("✅ Reconnected to EventSub via reconnect_url.");
-                                    // receive loop will resume in ConnectAsync if you structure it that way,
-                                    // or you can continue this loop similarly.
-                                });
+                                    _pendingReconnectUrl = reconnectUrl;
+                                    try { _cts.Cancel(); } catch { }
+                                }
+
                                 break;
                             }
 

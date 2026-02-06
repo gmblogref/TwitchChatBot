@@ -10,14 +10,20 @@ namespace TwitchChatBot.Core.Services
 {
     public class WebSocketServer : IWebSocketServer
     {
-        private readonly ILogger<WebSocketServer> _logger;
-        private readonly ConcurrentDictionary<WebSocket, byte> _sockets = new();
+        private sealed class SocketState
+        {
+            public DateTime LastPongUtc { get; set; } = DateTime.UtcNow;
+        }
 
+        private readonly ConcurrentDictionary<WebSocket, SocketState> _sockets = new();
+        private readonly ILogger<WebSocketServer> _logger;
         private CancellationTokenSource? _keepAliveCts;
         private Task? _keepAliveTask;
 
-        public event Action? OnClientDone;
-
+        public event Action<string?>? OnClientDone;
+        public event Action<string?>? OnClientAck;
+        public bool HasClientsConnected => _sockets.Any(kvp => kvp.Key.State == WebSocketState.Open);
+        
         public WebSocketServer(ILogger<WebSocketServer> logger)
         {
             _logger = logger;
@@ -43,6 +49,7 @@ namespace TwitchChatBot.Core.Services
                     _keepAliveCts.Cancel();
                     _keepAliveCts.Dispose();
                     _keepAliveCts = null;
+                    _keepAliveTask = null;
                 }
             }
             catch (Exception ex)
@@ -112,7 +119,7 @@ namespace TwitchChatBot.Core.Services
 
         public async Task HandleConnectionAsync(HttpContext context, WebSocket webSocket)
         {
-            _sockets.TryAdd(webSocket, 0);
+            _sockets.TryAdd(webSocket, new SocketState());
             _logger.LogInformation("🔌 WebSocket connected. Total: {Count}", _sockets.Count);
 
             try
@@ -154,7 +161,14 @@ namespace TwitchChatBot.Core.Services
 
                 do
                 {
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    try
+                    {
+                        result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    }
+                    catch
+                    {
+                        return;
+                    }
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
@@ -189,32 +203,65 @@ namespace TwitchChatBot.Core.Services
                     continue;
                 }
 
-                if (IsDoneMessage(message))
+                if (TryHandleControlMessage(webSocket, message))
                 {
-                    OnClientDone?.Invoke();
+                    continue;
                 }
             }
         }
 
-        private bool IsDoneMessage(string message)
+        private bool TryHandleControlMessage(WebSocket webSocket, string message)
         {
-            // More robust than Contains(). Handles whitespace/order differences.
             try
             {
                 using var doc = JsonDocument.Parse(message);
-                if (doc.RootElement.TryGetProperty("type", out var typeProp))
+
+                if (_sockets.TryGetValue(webSocket, out var state))
                 {
-                    var type = typeProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(type) &&
-                        string.Equals(type, "done", StringComparison.OrdinalIgnoreCase))
+                    state.LastPongUtc = DateTime.UtcNow;
+                }
+
+                if (!doc.RootElement.TryGetProperty("type", out var typeProp))
+                {
+                    return false;
+                }
+
+                var type = typeProp.GetString();
+                if (string.IsNullOrWhiteSpace(type))
+                {
+                    return false;
+                }
+
+                string? alertId = null;
+                if (doc.RootElement.TryGetProperty("alertId", out var alertIdProp))
+                {
+                    alertId = alertIdProp.GetString();
+                }
+
+                if (string.Equals(type, "pong", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_sockets.TryGetValue(webSocket, out var state))
                     {
-                        return true;
+                        state.LastPongUtc = DateTime.UtcNow;
                     }
+                    return true;
+                }
+
+                if (string.Equals(type, "ack", StringComparison.OrdinalIgnoreCase))
+                {
+                    OnClientAck?.Invoke(alertId);
+                    return true;
+                }
+
+                if (string.Equals(type, "done", StringComparison.OrdinalIgnoreCase))
+                {
+                    OnClientDone?.Invoke(alertId);
+                    return true;
                 }
             }
             catch
             {
-                // If it's malformed, don't crash the loop
+                // ignore malformed control messages
             }
 
             return false;
@@ -230,6 +277,27 @@ namespace TwitchChatBot.Core.Services
 
                     // lightweight ping that also helps you see "is overlay alive"
                     await BroadcastAsync(new { type = "ping", utc = DateTimeOffset.UtcNow });
+
+                    var now = DateTime.UtcNow;
+                    var staleSockets = _sockets
+                        .Where(kvp => kvp.Key.State == WebSocketState.Open && (now - kvp.Value.LastPongUtc) > TimeSpan.FromSeconds(45))
+                        .Select(kvp => kvp.Key)
+                        .ToList();
+
+                    foreach (var socket in staleSockets)
+                    {
+                        _logger.LogWarning("🧯 Overlay client stale (no pong). Removing socket.");
+                        SafeRemoveSocket(socket);
+
+                        try
+                        {
+                            socket.Abort();
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
                 }
                 catch (OperationCanceledException)
                 {
