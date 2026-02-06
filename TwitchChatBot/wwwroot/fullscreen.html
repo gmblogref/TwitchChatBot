@@ -14,6 +14,7 @@
         const mediaBox = document.getElementById("media");
         let playing = false;
         let ws;
+        let currentAlertId = null;
 
         function connectWebSocket() {
             ws = new WebSocket(`ws://${location.hostname}:3000/ws`);
@@ -21,11 +22,25 @@
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
 
+                // Ping/pong to keep connection alive (server sends pings every 30s)
+                if (data.type === "ping") {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: "pong" }));
+                    }
+                    return;
+                }
+
                 // Only handle fullscreen alerts here
                 if (data.type !== "fullscreen") return;
 
                 // If already playing something, ignore (server should serialize)
                 if (playing) return;
+
+                currentAlertId = data.alertId || null;
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: "ack", alertId: currentAlertId }));
+                }
 
                 playAlert(data.message, data.media);
             };
@@ -83,6 +98,7 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "done" }));
             }
+            currentAlertId = null;
         }
 
         function sleep(ms) {

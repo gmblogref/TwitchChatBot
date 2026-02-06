@@ -32,6 +32,14 @@ namespace TwitchChatBot.Core.Services
         private readonly HashSet<string> _vipList = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _viewers = new(StringComparer.OrdinalIgnoreCase);
 
+        // Reconnection variables
+        private readonly object _reconnectSync = new();
+        private System.Threading.Timer? _reconnectTimer;
+        private System.Threading.Timer? _watchdogTimer;
+        private int _reconnectAttempt = 0;
+        private DateTime _lastIrcActivityUtc = DateTime.UtcNow;
+        private bool _reconnectInProgress = false;
+
         // Dedup processed USERNOTICEs (keyed by "id" or login|tmi-sent-ts)
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _seenUserNoticeIds
             = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>();
@@ -76,11 +84,13 @@ namespace TwitchChatBot.Core.Services
                 _twitchClient.OnDisconnected += (s, e) =>
                 {
                     _logger.LogWarning("⚠️ Twitch disconnected.");
+                    StartReconnectLoop("OnDisconnected");
                     return Task.CompletedTask;
                 };
                 _twitchClient.OnConnectionError += (s, e) => 
                 { 
-                    _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message); 
+                    _logger.LogError("❌ Twitch connection error: {Error}", e.Error.Message);
+                    StartReconnectLoop("OnConnectionError");
                     return Task.CompletedTask; 
                 };
                 _twitchClient.OnUserLeft += (s, e) => 
@@ -96,7 +106,17 @@ namespace TwitchChatBot.Core.Services
                 };
                 _twitchClient.OnConnected += (s, e) =>
                 {
-                    return RunSafeAsync(HandleOnConnectedAsync, "OnConnected");
+                    return RunSafeAsync(async () =>
+                    {
+                        _reconnectAttempt = 0;
+                        _reconnectInProgress = false;
+                        _lastIrcActivityUtc = DateTime.UtcNow;
+
+                        StopReconnectTimerOnly();
+                        StartWatchdog();
+
+                        await HandleOnConnectedAsync();
+                    }, "OnConnected");
                 };
                 _twitchClient.OnUserJoined += (s, e) =>
                 {
@@ -134,7 +154,11 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        public async Task ConnectAsync() => await _twitchClient.ConnectAsync();
+        public async Task ConnectAsync()
+        {
+            StartWatchdog();
+            await _twitchClient.ConnectAsync();
+        }
 
         public async Task DisconnectAsync()
         {
@@ -186,6 +210,21 @@ namespace TwitchChatBot.Core.Services
         {
             if (_disposed) return;
 
+            _disposed = true;
+
+            try
+            {
+                _reconnectTimer?.Dispose();
+                _reconnectTimer = null;
+
+                _watchdogTimer?.Dispose();
+                _watchdogTimer = null;
+            }
+            catch
+            {
+                // swallow — Dispose must not throw
+            }
+
             // Best-effort sync shutdown
             try
             {
@@ -202,6 +241,21 @@ namespace TwitchChatBot.Core.Services
         public async ValueTask DisposeAsync()
         {
             if (_disposed) return;
+
+            _disposed = true;
+
+            try
+            {
+                _reconnectTimer?.Dispose();
+                _reconnectTimer = null;
+
+                _watchdogTimer?.Dispose();
+                _watchdogTimer = null;
+            }
+            catch
+            {
+                // swallow
+            }
 
             try
             {
@@ -335,6 +389,8 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
+            _lastIrcActivityUtc = DateTime.UtcNow;
+            
             // We only care about USERNOTICE for watch streaks
             if (!raw.Contains("USERNOTICE", StringComparison.OrdinalIgnoreCase))
             {
@@ -430,9 +486,9 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleOnCommunitySubscriptionAsync(TwitchLib.Client.Events.OnCommunitySubscriptionArgs e)
         {
             var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.DefaultUserName;
-            var count =
-                (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount :
-                (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0 ? e.GiftedSubscription!.MsgParamMassGiftCount : 1;
+            var count = (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0
+                ? e.GiftedSubscription!.MsgParamMassGiftCount
+                : 1;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubMysteryGiftAsync(gifter, count, tier);
         }
@@ -573,6 +629,149 @@ namespace TwitchChatBot.Core.Services
 
             return tags;
         }
+
+        private void StartReconnectLoop(string reason)
+        {
+            lock (_reconnectSync)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                if (_reconnectInProgress)
+                {
+                    _logger.LogWarning("🔁 Reconnect already in progress. Reason: {Reason}", reason);
+                    return;
+                }
+
+                _reconnectInProgress = true;
+
+                _reconnectTimer?.Dispose();
+                _reconnectTimer = new Timer(_ => TryReconnect(), null, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+
+                _logger.LogWarning("🔁 Starting Twitch IRC reconnect loop. Reason: {Reason}", reason);
+            }
+        }
+
+        private void TryReconnect()
+        {
+            try
+            {
+                if (_disposed)
+                {
+                    lock (_reconnectSync)
+                    {
+                        _reconnectInProgress = false;
+                    }
+                    return;
+                }
+
+                if (_twitchClient.IsConnected)
+                {
+                    lock (_reconnectSync)
+                    {
+                        _reconnectInProgress = false;
+                    }
+                    return;
+                }
+
+                _reconnectAttempt++;
+
+                var delaySeconds = Math.Min(300, (int)Math.Pow(2, Math.Min(_reconnectAttempt, 6)) * 5); // 5,10,20,40,80,160,300
+                _logger.LogWarning("🔌 Reconnect attempt #{Attempt}. Next delay: {Delay}s", _reconnectAttempt, delaySeconds);
+
+                try
+                {
+                    _ = RunSafeAsync(async () =>
+                    {
+                        await _twitchClient.ConnectAsync();
+                    }, "Reconnect: ConnectAsync");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Reconnect attempt threw.");
+                }
+
+                lock (_reconnectSync)
+                {
+                    if (_disposed)
+                    {
+                        _reconnectInProgress = false;
+                        return;
+                    }
+
+                    _reconnectTimer?.Change(TimeSpan.FromSeconds(delaySeconds), Timeout.InfiniteTimeSpan);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error in TryReconnect.");
+                lock (_reconnectSync)
+                {
+                    _reconnectInProgress = false;
+                }
+            }
+        }
+
+        private void StartWatchdog()
+        {
+            if (_watchdogTimer != null)
+            {
+                return;
+            }
+
+            _watchdogTimer = new Timer(_ =>
+            {
+                try
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    if (!_twitchClient.IsConnected)
+                    {
+                        StartReconnectLoop("Watchdog: IsConnected=false");
+                        return;
+                    }
+
+                    var idle = DateTime.UtcNow - _lastIrcActivityUtc;
+                    if (idle > TimeSpan.FromMinutes(10))
+                    {
+                        _logger.LogWarning("🧯 Watchdog detected stale IRC activity ({Minutes} min). Forcing reconnect.", (int)idle.TotalMinutes);
+
+                        try
+                        {
+                            _ = RunSafeAsync(async () =>
+                            {
+                                await _twitchClient.DisconnectAsync();
+                            }, "Watchdog: DisconnectAsync");
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+
+                        StartReconnectLoop("Watchdog: stale activity");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Watchdog tick failed.");
+                }
+            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        }
+
+        private void StopReconnectTimerOnly()
+        {
+            lock (_reconnectSync)
+            {
+                _reconnectTimer?.Dispose();
+                _reconnectTimer = null;
+            }
+        }
+
 
         private async Task RunSafeAsync(Func<Task> action, string context)
         {
