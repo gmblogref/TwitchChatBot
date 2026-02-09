@@ -167,6 +167,8 @@ namespace TwitchChatBot.Core.Services
                 {
                     lock (_sync)
                     {
+                        _isProcessing = false;
+
                         if (ReferenceEquals(_currentAlertTcs, alertTcs))
                         {
                             _currentAlertTcs = null;
