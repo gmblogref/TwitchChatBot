@@ -9,6 +9,7 @@ namespace TwitchChatBot.Core.Services.Contracts
         event Action<string?>? OnClientDone;
         event Action<string?>? OnClientAck;
 
+        bool HasClientsConnected { get; }
         void Start();
         void Stop();
         Task BroadcastAsync(object payload);

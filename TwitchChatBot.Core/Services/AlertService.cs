@@ -121,7 +121,12 @@ namespace TwitchChatBot.Core.Services
                         message = alert.Message,
                         media = alert.Media
                     };
-
+                    
+                    if (!_webSocketServer.HasClientsConnected)
+                    {
+                        _logger.LogWarning("⚠️ No overlay websocket clients connected. Skipping alert.");
+                        continue;
+                    }
                     await _webSocketServer.BroadcastAsync(payload).ConfigureAwait(false);
 
                     _logger.LogInformation(

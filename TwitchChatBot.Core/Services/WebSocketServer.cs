@@ -94,11 +94,27 @@ namespace TwitchChatBot.Core.Services
 
                 try
                 {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
                     await socket.SendAsync(
                         new ArraySegment<byte>(bytes),
                         WebSocketMessageType.Text,
                         endOfMessage: true,
-                        cancellationToken: CancellationToken.None);
+                        cancellationToken: cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogWarning("⚠️ WebSocket send timed out. Removing client.");
+                    SafeRemoveSocket(socket);
+
+                    try
+                    {
+                        socket.Abort();
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
                 }
                 catch (Exception ex)
                 {
