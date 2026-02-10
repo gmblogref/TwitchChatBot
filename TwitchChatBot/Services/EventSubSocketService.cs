@@ -33,15 +33,34 @@ namespace TwitchChatBot.UI.Services
 
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
-            _listenerTask = Task.Run(() => ConnectAsync(cancellationToken));
+            _listenerTask = Task.Run(() => ListenerLoopAsync(cancellationToken), cancellationToken);
             return Task.CompletedTask;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken = default)
+        public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("🛑 Stopping EventSub WebSocket...");
-            _cts.Cancel();
-            return Task.CompletedTask;
+
+            try
+            {
+                _cts.Cancel();
+            }
+            catch
+            {
+                // ignore
+            }
+
+            try
+            {
+                if (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived)
+                {
+                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "shutdown", cancellationToken);
+                }
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         private async Task ConnectAsync(CancellationToken cancellationToken)
@@ -317,6 +336,82 @@ namespace TwitchChatBot.UI.Services
             {
                 _logger.LogWarning(ex, "Failed to validate token for user id.");
                 return null;
+            }
+        }
+
+        private async Task ListenerLoopAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
+
+                try
+                {
+                    await ConnectAsync(linkedCts.Token);
+                    await ReceiveLoopAsync(linkedCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    // session_reconnect cancel or StopAsync: loop continues unless fully stopped
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ EventSub listener loop crashed. Will attempt reconnect.");
+                    await AttemptReconnectAsync(cancellationToken);
+                }
+            }
+        }
+
+        private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
+        {
+            var buffer = new byte[8 * 1024];
+
+            while (_socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+            {
+                var sb = new StringBuilder();
+                WebSocketReceiveResult result;
+
+                do
+                {
+                    result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        _logger.LogWarning("EventSub socket closed by server. Status={Status} Description={Desc}",
+                            result.CloseStatus,
+                            result.CloseStatusDescription);
+
+                        try
+                        {
+                            await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken);
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+
+                        return;
+                    }
+
+                    if (result.Count > 0)
+                    {
+                        sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    }
+                }
+                while (!result.EndOfMessage);
+
+                var json = sb.ToString();
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    continue;
+                }
+
+                await HandleMessageAsync(json);
             }
         }
     }
