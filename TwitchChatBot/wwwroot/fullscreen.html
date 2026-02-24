@@ -15,6 +15,7 @@
         let playing = false;
         let ws;
         let currentAlertId = null;
+        let pending = null;
 
         function connectWebSocket() {
             ws = new WebSocket(`ws://${location.hostname}:3000/ws`);
@@ -33,20 +34,68 @@
                 // Only handle fullscreen alerts here
                 if (data.type !== "fullscreen") return;
 
-                // If already playing something, ignore (server should serialize)
-                if (playing) return;
-
-                currentAlertId = data.alertId || null;
-
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: "ack", alertId: currentAlertId }));
+                if (playing) {
+                    pending = data;
+                    return;
                 }
 
-                playAlert(data.message, data.media);
+                startAlert(data);
             };
 
-            ws.onclose = () => setTimeout(connectWebSocket, 3000); // auto-reconnect
+            ws.onopen = () => {
+                if (pending && !playing) {
+                    const next = pending;
+                    pending = null;
+                    startAlert(next);
+                }
+            };
+
+            ws.onclose = () => {
+                playing = false;
+                pending = null;
+                currentAlertId = null;
+                setTimeout(connectWebSocket, 3000);  // auto-reconnect
+            };
         }
+
+        function startAlert(data) {
+            currentAlertId = data.alertId || null;
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                pending = data;
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "ack", alertId: currentAlertId }));
+            }
+
+            playAlert(data.message, data.media);
+        }
+
+        function waitForEndOrTimeout(mediaEl, timeoutMs) {
+            return new Promise(resolve => {
+                let done = false;
+
+                const finish = () => {
+                    if (done) return;
+                    done = true;
+                    cleanup();
+                    resolve();
+                };
+
+                const cleanup = () => {
+                    mediaEl.onended = null;
+                    mediaEl.onerror = null;
+                };
+
+                mediaEl.onended = finish;
+                mediaEl.onerror = finish;
+
+                setTimeout(finish, timeoutMs);
+            });
+        }
+
         connectWebSocket();
 
         async function playAlert(message, media) {
@@ -67,7 +116,7 @@
                 mediaBox.appendChild(video);
 
                 await video.play().catch(() => null);
-                await new Promise(resolve => video.onended = resolve);
+                await waitForEndOrTimeout(video, 30000);
                 await sleep(1000);
 
             } else if (media?.endsWith(".gif")) {
@@ -81,7 +130,7 @@
                 const audio = new Audio(media);
                 audio.volume = 1.0;
                 await audio.play().catch(() => null);
-                await new Promise(resolve => audio.onended = resolve);
+                await waitForEndOrTimeout(audio, 30000);
                 await sleep(1000);
 
             } else {
@@ -96,9 +145,15 @@
 
             // ✅ Notify server this alert finished
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "done" }));
+                ws.send(JSON.stringify({ type: "done", alertId: currentAlertId }));
             }
             currentAlertId = null;
+
+            if (pending) {
+                const next = pending;
+                pending = null;
+                startAlert(next);
+            }
         }
 
         function sleep(ms) {

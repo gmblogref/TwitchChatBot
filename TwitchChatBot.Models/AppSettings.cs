@@ -21,7 +21,6 @@ namespace TwitchChatBot.Models
         public static string TwitchUrl => GetStringSetting("AppSettings:TwitchUrl");
         public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes");
         public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
-        public static int AlertTimeOut => GetIntSetting("AppSettings:AlertTimeOut");
         public static string DefaultUserName => GetStringSetting("AppSettings:DefaultUserName");
         
 
@@ -125,6 +124,15 @@ namespace TwitchChatBot.Models
             public static int DefaultAlertMaxWords => GetIntSetting("OpenAI:DefaultAlertMaxWords");
             public static int WatchStreakThreshold => GetIntSetting("OpenAI:WatchStreakThreshold");
             public static int GiftSubThreshold => GetIntSetting("OpenAI:GiftSubThreshold");
+        }
+
+        public static class AlertSettings
+        {
+            public static int AlertTimeOut => GetIntSetting("AlertSettings:AlertTimeOut");
+            public static int AcknowledgeTimeOut => GetIntSetting("AlertSettings:AcknowledgeTimeOut");
+            public static int MaxQueueSize => GetIntSetting("AlertSettings:MaxQueueSize");
+            public static int MaxOfflineQueueTime => GetIntSetting("AlertSettings:MaxOfflineQueueTime");
+            public static int RetryTaskDelay => GetIntSetting("AlertSettings:RetryTaskDelay");
         }
 
         public static string GetStringSetting(string key)
