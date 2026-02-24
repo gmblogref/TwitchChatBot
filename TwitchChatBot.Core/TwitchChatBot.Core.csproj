@@ -9,12 +9,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AWSSDK.Polly" Version="4.0.3.14" />
+		<PackageReference Include="AWSSDK.Polly" Version="4.0.3.16" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
 		<PackageReference Include="TwitchLib.Client" Version="4.0.1" />
 	</ItemGroup>
 

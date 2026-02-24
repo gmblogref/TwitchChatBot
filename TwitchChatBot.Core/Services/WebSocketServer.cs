@@ -20,6 +20,7 @@ namespace TwitchChatBot.Core.Services
         private CancellationTokenSource? _keepAliveCts;
         private Task? _keepAliveTask;
 
+        public event Action? OnClientConnected;
         public event Action<string?>? OnClientDone;
         public event Action<string?>? OnClientAck;
         public bool HasClientsConnected => _sockets.Any(kvp => kvp.Key.State == WebSocketState.Open);
@@ -136,6 +137,7 @@ namespace TwitchChatBot.Core.Services
         public async Task HandleConnectionAsync(HttpContext context, WebSocket webSocket)
         {
             _sockets.TryAdd(webSocket, new SocketState());
+            OnClientConnected?.Invoke();
             _logger.LogInformation("🔌 WebSocket connected. Total: {Count}", _sockets.Count);
 
             try

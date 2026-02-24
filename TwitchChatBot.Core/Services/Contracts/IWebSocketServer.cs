@@ -6,6 +6,7 @@ namespace TwitchChatBot.Core.Services.Contracts
 {
     public interface IWebSocketServer
     {
+        event Action? OnClientConnected;
         event Action<string?>? OnClientDone;
         event Action<string?>? OnClientAck;
 
