@@ -21,7 +21,7 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           # Repo-relative path to your WinForms csproj
-          $proj = "TwitchChatBot.UI/TwitchChatBot.UI.csproj"
+          $proj = "TwitchChatBot/TwitchChatBot.UI/TwitchChatBot.UI.csproj"
 
           git fetch origin main --depth=1
 
