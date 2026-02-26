@@ -83,33 +83,40 @@ namespace TwitchChatBot.Data.Utilities
 
         public static async Task SaveAsync<T>(string filePath, T data, ILogger logger, string contextDescription, CancellationToken cancellationToken = default)
         {
+            string? tempPath = null;
+
             try
             {
                 if (data == null)
                 {
-                    throw new ArgumentNullException(nameof(data));
+                    logger.LogWarning("⚠️ Save skipped because data is null. Context={Context}", contextDescription);
+                    return;
                 }
 
                 var dir = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrWhiteSpace(dir))
+                if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
                 }
 
                 var options = new JsonSerializerOptions
                 {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    WriteIndented = true
                 };
-                options.Converters.Add(new JsonStringEnumConverter());
 
                 var json = JsonSerializer.Serialize(data, options);
 
-                var tempPath = filePath + ".tmp";
+                tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
                 await File.WriteAllTextAsync(tempPath, json, cancellationToken);
 
-                File.Copy(tempPath, filePath, overwrite: true);
-                File.Delete(tempPath);
+                if (File.Exists(filePath))
+                {
+                    File.Replace(tempPath, filePath, destinationBackupFileName: null);
+                }
+                else
+                {
+                    File.Move(tempPath, filePath);
+                }
 
                 logger.LogInformation("💾 {Context} saved successfully.", contextDescription);
             }
@@ -117,6 +124,20 @@ namespace TwitchChatBot.Data.Utilities
             {
                 logger.LogError(ex, "❌ Failed to save {Context}.", contextDescription);
                 throw;
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(tempPath) && File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // Best-effort cleanup only.
+                    }
+                }
             }
         }
 

@@ -396,7 +396,7 @@ namespace TwitchChatBot.Core.Services
                 _alertService.EnqueueAlert(fixedMessage, null);
 
                 // Optional TTS message
-                if (!string.IsNullOrWhiteSpace(textTier.TtsMessage) && CheckIfTextMediaIsLimited(textTier))
+                if (!string.IsNullOrWhiteSpace(textTier.TtsMessage) && !CheckIfTextMediaIsLimited(textTier))
                 {
                     var ttsRaw = CoreHelperMethods.ReplacePlaceholders(textTier.TtsMessage, username);
 

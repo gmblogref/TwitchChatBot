@@ -7,10 +7,19 @@ namespace TwitchChatBot.Core.Services
 {
     public class HelixLookupService : IHelixLookupService
     {
-        private readonly HttpClient _httpClient; 
+        private const int MaxLoginToIdCacheEntries = 4096;
+        private const int MaxIdToLastGameCacheEntries = 4096;
+
+        private readonly HttpClient _httpClient;
         private readonly ILogger<HelixLookupService> _logger;
+
+        private readonly object _cacheSync = new();
+
         private readonly Dictionary<string, string> _loginToId = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Queue<string> _loginToIdInsertionOrder = new();
+
         private readonly Dictionary<string, string> _idToLastGame = new();
+        private readonly Queue<string> _idToLastGameInsertionOrder = new();
 
         public HelixLookupService(ILogger<HelixLookupService> logger, IHttpClientFactory httpFactory)
         {
@@ -20,26 +29,64 @@ namespace TwitchChatBot.Core.Services
 
         public async Task<string?> GetUserIdByLoginAsync(string login, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(login)) return null;
-            if (_loginToId.TryGetValue(login, out var cached)) return cached;
+            if (string.IsNullOrWhiteSpace(login))
+            {
+                return null;
+            }
+
+            login = login.Trim();
+
+            lock (_cacheSync)
+            {
+                if (_loginToId.TryGetValue(login, out var cached))
+                {
+                    return cached;
+                }
+            }
 
             var url = AppSettings.Commands.UsersByLogin.Replace("{login}", Uri.EscapeDataString(login));
             using var resp = await _httpClient.GetAsync(url, ct);
-            if (!resp.IsSuccessStatusCode) { _logger.LogWarning("GetUsers {Login}: {Status}", login, resp.StatusCode); return null; }
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("GetUsers {Login}: {Status}", login, resp.StatusCode);
+                return null;
+            }
 
             using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             var data = doc.RootElement.GetProperty("data");
-            if (data.GetArrayLength() == 0) return null;
+            if (data.GetArrayLength() == 0)
+            {
+                return null;
+            }
 
             var id = data[0].GetProperty("id").GetString();
-            if (!string.IsNullOrEmpty(id)) _loginToId[login] = id!;
+            if (!string.IsNullOrEmpty(id))
+            {
+                lock (_cacheSync)
+                {
+                    AddToBoundedCache(_loginToId, _loginToIdInsertionOrder, MaxLoginToIdCacheEntries, login, id!);
+                }
+            }
+
             return id;
         }
 
         public async Task<string?> GetLastKnownGameByUserIdAsync(string userId, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(userId)) return null;
-            if (_idToLastGame.TryGetValue(userId, out var cached) && !string.IsNullOrEmpty(cached)) return cached;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return null;
+            }
+
+            userId = userId.Trim();
+
+            lock (_cacheSync)
+            {
+                if (_idToLastGame.TryGetValue(userId, out var cached) && !string.IsNullOrEmpty(cached))
+                {
+                    return cached;
+                }
+            }
 
             // 1) Streams (live)
             {
@@ -49,8 +96,17 @@ namespace TwitchChatBot.Core.Services
                 {
                     using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
                     var data = doc.RootElement.GetProperty("data");
-                    if (data.GetArrayLength() > 0 && data[0].TryGetProperty("game_name", out var g) && g.ValueKind == JsonValueKind.String)
-                        return _idToLastGame[userId] = g.GetString()!;
+                    if (data.GetArrayLength() > 0 &&
+                        data[0].TryGetProperty("game_name", out var g) &&
+                        g.ValueKind == JsonValueKind.String)
+                    {
+                        var gameName = g.GetString()!;
+                        lock (_cacheSync)
+                        {
+                            AddToBoundedCache(_idToLastGame, _idToLastGameInsertionOrder, MaxIdToLastGameCacheEntries, userId, gameName);
+                        }
+                        return gameName;
+                    }
                 }
             }
 
@@ -62,8 +118,17 @@ namespace TwitchChatBot.Core.Services
                 {
                     using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
                     var data = doc.RootElement.GetProperty("data");
-                    if (data.GetArrayLength() > 0 && data[0].TryGetProperty("game_name", out var g) && g.ValueKind == JsonValueKind.String)
-                        return _idToLastGame[userId] = g.GetString()!;
+                    if (data.GetArrayLength() > 0 &&
+                        data[0].TryGetProperty("game_name", out var g) &&
+                        g.ValueKind == JsonValueKind.String)
+                    {
+                        var gameName = g.GetString()!;
+                        lock (_cacheSync)
+                        {
+                            AddToBoundedCache(_idToLastGame, _idToLastGameInsertionOrder, MaxIdToLastGameCacheEntries, userId, gameName);
+                        }
+                        return gameName;
+                    }
                 }
             }
 
@@ -71,20 +136,40 @@ namespace TwitchChatBot.Core.Services
             {
                 var url = AppSettings.Commands.VideosByUserId.Replace("{id}", Uri.EscapeDataString(userId));
                 using var resp = await _httpClient.GetAsync(url, ct);
-                if (!resp.IsSuccessStatusCode) return null;
+                if (!resp.IsSuccessStatusCode)
+                {
+                    return null;
+                }
 
                 using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
                 var data = doc.RootElement.GetProperty("data");
-                if (data.GetArrayLength() == 0) return null;
+                if (data.GetArrayLength() == 0)
+                {
+                    return null;
+                }
 
                 var item = data[0];
                 if (item.TryGetProperty("game_name", out var gn) && gn.ValueKind == JsonValueKind.String)
-                    return _idToLastGame[userId] = gn.GetString()!;
+                {
+                    var gameName = gn.GetString()!;
+                    lock (_cacheSync)
+                    {
+                        AddToBoundedCache(_idToLastGame, _idToLastGameInsertionOrder, MaxIdToLastGameCacheEntries, userId, gameName);
+                    }
+                    return gameName;
+                }
 
                 if (item.TryGetProperty("game_id", out var gid) && gid.ValueKind == JsonValueKind.String)
                 {
                     var name = await ResolveGameNameAsync(gid.GetString()!, ct);
-                    if (!string.IsNullOrWhiteSpace(name)) return _idToLastGame[userId] = name!;
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        lock (_cacheSync)
+                        {
+                            AddToBoundedCache(_idToLastGame, _idToLastGameInsertionOrder, MaxIdToLastGameCacheEntries, userId, name!);
+                        }
+                        return name;
+                    }
                 }
             }
 
@@ -116,7 +201,9 @@ namespace TwitchChatBot.Core.Services
                     foreach (var item in data.EnumerateArray())
                     {
                         if (item.TryGetProperty("user_login", out var login) && login.ValueKind == JsonValueKind.String)
+                        {
                             result.Add(login.GetString()!);
+                        }
                     }
                 }
 
@@ -156,7 +243,9 @@ namespace TwitchChatBot.Core.Services
                     foreach (var item in data.EnumerateArray())
                     {
                         if (item.TryGetProperty("user_login", out var login) && login.ValueKind == JsonValueKind.String)
+                        {
                             result.Add(login.GetString()!);
+                        }
                     }
                 }
 
@@ -175,11 +264,37 @@ namespace TwitchChatBot.Core.Services
         {
             var url = AppSettings.Commands.GamesByGameId.Replace("{gameid}", Uri.EscapeDataString(gameId));
             using var resp = await _httpClient.GetAsync(url, ct);
-            if (!resp.IsSuccessStatusCode) return null;
+            if (!resp.IsSuccessStatusCode)
+            {
+                return null;
+            }
 
             using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             var data = doc.RootElement.GetProperty("data");
             return data.GetArrayLength() == 0 ? null : data[0].TryGetProperty("name", out var n) ? n.GetString() : null;
+        }
+
+        private static void AddToBoundedCache(
+            Dictionary<string, string> cache,
+            Queue<string> insertionOrder,
+            int maxEntries,
+            string key,
+            string value)
+        {
+            if (cache.ContainsKey(key))
+            {
+                cache[key] = value;
+                return;
+            }
+
+            cache[key] = value;
+            insertionOrder.Enqueue(key);
+
+            while (cache.Count > maxEntries && insertionOrder.Count > 0)
+            {
+                var oldestKey = insertionOrder.Dequeue();
+                cache.Remove(oldestKey);
+            }
         }
     }
 }

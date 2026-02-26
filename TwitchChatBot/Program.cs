@@ -116,6 +116,20 @@ namespace TwitchChatBot
                 client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
             });
 
+            services.AddHttpClient("openai", client =>
+            {
+                client.BaseAddress = new Uri(AppSettings.OpenAI.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", AppSettings.OpenAI.ApiKey);
+            });
+
+            services.AddHttpClient("twitch-eventsub", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+
             services.TryAddScoped<IModerationService, ModerationService>();
 
             services.TryAddSingleton<IWebHostWrapper, WebHostWrapper>();

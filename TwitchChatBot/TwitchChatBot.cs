@@ -384,7 +384,7 @@ namespace TwitchChatBot
         {
             try
             {
-                await _chatBotController.StopAsync();
+                await _chatBotController.StopBotAsync();
                 buttonStartBot.Enabled = true;
                 buttonTestBot.Enabled = true;
             }
@@ -396,13 +396,28 @@ namespace TwitchChatBot
 
         private async void TwitchChatBot_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // Prevent re-entrancy (FormClosing can fire more than once)
+            if (e.CloseReason == CloseReason.None)
+            {
+                return;
+            }
+
+            e.Cancel = true;
+
             try
             {
-                await _chatBotController.StopAsync();
+                await _chatBotController.ShutdownAsync();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error while closing: {ex.Message}");
+            }
+            finally
+            {
+                e.Cancel = false;
+
+                // Now actually close
+                BeginInvoke(new Action(Close));
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Drawing;
-using System.Threading.Channels;
+using System.Security.Cryptography;
+using System.Text;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Core.Utilities;
 using TwitchChatBot.Models;
@@ -43,7 +44,8 @@ namespace TwitchChatBot.Core.Services
         // Dedup processed USERNOTICEs (keyed by "id" or login|tmi-sent-ts)
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _seenUserNoticeIds
             = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>();
-
+        private DateTime _lastSeenUserNoticePruneUtc = DateTime.MinValue;
+        private readonly object _seenUserNoticePruneLock = new();
 
         public event EventHandler<List<ViewerEntry>>? OnViewerListChanged;
         public event EventHandler<TwitchMessageEventArgs>? OnMessageReceived;
@@ -552,17 +554,55 @@ namespace TwitchChatBot.Core.Services
             if (string.IsNullOrEmpty(uniqueId))
             {
                 // Extremely rare: still create a stable key to prevent back-to-back duplicates
-                uniqueId = $"{tags.GetValueOrDefault("display-name", AppSettings.DefaultUserName)}|" + raw.GetHashCode();
+                var display = tags.GetValueOrDefault("display-name", AppSettings.DefaultUserName);
+                uniqueId = $"{display}|{CreateStableHash(raw)}";
             }
 
+            var now = DateTime.UtcNow;
+
+            // Periodic cleanup (TTL) to avoid unbounded growth
+            CleanupSeenUserNoticeIds(now);
+
             // Try to add; if already there, we already handled this notice
-            if (!_seenUserNoticeIds.TryAdd(uniqueId, DateTime.UtcNow))
+            if (!_seenUserNoticeIds.TryAdd(uniqueId, now))
             {
                 _logger.LogDebug("🔁 Duplicate USERNOTICE ignored: {UniqueId}", uniqueId);
                 return true;
             }
 
             return false;
+        }
+
+        private static string CreateStableHash(string input)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input ?? string.Empty));
+            return Convert.ToHexString(bytes);
+        }
+
+        private void CleanupSeenUserNoticeIds(DateTime nowUtc)
+        {
+            var ttl = TimeSpan.FromMinutes(10);
+            var pruneInterval = TimeSpan.FromMinutes(1);
+
+            lock (_seenUserNoticePruneLock)
+            {
+                if ((nowUtc - _lastSeenUserNoticePruneUtc) < pruneInterval)
+                {
+                    return;
+                }
+
+                _lastSeenUserNoticePruneUtc = nowUtc;
+            }
+
+            var cutoff = nowUtc - ttl;
+
+            foreach (var kvp in _seenUserNoticeIds)
+            {
+                if (kvp.Value < cutoff)
+                {
+                    _seenUserNoticeIds.TryRemove(kvp.Key, out _);
+                }
+            }
         }
 
         private static Dictionary<string, string> ParseTags(string raw)

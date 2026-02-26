@@ -11,15 +11,111 @@ namespace TwitchChatBot
 {
     public class WebHostWrapper : IWebHostWrapper
     {
-        private readonly IHost _host;
+        private readonly IWebSocketServer _webSocketServer;
+        private readonly ILogger<WebHostWrapper> _logger;
 
-        public WebHostWrapper(IWebSocketServer webSocketServer)
+        private readonly object _sync = new();
+
+        private IHost? _host;
+        private int _started; // 0 = false, 1 = true
+
+        public WebHostWrapper(
+            IWebSocketServer webSocketServer,
+            ILogger<WebHostWrapper> logger)
         {
-            _host = Host.CreateDefaultBuilder()
+            _webSocketServer = webSocketServer;
+            _logger = logger;
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                if (_started == 1)
+                {
+                    return;
+                }
+
+                if (_host == null)
+                {
+                    _host = BuildHost();
+                }
+
+                _started = 1;
+            }
+
+            try
+            {
+                await _host!.StartAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("✅ WebHost started on {BaseUrl}", AppSettings.WebHost.BaseUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ WebHostWrapper.StartAsync failed.");
+
+                lock (_sync)
+                {
+                    _started = 0;
+
+                    try { _host?.Dispose(); } catch { }
+                    _host = null;
+                }
+
+                throw;
+            }
+        }
+
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            IHost? hostToStop;
+
+            lock (_sync)
+            {
+                if (_started == 0)
+                {
+                    return;
+                }
+
+                _started = 0;
+                hostToStop = _host;
+                _host = null;
+            }
+
+            if (hostToStop == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await hostToStop.StopAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("🛑 WebHost stopped.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "WebHostWrapper.StopAsync failed.");
+            }
+            finally
+            {
+                try
+                {
+                    hostToStop.Dispose();
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+        }
+
+        private IHost BuildHost()
+        {
+            return Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseUrls(AppSettings.WebHost.BaseUrl);
                     webBuilder.UseWebRoot(AppSettings.WebHost.WebRoot);
+
                     webBuilder.Configure(app =>
                     {
                         app.UseWebSockets();
@@ -29,7 +125,7 @@ namespace TwitchChatBot
                             if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest)
                             {
                                 var socket = await context.WebSockets.AcceptWebSocketAsync();
-                                await webSocketServer.HandleConnectionAsync(context, socket);
+                                await _webSocketServer.HandleConnectionAsync(context, socket);
                             }
                             else
                             {
@@ -45,7 +141,6 @@ namespace TwitchChatBot
                             RequestPath = "/media"
                         });
 
-                        // Enable endpoint routing
                         app.UseRouting();
 
                         app.UseEndpoints(endpoints =>
@@ -66,9 +161,5 @@ namespace TwitchChatBot
                 })
                 .Build();
         }
-
-        public Task StartAsync(CancellationToken cancellationToken = default) => _host.StartAsync(cancellationToken);
-
-        public Task StopAsync(CancellationToken cancellationToken = default) => _host.StopAsync(cancellationToken);
     }
 }
