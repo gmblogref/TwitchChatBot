@@ -50,6 +50,26 @@ The system uses dependency injection and separation of concerns to keep alert lo
 
 ---
 
+## Configuration
+
+The repository includes an `appsettings.json` file containing configuration keys only.
+
+⚠️ This file does **not** contain any secrets.
+
+To run the application:
+
+1. Create a local `appsettings.Development.json` (or modify `appsettings.json` locally).
+2. Populate required values such as:
+   - Twitch Client ID
+   - Access Tokens
+   - EventSub configuration
+   - Media paths
+3. Do **not** commit any real tokens or credentials.
+
+Sensitive configuration files are excluded via `.gitignore`.
+
+---
+
 ## Versioning & Release Process
 
 This project follows Semantic Versioning (x.y.z).

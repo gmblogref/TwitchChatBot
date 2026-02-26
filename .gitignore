@@ -9,7 +9,12 @@
 *.user
 *.userosscache
 *.sln.docstates
-appsettings.Development.json
+
+# Local application configuration (NEVER commit secrets)
+**/appsettings.json
+**/appsettings.*.json
+!**/appsettings.example.json
+!**/appsettings.*.example.json
 
 # Ignore JSON media maps
 TwitchChatBot/MediaMaps/*.json
