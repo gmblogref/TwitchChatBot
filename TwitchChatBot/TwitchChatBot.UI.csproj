@@ -45,7 +45,7 @@
 			<DependentUpon>appsettings.json</DependentUpon>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="appSettings.json">
+		<None Update="appsettings.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
