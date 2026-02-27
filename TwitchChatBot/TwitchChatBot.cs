@@ -440,5 +440,10 @@ namespace TwitchChatBot
         {
             ReplaySelectedAlert();
         }
+
+        private async void buttonTestHypeTrainEnd_Click(object sender, EventArgs e)
+        {
+            await _testUtilityService.TriggerHypeTrainEndTestAsync();
+        }
     }
 }

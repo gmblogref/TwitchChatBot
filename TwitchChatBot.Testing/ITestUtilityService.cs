@@ -4,6 +4,7 @@
     Task TriggerCheerTestAsync(int bits);
     void TriggerFollowTest(string userName);
     Task TriggerHypeTrainTestAsync();
+    Task TriggerHypeTrainEndTestAsync();
     Task TriggerRaidTestAsync(string userName, int viewers);
     Task TriggerReSubTestAsync(string userName, int months);
     Task TriggerSubGiftTestAsync(string userName, string recipient);

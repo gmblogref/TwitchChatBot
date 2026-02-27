@@ -141,12 +141,12 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            if (string.Equals(username, AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(username, AppSettings.Twitch.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
-            if (string.Equals(username, AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(username, AppSettings.Twitch.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -176,7 +176,7 @@ namespace TwitchChatBot.Core.Services
             await HandleCommandAsync(
                 $"!so @{username}",
                 userId,
-                AppSettings.TWITCH_BOT_USERNAME,
+                AppSettings.Twitch.TWITCH_BOT_USERNAME,
                 channel,
                 sendMessage,
                 isAutoCommand: true);
@@ -276,7 +276,7 @@ namespace TwitchChatBot.Core.Services
                 .Replace("@$targetname", $"@{(string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget)}", StringComparison.OrdinalIgnoreCase)
                 .Replace("$targetname", (string.IsNullOrEmpty(ctx.RawTarget) ? ctx.Username : ctx.RawTarget), StringComparison.OrdinalIgnoreCase)
                 .Replace("$target", string.IsNullOrEmpty(ctx.RawTarget) ? $"@{ctx.Username}" : ctx.Target, StringComparison.OrdinalIgnoreCase)
-                .Replace("$url", string.IsNullOrEmpty(ctx.RawTarget) ? AppSettings.TwitchUrl + $"{ctx.Username}" : ctx.Url, StringComparison.OrdinalIgnoreCase)
+                .Replace("$url", string.IsNullOrEmpty(ctx.RawTarget) ? AppSettings.Twitch.TwitchUrl + $"{ctx.Username}" : ctx.Url, StringComparison.OrdinalIgnoreCase)
                 .Replace("$game", ctx.Game, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -329,7 +329,7 @@ namespace TwitchChatBot.Core.Services
                     await HandleNukeCommandAsync(ctx, sendMessage);
                     return false;
                 case "!clearnukes":
-                    if(ctx.Username.ToLower() == AppSettings.TWITCH_CHANNEL.ToLower() || AppSettings.Moderation.ClearSpecialAlertUsers.Contains(ctx.Username.ToLower()))
+                    if(ctx.Username.ToLower() == AppSettings.Twitch.TWITCH_CHANNEL.ToLower() || AppSettings.Moderation.ClearSpecialAlertUsers.Contains(ctx.Username.ToLower()))
                     {
                         _nukeService.ClearNukes();
                     }
@@ -405,9 +405,9 @@ namespace TwitchChatBot.Core.Services
             }
             
             // Optional: mod safety check if your GetModeratorsAsync returns logins
-            var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID);
-            var isTargetBroadcaster = targetLogin.Equals(AppSettings.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase);
-            var isTargetBot = targetLogin.Equals(AppSettings.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase);
+            var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.Twitch.TWITCH_USER_ID);
+            var isTargetBroadcaster = targetLogin.Equals(AppSettings.Twitch.TWITCH_CHANNEL, StringComparison.OrdinalIgnoreCase);
+            var isTargetBot = targetLogin.Equals(AppSettings.Twitch.TWITCH_BOT_USERNAME, StringComparison.OrdinalIgnoreCase);
             var isTargetMod = !isTargetBot && mods.Contains(targetLogin, StringComparer.OrdinalIgnoreCase);
             var useBot = (!isTargetBot && !isTargetMod);
 
@@ -419,7 +419,7 @@ namespace TwitchChatBot.Core.Services
                 if (isTargetMod)
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_USER_ID, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.Twitch.TWITCH_USER_ID, AppSettings.Twitch.TWITCH_USER_ID, targetId, 5, useBot);
 
                     // Fun line + media for mod nukes
                     sendMessage(ctx.Channel, $"⚠️ @{ctx.Username} is attacking the MODs… let’s see how that works out. 🔥");
@@ -430,7 +430,7 @@ namespace TwitchChatBot.Core.Services
                 else if (isTargetBot)
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_USER_ID, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.Twitch.TWITCH_USER_ID, AppSettings.Twitch.TWITCH_USER_ID, targetId, 5, useBot);
 
                     // TTS reminder to re-mod the bot afterward
                     sendMessage(ctx.Channel, $"BOOM! 💣 @{ctx.Username} nuked the bot!");
@@ -444,7 +444,7 @@ namespace TwitchChatBot.Core.Services
                 else
                 {
                     // Helix timeout (10s example)
-                    await _moderationService.TimeoutAsync(AppSettings.TWITCH_USER_ID, AppSettings.TWITCH_BOT_ID, targetId, 5, useBot);
+                    await _moderationService.TimeoutAsync(AppSettings.Twitch.TWITCH_USER_ID, AppSettings.Twitch.TWITCH_BOT_ID, targetId, 5, useBot);
 
                     // Announce success
                     sendMessage(ctx.Channel, $"💣 {targetLogin} bye bye!!!");

@@ -83,12 +83,12 @@ namespace TwitchChatBot.Core.Services
 
             // Pull tokens fresh (however you store them). Example using AppSettings:
             var bearer = useBot
-                ? AppSettings.TWITCH_OAUTH_BEARER_BOT
-                : AppSettings.TWITCH_ACCESS_TOKEN;
+                ? AppSettings.Auth.TWITCH_OAUTH_BEARER_BOT
+                : AppSettings.Auth.TWITCH_ACCESS_TOKEN;
 
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
             req.Headers.Remove("Client-Id");
-            req.Headers.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+            req.Headers.Add("Client-Id", AppSettings.Auth.TWITCH_CLIENT_ID);
 
             var body = JsonSerializer.Serialize(new { data = new { user_id = targetUserId, duration = seconds } });
             req.Content = new StringContent(body, Encoding.UTF8, "application/json");

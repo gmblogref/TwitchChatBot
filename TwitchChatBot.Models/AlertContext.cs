@@ -4,7 +4,7 @@
     {
         // Core identifiers
         public AlertAiType AiType { get; set; }
-        public string Username { get; set; } = AppSettings.DefaultUserName;
+        public string Username { get; set; } = AppSettings.Ads.DefaultUserName;
 
         // Optional event-specific fields
         public int? ViewerCount { get; set; }

@@ -301,7 +301,7 @@ namespace TwitchChatBot.UI.Services
                             var subscriptionType = metadata.GetProperty("subscription_type").GetString();
                             var eventPayload = root.GetProperty("payload").GetProperty("event");
 
-                            string userName = AppSettings.DefaultUserName;
+                            string userName = AppSettings.Ads.DefaultUserName;
 
                             switch (subscriptionType)
                             {
@@ -325,6 +325,11 @@ namespace TwitchChatBot.UI.Services
                                         await _twitchAlertTypesService.HandleHypeTrainAsync();
                                         break;
                                     }
+                                case TwitchEventTypes.HypeTrainEnd:
+                                    {
+                                        await _twitchAlertTypesService.HandleHypeTrainEndAsync(ParseHypeTrainEndEvent(eventPayload));
+                                        break;
+                                    }
                                 case TwitchEventTypes.ChannelFollow:
                                     {
                                         var followerName =
@@ -332,9 +337,9 @@ namespace TwitchChatBot.UI.Services
                                                 ? uName.GetString()
                                                 : (eventPayload.TryGetProperty("user_login", out var uLogin) && uLogin.ValueKind == JsonValueKind.String
                                                     ? uLogin.GetString()
-                                                    : AppSettings.DefaultUserName);
+                                                    : AppSettings.Ads.DefaultUserName);
 
-                                        await _twitchAlertTypesService.HandleFollowAsync(followerName ?? AppSettings.DefaultUserName);
+                                        await _twitchAlertTypesService.HandleFollowAsync(followerName ?? AppSettings.Ads.DefaultUserName);
                                         break;
                                     }
                                 default:
@@ -372,9 +377,9 @@ namespace TwitchChatBot.UI.Services
                 return;
             }
 
-            var token = AppSettings.TWITCH_ACCESS_TOKEN;
-            var clientId = AppSettings.TWITCH_CLIENT_ID;
-            var broadcasterId = AppSettings.TWITCH_USER_ID;
+            var token = AppSettings.Auth.TWITCH_ACCESS_TOKEN;
+            var clientId = AppSettings.Auth.TWITCH_CLIENT_ID;
+            var broadcasterId = AppSettings.Twitch.TWITCH_USER_ID;
 
             if (string.IsNullOrWhiteSpace(token) ||
                 string.IsNullOrWhiteSpace(clientId) ||
@@ -414,8 +419,15 @@ namespace TwitchChatBot.UI.Services
                     break;
                 }
 
-                string version = "1";
                 object condition;
+                string version = type switch
+                {
+                    TwitchEventTypes.ChannelFollow => "2",
+                    TwitchEventTypes.HypeTrainBegin => "2",
+                    TwitchEventTypes.HypeTrainProgress => "2",
+                    TwitchEventTypes.HypeTrainEnd => "2",
+                    _ => "1"
+                };
 
                 if (type == TwitchEventTypes.ChannelFollow)
                 {
@@ -425,7 +437,6 @@ namespace TwitchChatBot.UI.Services
                         continue;
                     }
 
-                    version = "2";
                     condition = new
                     {
                         broadcaster_user_id = broadcasterId,
@@ -542,6 +553,61 @@ namespace TwitchChatBot.UI.Services
             }
 
             _socket = null;
+        }
+
+        private HypeTrainEnd ParseHypeTrainEndEvent(JsonElement eventPayload)
+        {
+            var hypeTrainEnd = new HypeTrainEnd();
+
+            hypeTrainEnd.Level = eventPayload.TryGetProperty("level", out var lvlProp) &&
+                lvlProp.ValueKind == JsonValueKind.Number
+                ? lvlProp.GetInt32()
+                : 0;
+
+            if (eventPayload.TryGetProperty("top_contributions", out var contributions) &&
+                contributions.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var contribution in contributions.EnumerateArray())
+                {
+                    var type = contribution.TryGetProperty("type", out var typeProp) &&
+                               typeProp.ValueKind == JsonValueKind.String
+                        ? typeProp.GetString()
+                        : string.Empty;
+
+                    var user = contribution.TryGetProperty("user_name", out var userProp) &&
+                               userProp.ValueKind == JsonValueKind.String
+                        ? userProp.GetString()
+                        : (contribution.TryGetProperty("user_login", out var loginProp) &&
+                           loginProp.ValueKind == JsonValueKind.String
+                            ? loginProp.GetString()
+                            : AppSettings.Ads.DefaultUserName);
+
+                    var total = contribution.TryGetProperty("total", out var totalProp) &&
+                                totalProp.ValueKind == JsonValueKind.Number
+                        ? totalProp.GetInt32()
+                        : 0;
+
+                    if (string.Equals(type, "bits", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (total > hypeTrainEnd.TopCheerBits)
+                        {
+                            hypeTrainEnd.TopCheerBits = total;
+                            hypeTrainEnd.TopCheerUser = user;
+                        }
+                    }
+                    else if (string.Equals(type, "subs", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(type, "subscription", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (total > hypeTrainEnd.TopGiftsubs)
+                        {
+                            hypeTrainEnd.TopGiftsubs = total;
+                            hypeTrainEnd.TopGiftsubUser = user;
+                        }
+                    }
+                }
+            }
+
+            return hypeTrainEnd;
         }
 
         private void DisposeConnectionResources()

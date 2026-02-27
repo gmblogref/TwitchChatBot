@@ -14,8 +14,7 @@ namespace TwitchChatBot.Core.Controller
         private readonly IWebHostWrapper _webHostWrapper;
         private readonly IWatchStreakService _watchStreakService;
         private readonly IAppFlags _appFlags;
-        private int _handlersWired; // 0 = not wired, 1 = wired
-
+        
         private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
         private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);

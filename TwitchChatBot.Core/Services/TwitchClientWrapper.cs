@@ -73,9 +73,9 @@ namespace TwitchChatBot.Core.Services
 
             try
             {
-                var credentials = new ConnectionCredentials(AppSettings.TWITCH_BOT_USERNAME, AppSettings.TWITCH_OAUTH_TOKEN);
+                var credentials = new ConnectionCredentials(AppSettings.Twitch.TWITCH_BOT_USERNAME, AppSettings.Auth.TWITCH_OAUTH_TOKEN);
                 _twitchClient = new TwitchClient();
-                _twitchClient.Initialize(credentials, AppSettings.TWITCH_CHANNEL);
+                _twitchClient.Initialize(credentials, AppSettings.Twitch.TWITCH_CHANNEL);
 
                 // Non async wire ups
                 _twitchClient.OnJoinedChannel += (s, e) =>
@@ -176,7 +176,7 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("🛑 GetGroupedViewers called.");
             var result = new List<ViewerEntry>();
 
-            result.Add(new ViewerEntry { Username = AppSettings.TWITCH_CHANNEL, Role = "Broadcaster" });
+            result.Add(new ViewerEntry { Username = AppSettings.Twitch.TWITCH_CHANNEL, Role = "Broadcaster" });
 
             foreach (var name in _mods.OrderBy(x => x))
                 result.Add(new ViewerEntry { Username = name, Role = "mod" });
@@ -279,16 +279,16 @@ namespace TwitchChatBot.Core.Services
 
                 _ = _commandAlertService.HandleCommandAsync(
                     "!ads",
-                    AppSettings.TWITCH_BOT_ID,
-                    AppSettings.TWITCH_CHANNEL,
-                    AppSettings.TWITCH_CHANNEL,
+                    AppSettings.Twitch.TWITCH_BOT_ID,
+                    AppSettings.Twitch.TWITCH_CHANNEL,
+                    AppSettings.Twitch.TWITCH_CHANNEL,
                     SendMessage
                 );
 
             },
             null,
-            TimeSpan.FromSeconds(AppSettings.AdInitialMinutes),
-            TimeSpan.FromMinutes(AppSettings.AdIntervalMinutes));
+            TimeSpan.FromSeconds(AppSettings.Ads.AdInitialMinutes),
+            TimeSpan.FromMinutes(AppSettings.Ads.AdIntervalMinutes));
         }
 
         public void StopAdTimer()
@@ -305,8 +305,8 @@ namespace TwitchChatBot.Core.Services
             {
                 await _twitchClient.SendRawAsync("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
 
-                var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.TWITCH_USER_ID);
-                var vips = await _twitchRoleService.GetVipsAsync(AppSettings.TWITCH_USER_ID);
+                var mods = await _twitchRoleService.GetModeratorsAsync(AppSettings.Twitch.TWITCH_USER_ID);
+                var vips = await _twitchRoleService.GetVipsAsync(AppSettings.Twitch.TWITCH_USER_ID);
 
                 _modList.UnionWith(mods);
                 _vipList.UnionWith(vips);
@@ -331,7 +331,7 @@ namespace TwitchChatBot.Core.Services
                 _mods.Add(username);
             else if (_vipList.Contains(username))
                 _vips.Add(username);
-            else if (username != AppSettings.TWITCH_CHANNEL)
+            else if (username != AppSettings.Twitch.TWITCH_CHANNEL)
                 _viewers.Add(username);
 
             _logger.LogInformation("👤 Joined: {User}", username);
@@ -439,7 +439,7 @@ namespace TwitchChatBot.Core.Services
 
                 // Log for visibility while you debug
                 _logger.LogInformation("🌟 Watch streak USERNOTICE for {User} (streak {Streak})",
-                    tags.GetValueOrDefault("display-name", tags.GetValueOrDefault("login", AppSettings.DefaultUserName)),
+                    tags.GetValueOrDefault("display-name", tags.GetValueOrDefault("login", AppSettings.Ads.DefaultUserName)),
                     tags.GetValueOrDefault("watch-streak-value", "?"));
 
                 await _ircNoticeService.HandleUserNoticeAsync(tags, tags.GetValueOrDefault("system-msg"));
@@ -452,7 +452,7 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnNewSubscriberAsync(TwitchLib.Client.Events.OnNewSubscriberArgs e)
         {
-            var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? AppSettings.DefaultUserName;
+            var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? AppSettings.Ads.DefaultUserName;
             var tier = ConvertPlanToTier(e.Subscriber?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubscriptionAsync(user, tier);
         }
@@ -460,7 +460,7 @@ namespace TwitchChatBot.Core.Services
         private async Task HandleOnReSubscriberAsync(TwitchLib.Client.Events.OnReSubscriberArgs e)
         {
             // DisplayName/Login
-            var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? AppSettings.DefaultUserName;
+            var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? AppSettings.Ads.DefaultUserName;
 
             // Twitch sends months data as msg-param-cumulative-months / msg-param-streak-months / msg-param-months
             // TwitchLib exposes them through MsgParam... properties
@@ -479,15 +479,15 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnGiftedSubscriptionAsync(TwitchLib.Client.Events.OnGiftedSubscriptionArgs e)
         {
-            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.DefaultUserName;
-            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? AppSettings.DefaultUserName;
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.Ads.DefaultUserName;
+            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? AppSettings.Ads.DefaultUserName;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubGiftAsync(gifter, recipient, tier);
         }
 
         private async Task HandleOnCommunitySubscriptionAsync(TwitchLib.Client.Events.OnCommunitySubscriptionArgs e)
         {
-            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.DefaultUserName;
+            var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.Ads.DefaultUserName;
             var count = (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0
                 ? e.GiftedSubscription!.MsgParamMassGiftCount
                 : 1;
@@ -497,7 +497,7 @@ namespace TwitchChatBot.Core.Services
 
         private async Task HandleOnRaidNotificationAsync(TwitchLib.Client.Events.OnRaidNotificationArgs e)
         {
-            var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? AppSettings.DefaultUserName;
+            var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? AppSettings.Ads.DefaultUserName;
             var raiderUserId = e.RaidNotification?.UserId ?? string.Empty;
             int viewers = 1;
             if (int.TryParse(e.RaidNotification?.MsgParamViewerCount, out var parsed))
@@ -518,8 +518,8 @@ namespace TwitchChatBot.Core.Services
             await _commandAlertService.HandleCommandAsync(
                 $"!so {handle}",
                 raiderUserId,
-                AppSettings.TWITCH_BOT_USERNAME,
-                AppSettings.TWITCH_CHANNEL,
+                AppSettings.Twitch.TWITCH_BOT_USERNAME,
+                AppSettings.Twitch.TWITCH_CHANNEL,
                 SendMessage,
                 isAutoCommand: true);
         }
@@ -554,7 +554,7 @@ namespace TwitchChatBot.Core.Services
             if (string.IsNullOrEmpty(uniqueId))
             {
                 // Extremely rare: still create a stable key to prevent back-to-back duplicates
-                var display = tags.GetValueOrDefault("display-name", AppSettings.DefaultUserName);
+                var display = tags.GetValueOrDefault("display-name", AppSettings.Ads.DefaultUserName);
                 uniqueId = $"{display}|{CreateStableHash(raw)}";
             }
 

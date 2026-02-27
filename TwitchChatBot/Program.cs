@@ -104,16 +104,16 @@ namespace TwitchChatBot
             services.AddHttpClient("twitch-helix", client =>
             {
                 client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", AppSettings.TWITCH_ACCESS_TOKEN);
-                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+                    new AuthenticationHeaderValue("Bearer", AppSettings.Auth.TWITCH_ACCESS_TOKEN);
+                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.Auth.TWITCH_CLIENT_ID);
             });
 
             services.AddHttpClient("twitch-bot-helix", client =>
             {
                 // Bot bearer WITHOUT "oauth:" prefix
                 client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", AppSettings.TWITCH_OAUTH_BEARER_BOT);
-                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.TWITCH_CLIENT_ID);
+                    new AuthenticationHeaderValue("Bearer", AppSettings.Auth.TWITCH_OAUTH_BEARER_BOT);
+                client.DefaultRequestHeaders.Add("Client-Id", AppSettings.Auth.TWITCH_CLIENT_ID);
             });
 
             services.AddHttpClient("openai", client =>

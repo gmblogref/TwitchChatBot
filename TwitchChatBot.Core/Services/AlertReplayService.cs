@@ -56,7 +56,7 @@ namespace TwitchChatBot.Core.Services
 
                     case AlertHistoryType.Cmd:
                         if (!string.IsNullOrWhiteSpace(e.CommandText))
-                            await _command.HandleCommandAsync(e.CommandText, e.UserId, e.Username ?? AppSettings.DefaultUserName, AppSettings.TWITCH_CHANNEL, _twitchClient.SendMessage);
+                            await _command.HandleCommandAsync(e.CommandText, e.UserId, e.Username ?? AppSettings.Ads.DefaultUserName, AppSettings.Twitch.TWITCH_CHANNEL, _twitchClient.SendMessage);
                         else
                             _logger.LogWarning("Replay Cmd: missing CommandText.");
                         break;
@@ -87,7 +87,7 @@ namespace TwitchChatBot.Core.Services
 
                     case AlertHistoryType.TwitchCheer:
                         await _twitch.HandleCheerAsync(
-                            e.Username ?? AppSettings.DefaultUserName,
+                            e.Username ?? AppSettings.Ads.DefaultUserName,
                             e.Bits ?? 0,
                             e.Message ?? "");
                         break;
@@ -95,13 +95,13 @@ namespace TwitchChatBot.Core.Services
                     case AlertHistoryType.TwitchSub:
                         // first-time sub; tier may be null (we’ll pass empty)
                         await _twitch.HandleSubscriptionAsync(
-                            e.Username ?? AppSettings.DefaultUserName,
+                            e.Username ?? AppSettings.Ads.DefaultUserName,
                             tier ?? "");
                         break;
 
                     case AlertHistoryType.TwitchSubMessage:
                         await _twitch.HandleResubAsync(
-                            e.Username ?? AppSettings.DefaultUserName,
+                            e.Username ?? AppSettings.Ads.DefaultUserName,
                             e.Months ?? 0,
                             e.Message ?? string.Empty,
                             tier ?? "");
@@ -109,8 +109,8 @@ namespace TwitchChatBot.Core.Services
 
                     case AlertHistoryType.TwitchSubGift:
                         await _twitch.HandleSubGiftAsync(
-                            e.Gifter ?? (e.Username ?? AppSettings.DefaultUserName),
-                            e.Recipient ?? AppSettings.DefaultUserName,
+                            e.Gifter ?? (e.Username ?? AppSettings.Ads.DefaultUserName),
+                            e.Recipient ?? AppSettings.Ads.DefaultUserName,
                             tier ?? "");
                         break;
 
@@ -124,13 +124,13 @@ namespace TwitchChatBot.Core.Services
                     case AlertHistoryType.ChannelPoint:
                         // Recreate a channel-point alert; you may have a HandleChannelPointAsync
                         await _twitch.HandleChannelPointRedemptionAsync(
-                            e.Username ?? AppSettings.DefaultUserName,
+                            e.Username ?? AppSettings.Ads.DefaultUserName,
                             e.RewardTitle ?? "Channel Point");
                         break;
 
                     case AlertHistoryType.TwitchWatchStreak:
                         await _twitch.HandleWatchStreakNoticeAsync(
-                            e.Username ?? AppSettings.DefaultUserName,
+                            e.Username ?? AppSettings.Ads.DefaultUserName,
                             e.Count ?? 0,
                             e.Message ?? string.Empty);
                         break;
