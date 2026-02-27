@@ -52,19 +52,30 @@ The system uses dependency injection and separation of concerns to keep alert lo
 
 ## Configuration
 
-The repository includes an `appsettings.json` file containing configuration keys only.
+The repository includes an `appsettings.example.json` file containing configuration keys only.
 
 ⚠️ This file does **not** contain any secrets.
 
 To run the application:
 
-1. Create a local `appsettings.Development.json` (or modify `appsettings.json` locally).
-2. Populate required values such as:
+1. Copy the template config:
+   - Rename `TwitchChatBot/appsettings.example.json` to `TwitchChatBot/appsettings.json`
+2. Fill in your values in `appsettings.json` (local only).
+   - **Do not commit this file.** It is ignored by `.gitignore`.
+3. Populate required values such as:
    - Twitch Client ID
    - Access Tokens
    - EventSub configuration
    - Media paths
-3. Do **not** commit any real tokens or credentials.
+4. Do **not** commit any real tokens or credentials.
+5. (Recommended) Create an override file for secrets:
+   - Create `TwitchChatBot/appsettings.Development.json`
+   - Put sensitive values (tokens/secrets) there.
+   - This file is also ignored by `.gitignore`.
+
+The application loads configuration in this order:
+- `appsettings.json`
+- `appsettings.Development.json` (overrides base values if present)
 
 Sensitive configuration files are excluded via `.gitignore`.
 
