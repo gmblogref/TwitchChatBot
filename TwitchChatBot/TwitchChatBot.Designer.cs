@@ -75,6 +75,7 @@
             labelLogging = new Label();
             buttonTestBot = new Button();
             buttonStopBot = new Button();
+            buttonTestHypeTrainEnd = new Button();
             tabControlChatBot.SuspendLayout();
             tabPageMainChat.SuspendLayout();
             tabPageUtilities.SuspendLayout();
@@ -90,9 +91,10 @@
             // 
             buttonStartBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             buttonStartBot.BackColor = Color.Green;
-            buttonStartBot.Location = new Point(1007, 518);
+            buttonStartBot.Location = new Point(881, 388);
+            buttonStartBot.Margin = new Padding(3, 2, 3, 2);
             buttonStartBot.Name = "buttonStartBot";
-            buttonStartBot.Size = new Size(127, 49);
+            buttonStartBot.Size = new Size(111, 37);
             buttonStartBot.TabIndex = 0;
             buttonStartBot.Text = "Start Bot";
             buttonStartBot.UseVisualStyleBackColor = false;
@@ -109,10 +111,11 @@
             tabControlChatBot.DrawMode = TabDrawMode.OwnerDrawFixed;
             tabControlChatBot.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabControlChatBot.ItemSize = new Size(250, 35);
-            tabControlChatBot.Location = new Point(12, 12);
+            tabControlChatBot.Location = new Point(10, 9);
+            tabControlChatBot.Margin = new Padding(3, 2, 3, 2);
             tabControlChatBot.Name = "tabControlChatBot";
             tabControlChatBot.SelectedIndex = 0;
-            tabControlChatBot.Size = new Size(1126, 500);
+            tabControlChatBot.Size = new Size(985, 375);
             tabControlChatBot.SizeMode = TabSizeMode.Fixed;
             tabControlChatBot.TabIndex = 2;
             tabControlChatBot.DrawItem += tabControlChatBot_DrawItem;
@@ -125,9 +128,10 @@
             tabPageMainChat.Controls.Add(labelChatBox);
             tabPageMainChat.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabPageMainChat.Location = new Point(4, 39);
+            tabPageMainChat.Margin = new Padding(3, 2, 3, 2);
             tabPageMainChat.Name = "tabPageMainChat";
-            tabPageMainChat.Padding = new Padding(3);
-            tabPageMainChat.Size = new Size(1118, 457);
+            tabPageMainChat.Padding = new Padding(3, 2, 3, 2);
+            tabPageMainChat.Size = new Size(977, 332);
             tabPageMainChat.TabIndex = 0;
             tabPageMainChat.Text = "Main Chat Bot Tab";
             tabPageMainChat.UseVisualStyleBackColor = true;
@@ -138,10 +142,11 @@
             richTextBoxViewers.BackColor = Color.Black;
             richTextBoxViewers.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             richTextBoxViewers.ForeColor = Color.White;
-            richTextBoxViewers.Location = new Point(732, 38);
-            richTextBoxViewers.MinimumSize = new Size(303, 363);
+            richTextBoxViewers.Location = new Point(640, 28);
+            richTextBoxViewers.Margin = new Padding(3, 2, 3, 2);
+            richTextBoxViewers.MinimumSize = new Size(266, 273);
             richTextBoxViewers.Name = "richTextBoxViewers";
-            richTextBoxViewers.Size = new Size(303, 363);
+            richTextBoxViewers.Size = new Size(266, 273);
             richTextBoxViewers.TabIndex = 6;
             richTextBoxViewers.Text = "";
             // 
@@ -150,9 +155,9 @@
             labelViewers.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             labelViewers.AutoSize = true;
             labelViewers.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            labelViewers.Location = new Point(732, 3);
+            labelViewers.Location = new Point(640, 2);
             labelViewers.Name = "labelViewers";
-            labelViewers.Size = new Size(219, 32);
+            labelViewers.Size = new Size(182, 27);
             labelViewers.TabIndex = 5;
             labelViewers.Text = "Current Viewers";
             // 
@@ -162,10 +167,11 @@
             richTextBoxStreamChat.BackColor = Color.Black;
             richTextBoxStreamChat.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             richTextBoxStreamChat.ForeColor = Color.White;
-            richTextBoxStreamChat.Location = new Point(6, 38);
-            richTextBoxStreamChat.MinimumSize = new Size(720, 363);
+            richTextBoxStreamChat.Location = new Point(5, 28);
+            richTextBoxStreamChat.Margin = new Padding(3, 2, 3, 2);
+            richTextBoxStreamChat.MinimumSize = new Size(630, 273);
             richTextBoxStreamChat.Name = "richTextBoxStreamChat";
-            richTextBoxStreamChat.Size = new Size(720, 363);
+            richTextBoxStreamChat.Size = new Size(630, 273);
             richTextBoxStreamChat.TabIndex = 4;
             richTextBoxStreamChat.Text = "";
             // 
@@ -173,9 +179,9 @@
             // 
             labelChatBox.AutoSize = true;
             labelChatBox.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            labelChatBox.Location = new Point(6, 3);
+            labelChatBox.Location = new Point(5, 2);
             labelChatBox.Name = "labelChatBox";
-            labelChatBox.Size = new Size(170, 32);
+            labelChatBox.Size = new Size(142, 27);
             labelChatBox.TabIndex = 3;
             labelChatBox.Text = "Stream Chat";
             // 
@@ -185,8 +191,9 @@
             tabPageUtilities.Controls.Add(buttonClearFirst);
             tabPageUtilities.Controls.Add(groupBoxTts);
             tabPageUtilities.Location = new Point(4, 39);
+            tabPageUtilities.Margin = new Padding(3, 2, 3, 2);
             tabPageUtilities.Name = "tabPageUtilities";
-            tabPageUtilities.Size = new Size(1118, 457);
+            tabPageUtilities.Size = new Size(977, 332);
             tabPageUtilities.TabIndex = 3;
             tabPageUtilities.Text = "Utilities Tab";
             tabPageUtilities.UseVisualStyleBackColor = true;
@@ -196,9 +203,11 @@
             groupBoxAlertHistory.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             groupBoxAlertHistory.Controls.Add(buttonReplayAlert);
             groupBoxAlertHistory.Controls.Add(listViewAlertHistory);
-            groupBoxAlertHistory.Location = new Point(497, 24);
+            groupBoxAlertHistory.Location = new Point(435, 18);
+            groupBoxAlertHistory.Margin = new Padding(3, 2, 3, 2);
             groupBoxAlertHistory.Name = "groupBoxAlertHistory";
-            groupBoxAlertHistory.Size = new Size(604, 412);
+            groupBoxAlertHistory.Padding = new Padding(3, 2, 3, 2);
+            groupBoxAlertHistory.Size = new Size(528, 309);
             groupBoxAlertHistory.TabIndex = 18;
             groupBoxAlertHistory.TabStop = false;
             groupBoxAlertHistory.Text = "Alert History";
@@ -206,9 +215,10 @@
             // buttonReplayAlert
             // 
             buttonReplayAlert.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            buttonReplayAlert.Location = new Point(72, 357);
+            buttonReplayAlert.Location = new Point(63, 268);
+            buttonReplayAlert.Margin = new Padding(3, 2, 3, 2);
             buttonReplayAlert.Name = "buttonReplayAlert";
-            buttonReplayAlert.Size = new Size(101, 49);
+            buttonReplayAlert.Size = new Size(88, 37);
             buttonReplayAlert.TabIndex = 1;
             buttonReplayAlert.Text = "Replay";
             buttonReplayAlert.UseVisualStyleBackColor = true;
@@ -217,9 +227,10 @@
             // listViewAlertHistory
             // 
             listViewAlertHistory.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            listViewAlertHistory.Location = new Point(23, 35);
+            listViewAlertHistory.Location = new Point(20, 26);
+            listViewAlertHistory.Margin = new Padding(3, 2, 3, 2);
             listViewAlertHistory.Name = "listViewAlertHistory";
-            listViewAlertHistory.Size = new Size(535, 302);
+            listViewAlertHistory.Size = new Size(469, 228);
             listViewAlertHistory.TabIndex = 0;
             listViewAlertHistory.UseCompatibleStateImageBehavior = false;
             listViewAlertHistory.DoubleClick += listViewAlertHistory_DoubleClick;
@@ -227,9 +238,10 @@
             // buttonClearFirst
             // 
             buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonClearFirst.Location = new Point(33, 180);
+            buttonClearFirst.Location = new Point(29, 135);
+            buttonClearFirst.Margin = new Padding(3, 2, 3, 2);
             buttonClearFirst.Name = "buttonClearFirst";
-            buttonClearFirst.Size = new Size(163, 40);
+            buttonClearFirst.Size = new Size(143, 30);
             buttonClearFirst.TabIndex = 17;
             buttonClearFirst.Text = "Clear First";
             buttonClearFirst.UseVisualStyleBackColor = true;
@@ -239,18 +251,21 @@
             // 
             groupBoxTts.Controls.Add(buttonTtsReset);
             groupBoxTts.Controls.Add(buttonTtsSkip);
-            groupBoxTts.Location = new Point(23, 24);
+            groupBoxTts.Location = new Point(20, 18);
+            groupBoxTts.Margin = new Padding(3, 2, 3, 2);
             groupBoxTts.Name = "groupBoxTts";
-            groupBoxTts.Size = new Size(250, 96);
+            groupBoxTts.Padding = new Padding(3, 2, 3, 2);
+            groupBoxTts.Size = new Size(219, 72);
             groupBoxTts.TabIndex = 0;
             groupBoxTts.TabStop = false;
             groupBoxTts.Text = "TTS Controls";
             // 
             // buttonTtsReset
             // 
-            buttonTtsReset.Location = new Point(126, 35);
+            buttonTtsReset.Location = new Point(110, 26);
+            buttonTtsReset.Margin = new Padding(3, 2, 3, 2);
             buttonTtsReset.Name = "buttonTtsReset";
-            buttonTtsReset.Size = new Size(94, 37);
+            buttonTtsReset.Size = new Size(82, 28);
             buttonTtsReset.TabIndex = 1;
             buttonTtsReset.Text = "Reset";
             buttonTtsReset.UseVisualStyleBackColor = true;
@@ -258,9 +273,10 @@
             // 
             // buttonTtsSkip
             // 
-            buttonTtsSkip.Location = new Point(10, 35);
+            buttonTtsSkip.Location = new Point(9, 26);
+            buttonTtsSkip.Margin = new Padding(3, 2, 3, 2);
             buttonTtsSkip.Name = "buttonTtsSkip";
-            buttonTtsSkip.Size = new Size(94, 37);
+            buttonTtsSkip.Size = new Size(82, 28);
             buttonTtsSkip.TabIndex = 0;
             buttonTtsSkip.Text = "Skip";
             buttonTtsSkip.UseVisualStyleBackColor = true;
@@ -274,14 +290,16 @@
             tabTesting.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabTesting.ForeColor = SystemColors.ControlText;
             tabTesting.Location = new Point(4, 39);
+            tabTesting.Margin = new Padding(3, 2, 3, 2);
             tabTesting.Name = "tabTesting";
-            tabTesting.Padding = new Padding(3);
-            tabTesting.Size = new Size(1118, 457);
+            tabTesting.Padding = new Padding(3, 2, 3, 2);
+            tabTesting.Size = new Size(977, 332);
             tabTesting.TabIndex = 2;
             tabTesting.Text = "Testing Tab";
             // 
             // groupBoxButtonTests
             // 
+            groupBoxButtonTests.Controls.Add(buttonTestHypeTrainEnd);
             groupBoxButtonTests.Controls.Add(buttonTestWatchStreak);
             groupBoxButtonTests.Controls.Add(labelUserName);
             groupBoxButtonTests.Controls.Add(textUserName);
@@ -295,9 +313,11 @@
             groupBoxButtonTests.Controls.Add(buttonTestMysteryGift);
             groupBoxButtonTests.Controls.Add(buttonTestHypeTrain);
             groupBoxButtonTests.Font = new Font("Arial Black", 12F, FontStyle.Bold);
-            groupBoxButtonTests.Location = new Point(24, 45);
+            groupBoxButtonTests.Location = new Point(21, 34);
+            groupBoxButtonTests.Margin = new Padding(3, 2, 3, 2);
             groupBoxButtonTests.Name = "groupBoxButtonTests";
-            groupBoxButtonTests.Size = new Size(415, 325);
+            groupBoxButtonTests.Padding = new Padding(3, 2, 3, 2);
+            groupBoxButtonTests.Size = new Size(363, 269);
             groupBoxButtonTests.TabIndex = 18;
             groupBoxButtonTests.TabStop = false;
             groupBoxButtonTests.Text = "Button Tests";
@@ -305,9 +325,10 @@
             // buttonTestWatchStreak
             // 
             buttonTestWatchStreak.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestWatchStreak.Location = new Point(10, 249);
+            buttonTestWatchStreak.Location = new Point(9, 187);
+            buttonTestWatchStreak.Margin = new Padding(3, 2, 3, 2);
             buttonTestWatchStreak.Name = "buttonTestWatchStreak";
-            buttonTestWatchStreak.Size = new Size(163, 40);
+            buttonTestWatchStreak.Size = new Size(143, 30);
             buttonTestWatchStreak.TabIndex = 16;
             buttonTestWatchStreak.Text = "Watch Streak";
             buttonTestWatchStreak.UseVisualStyleBackColor = true;
@@ -317,44 +338,47 @@
             // 
             labelUserName.AutoSize = true;
             labelUserName.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            labelUserName.Location = new Point(10, 35);
+            labelUserName.Location = new Point(9, 26);
             labelUserName.Name = "labelUserName";
-            labelUserName.Size = new Size(118, 24);
+            labelUserName.Size = new Size(99, 19);
             labelUserName.TabIndex = 0;
             labelUserName.Text = "User Name:";
             // 
             // textUserName
             // 
             textUserName.Font = new Font("Arial", 10F);
-            textUserName.Location = new Point(160, 30);
+            textUserName.Location = new Point(140, 22);
+            textUserName.Margin = new Padding(3, 2, 3, 2);
             textUserName.Name = "textUserName";
-            textUserName.Size = new Size(210, 27);
+            textUserName.Size = new Size(184, 23);
             textUserName.TabIndex = 1;
             // 
             // labelAmount
             // 
             labelAmount.AutoSize = true;
             labelAmount.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            labelAmount.Location = new Point(41, 73);
+            labelAmount.Location = new Point(36, 55);
             labelAmount.Name = "labelAmount";
-            labelAmount.Size = new Size(87, 24);
+            labelAmount.Size = new Size(72, 19);
             labelAmount.TabIndex = 2;
             labelAmount.Text = "Amount:";
             // 
             // textAmount
             // 
             textAmount.Font = new Font("Arial", 10F);
-            textAmount.Location = new Point(160, 70);
+            textAmount.Location = new Point(140, 52);
+            textAmount.Margin = new Padding(3, 2, 3, 2);
             textAmount.Name = "textAmount";
-            textAmount.Size = new Size(210, 27);
+            textAmount.Size = new Size(184, 23);
             textAmount.TabIndex = 3;
             // 
             // buttonTestFollow
             // 
             buttonTestFollow.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestFollow.Location = new Point(10, 110);
+            buttonTestFollow.Location = new Point(9, 82);
+            buttonTestFollow.Margin = new Padding(3, 2, 3, 2);
             buttonTestFollow.Name = "buttonTestFollow";
-            buttonTestFollow.Size = new Size(163, 40);
+            buttonTestFollow.Size = new Size(143, 30);
             buttonTestFollow.TabIndex = 15;
             buttonTestFollow.Text = "Follow";
             buttonTestFollow.UseVisualStyleBackColor = true;
@@ -363,9 +387,10 @@
             // buttonTestSub
             // 
             buttonTestSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestSub.Location = new Point(207, 110);
+            buttonTestSub.Location = new Point(181, 82);
+            buttonTestSub.Margin = new Padding(3, 2, 3, 2);
             buttonTestSub.Name = "buttonTestSub";
-            buttonTestSub.Size = new Size(163, 40);
+            buttonTestSub.Size = new Size(143, 30);
             buttonTestSub.TabIndex = 0;
             buttonTestSub.Text = "Subscription";
             buttonTestSub.UseVisualStyleBackColor = true;
@@ -374,9 +399,10 @@
             // buttonTestReSub
             // 
             buttonTestReSub.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestReSub.Location = new Point(207, 245);
+            buttonTestReSub.Location = new Point(181, 184);
+            buttonTestReSub.Margin = new Padding(3, 2, 3, 2);
             buttonTestReSub.Name = "buttonTestReSub";
-            buttonTestReSub.Size = new Size(163, 40);
+            buttonTestReSub.Size = new Size(143, 30);
             buttonTestReSub.TabIndex = 2;
             buttonTestReSub.Text = "ReSub";
             buttonTestReSub.UseVisualStyleBackColor = true;
@@ -385,9 +411,10 @@
             // buttonTestSubGift
             // 
             buttonTestSubGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestSubGift.Location = new Point(207, 155);
+            buttonTestSubGift.Location = new Point(181, 116);
+            buttonTestSubGift.Margin = new Padding(3, 2, 3, 2);
             buttonTestSubGift.Name = "buttonTestSubGift";
-            buttonTestSubGift.Size = new Size(163, 40);
+            buttonTestSubGift.Size = new Size(143, 30);
             buttonTestSubGift.TabIndex = 3;
             buttonTestSubGift.Text = "Gift Subs";
             buttonTestSubGift.UseVisualStyleBackColor = true;
@@ -396,9 +423,10 @@
             // buttonTestRaid
             // 
             buttonTestRaid.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestRaid.Location = new Point(10, 157);
+            buttonTestRaid.Location = new Point(9, 118);
+            buttonTestRaid.Margin = new Padding(3, 2, 3, 2);
             buttonTestRaid.Name = "buttonTestRaid";
-            buttonTestRaid.Size = new Size(163, 40);
+            buttonTestRaid.Size = new Size(143, 30);
             buttonTestRaid.TabIndex = 1;
             buttonTestRaid.Text = "Raid";
             buttonTestRaid.UseVisualStyleBackColor = true;
@@ -407,9 +435,10 @@
             // buttonTestMysteryGift
             // 
             buttonTestMysteryGift.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestMysteryGift.Location = new Point(207, 200);
+            buttonTestMysteryGift.Location = new Point(181, 150);
+            buttonTestMysteryGift.Margin = new Padding(3, 2, 3, 2);
             buttonTestMysteryGift.Name = "buttonTestMysteryGift";
-            buttonTestMysteryGift.Size = new Size(163, 40);
+            buttonTestMysteryGift.Size = new Size(143, 30);
             buttonTestMysteryGift.TabIndex = 7;
             buttonTestMysteryGift.Text = "Mystery Gifts";
             buttonTestMysteryGift.UseVisualStyleBackColor = true;
@@ -418,9 +447,10 @@
             // buttonTestHypeTrain
             // 
             buttonTestHypeTrain.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
-            buttonTestHypeTrain.Location = new Point(10, 203);
+            buttonTestHypeTrain.Location = new Point(9, 152);
+            buttonTestHypeTrain.Margin = new Padding(3, 2, 3, 2);
             buttonTestHypeTrain.Name = "buttonTestHypeTrain";
-            buttonTestHypeTrain.Size = new Size(163, 40);
+            buttonTestHypeTrain.Size = new Size(143, 30);
             buttonTestHypeTrain.TabIndex = 4;
             buttonTestHypeTrain.Text = "Hype Train";
             buttonTestHypeTrain.UseVisualStyleBackColor = true;
@@ -439,9 +469,11 @@
             groupBoxTextEntryTests.Controls.Add(textCommand);
             groupBoxTextEntryTests.Controls.Add(textChannelPoint);
             groupBoxTextEntryTests.Controls.Add(buttonTestCommand);
-            groupBoxTextEntryTests.Location = new Point(522, 45);
+            groupBoxTextEntryTests.Location = new Point(457, 34);
+            groupBoxTextEntryTests.Margin = new Padding(3, 2, 3, 2);
             groupBoxTextEntryTests.Name = "groupBoxTextEntryTests";
-            groupBoxTextEntryTests.Size = new Size(552, 325);
+            groupBoxTextEntryTests.Padding = new Padding(3, 2, 3, 2);
+            groupBoxTextEntryTests.Size = new Size(483, 244);
             groupBoxTextEntryTests.TabIndex = 17;
             groupBoxTextEntryTests.TabStop = false;
             groupBoxTextEntryTests.Text = "Text Entry Tests";
@@ -450,26 +482,29 @@
             // 
             comboBoxTtsSpeaker.FormattingEnabled = true;
             comboBoxTtsSpeaker.Items.AddRange(new object[] { "Matthew", "Joanna", "Brian", "Emma", "Justin", "Kimberly", "Amy", "Russel", "Nicole", "Olivia", "Stephen", "Salli", "Joey", "Ivy", "Kendra" });
-            comboBoxTtsSpeaker.Location = new Point(209, 248);
+            comboBoxTtsSpeaker.Location = new Point(183, 186);
+            comboBoxTtsSpeaker.Margin = new Padding(3, 2, 3, 2);
             comboBoxTtsSpeaker.Name = "comboBoxTtsSpeaker";
-            comboBoxTtsSpeaker.Size = new Size(151, 40);
+            comboBoxTtsSpeaker.Size = new Size(133, 34);
             comboBoxTtsSpeaker.TabIndex = 17;
             comboBoxTtsSpeaker.Text = "Matthew";
             // 
             // textBoxTtsText
             // 
-            textBoxTtsText.Location = new Point(366, 248);
+            textBoxTtsText.Location = new Point(320, 186);
+            textBoxTtsText.Margin = new Padding(3, 2, 3, 2);
             textBoxTtsText.Name = "textBoxTtsText";
-            textBoxTtsText.Size = new Size(206, 40);
+            textBoxTtsText.Size = new Size(181, 33);
             textBoxTtsText.TabIndex = 16;
             textBoxTtsText.KeyDown += textBoxTtsText_KeyDown;
             // 
             // buttonTestTts
             // 
             buttonTestTts.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestTts.Location = new Point(6, 248);
+            buttonTestTts.Location = new Point(5, 186);
+            buttonTestTts.Margin = new Padding(3, 2, 3, 2);
             buttonTestTts.Name = "buttonTestTts";
-            buttonTestTts.Size = new Size(163, 40);
+            buttonTestTts.Size = new Size(143, 30);
             buttonTestTts.TabIndex = 15;
             buttonTestTts.Text = "Text 2 Speech";
             buttonTestTts.UseVisualStyleBackColor = true;
@@ -478,9 +513,10 @@
             // buttonTestCheer
             // 
             buttonTestCheer.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestCheer.Location = new Point(6, 59);
+            buttonTestCheer.Location = new Point(5, 44);
+            buttonTestCheer.Margin = new Padding(3, 2, 3, 2);
             buttonTestCheer.Name = "buttonTestCheer";
-            buttonTestCheer.Size = new Size(163, 40);
+            buttonTestCheer.Size = new Size(143, 30);
             buttonTestCheer.TabIndex = 5;
             buttonTestCheer.Text = "Cheer";
             buttonTestCheer.UseVisualStyleBackColor = true;
@@ -488,26 +524,29 @@
             // 
             // textBits
             // 
-            textBits.Location = new Point(209, 59);
+            textBits.Location = new Point(183, 44);
+            textBits.Margin = new Padding(3, 2, 3, 2);
             textBits.Name = "textBits";
-            textBits.Size = new Size(206, 40);
+            textBits.Size = new Size(181, 33);
             textBits.TabIndex = 6;
             textBits.KeyDown += textBits_KeyDown;
             // 
             // textFirstChatter
             // 
-            textFirstChatter.Location = new Point(209, 202);
+            textFirstChatter.Location = new Point(183, 152);
+            textFirstChatter.Margin = new Padding(3, 2, 3, 2);
             textFirstChatter.Name = "textFirstChatter";
-            textFirstChatter.Size = new Size(206, 40);
+            textFirstChatter.Size = new Size(181, 33);
             textFirstChatter.TabIndex = 14;
             textFirstChatter.KeyDown += textFirstChatter_KeyDown;
             // 
             // buttonTestFirstChat
             // 
             buttonTestFirstChat.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestFirstChat.Location = new Point(6, 202);
+            buttonTestFirstChat.Location = new Point(5, 152);
+            buttonTestFirstChat.Margin = new Padding(3, 2, 3, 2);
             buttonTestFirstChat.Name = "buttonTestFirstChat";
-            buttonTestFirstChat.Size = new Size(163, 40);
+            buttonTestFirstChat.Size = new Size(143, 30);
             buttonTestFirstChat.TabIndex = 13;
             buttonTestFirstChat.Text = "First Chat";
             buttonTestFirstChat.UseVisualStyleBackColor = true;
@@ -516,9 +555,10 @@
             // buttonTestChannelPoint
             // 
             buttonTestChannelPoint.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestChannelPoint.Location = new Point(6, 110);
+            buttonTestChannelPoint.Location = new Point(5, 82);
+            buttonTestChannelPoint.Margin = new Padding(3, 2, 3, 2);
             buttonTestChannelPoint.Name = "buttonTestChannelPoint";
-            buttonTestChannelPoint.Size = new Size(163, 40);
+            buttonTestChannelPoint.Size = new Size(143, 30);
             buttonTestChannelPoint.TabIndex = 9;
             buttonTestChannelPoint.Text = "Channel Points";
             buttonTestChannelPoint.UseVisualStyleBackColor = true;
@@ -526,26 +566,29 @@
             // 
             // textCommand
             // 
-            textCommand.Location = new Point(209, 156);
+            textCommand.Location = new Point(183, 117);
+            textCommand.Margin = new Padding(3, 2, 3, 2);
             textCommand.Name = "textCommand";
-            textCommand.Size = new Size(206, 40);
+            textCommand.Size = new Size(181, 33);
             textCommand.TabIndex = 12;
             textCommand.KeyDown += textCommand_KeyDown;
             // 
             // textChannelPoint
             // 
-            textChannelPoint.Location = new Point(209, 110);
+            textChannelPoint.Location = new Point(183, 82);
+            textChannelPoint.Margin = new Padding(3, 2, 3, 2);
             textChannelPoint.Name = "textChannelPoint";
-            textChannelPoint.Size = new Size(206, 40);
+            textChannelPoint.Size = new Size(181, 33);
             textChannelPoint.TabIndex = 10;
             textChannelPoint.KeyDown += textChannelPoint_KeyDown;
             // 
             // buttonTestCommand
             // 
             buttonTestCommand.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonTestCommand.Location = new Point(6, 156);
+            buttonTestCommand.Location = new Point(5, 117);
+            buttonTestCommand.Margin = new Padding(3, 2, 3, 2);
             buttonTestCommand.Name = "buttonTestCommand";
-            buttonTestCommand.Size = new Size(163, 40);
+            buttonTestCommand.Size = new Size(143, 30);
             buttonTestCommand.TabIndex = 11;
             buttonTestCommand.Text = "Commands";
             buttonTestCommand.UseVisualStyleBackColor = true;
@@ -558,9 +601,10 @@
             tabPageLogging.Controls.Add(labelLogging);
             tabPageLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             tabPageLogging.Location = new Point(4, 39);
+            tabPageLogging.Margin = new Padding(3, 2, 3, 2);
             tabPageLogging.Name = "tabPageLogging";
-            tabPageLogging.Padding = new Padding(3);
-            tabPageLogging.Size = new Size(1118, 457);
+            tabPageLogging.Padding = new Padding(3, 2, 3, 2);
+            tabPageLogging.Size = new Size(977, 332);
             tabPageLogging.TabIndex = 1;
             tabPageLogging.Text = "Logging Tab";
             tabPageLogging.UseVisualStyleBackColor = true;
@@ -571,22 +615,23 @@
             textBoxLogging.BackColor = Color.Black;
             textBoxLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
             textBoxLogging.ForeColor = Color.White;
-            textBoxLogging.Location = new Point(6, 38);
-            textBoxLogging.MinimumSize = new Size(1025, 365);
+            textBoxLogging.Location = new Point(5, 28);
+            textBoxLogging.Margin = new Padding(3, 2, 3, 2);
+            textBoxLogging.MinimumSize = new Size(897, 275);
             textBoxLogging.Multiline = true;
             textBoxLogging.Name = "textBoxLogging";
             textBoxLogging.ReadOnly = true;
             textBoxLogging.ScrollBars = ScrollBars.Both;
-            textBoxLogging.Size = new Size(1025, 365);
+            textBoxLogging.Size = new Size(897, 275);
             textBoxLogging.TabIndex = 1;
             // 
             // labelLogging
             // 
             labelLogging.AutoSize = true;
             labelLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            labelLogging.Location = new Point(6, 3);
+            labelLogging.Location = new Point(5, 2);
             labelLogging.Name = "labelLogging";
-            labelLogging.Size = new Size(265, 32);
+            labelLogging.Size = new Size(223, 27);
             labelLogging.TabIndex = 0;
             labelLogging.Text = "Logging Information";
             // 
@@ -594,9 +639,10 @@
             // 
             buttonTestBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonTestBot.BackColor = Color.Yellow;
-            buttonTestBot.Location = new Point(16, 518);
+            buttonTestBot.Location = new Point(14, 388);
+            buttonTestBot.Margin = new Padding(3, 2, 3, 2);
             buttonTestBot.Name = "buttonTestBot";
-            buttonTestBot.Size = new Size(127, 49);
+            buttonTestBot.Size = new Size(111, 37);
             buttonTestBot.TabIndex = 3;
             buttonTestBot.Text = "Test Bot";
             buttonTestBot.UseVisualStyleBackColor = false;
@@ -607,25 +653,39 @@
             buttonStopBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             buttonStopBot.BackColor = Color.Crimson;
             buttonStopBot.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            buttonStopBot.Location = new Point(874, 518);
+            buttonStopBot.Location = new Point(765, 388);
+            buttonStopBot.Margin = new Padding(3, 2, 3, 2);
             buttonStopBot.Name = "buttonStopBot";
-            buttonStopBot.Size = new Size(127, 49);
+            buttonStopBot.Size = new Size(111, 37);
             buttonStopBot.TabIndex = 4;
             buttonStopBot.Text = "Stop Bot";
             buttonStopBot.UseVisualStyleBackColor = false;
             buttonStopBot.Click += buttonStopBot_Click;
             // 
+            // buttonTestHypeTrainEnd
+            // 
+            buttonTestHypeTrainEnd.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+            buttonTestHypeTrainEnd.Location = new Point(9, 221);
+            buttonTestHypeTrainEnd.Margin = new Padding(3, 2, 3, 2);
+            buttonTestHypeTrainEnd.Name = "buttonTestHypeTrainEnd";
+            buttonTestHypeTrainEnd.Size = new Size(143, 30);
+            buttonTestHypeTrainEnd.TabIndex = 17;
+            buttonTestHypeTrainEnd.Text = "Hype Train End";
+            buttonTestHypeTrainEnd.UseVisualStyleBackColor = true;
+            buttonTestHypeTrainEnd.Click += buttonTestHypeTrainEnd_Click;
+            // 
             // TwitchChatBot
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1150, 579);
+            ClientSize = new Size(1008, 440);
             Controls.Add(buttonStopBot);
             Controls.Add(buttonTestBot);
             Controls.Add(tabControlChatBot);
             Controls.Add(buttonStartBot);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(1168, 626);
+            Margin = new Padding(3, 2, 3, 2);
+            MinimumSize = new Size(1024, 479);
             Name = "TwitchChatBot";
             Text = "Twitch Chat Bot";
             FormClosing += TwitchChatBot_FormClosing;
@@ -695,5 +755,6 @@
         private ListView listViewAlertHistory;
         private Button buttonReplayAlert;
         private Button buttonTestWatchStreak;
+        private Button buttonTestHypeTrainEnd;
     }
 }

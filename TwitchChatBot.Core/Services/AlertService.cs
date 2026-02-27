@@ -12,6 +12,10 @@ namespace TwitchChatBot.Core.Services
         private readonly Queue<AlertItem> _alertQueue = new();
         private readonly object _sync = new();
 
+        private readonly SemaphoreSlim _queueSignal = new(0, int.MaxValue);
+        private readonly CancellationTokenSource _processorCts = new();
+        private readonly Task _processorTask;
+
         private TaskCompletionSource<bool>? _currentAlertTcs;
         private TaskCompletionSource<bool>? _currentAckTcs;
         private bool _isProcessing = false;
@@ -35,6 +39,9 @@ namespace TwitchChatBot.Core.Services
             _webSocketServer.OnClientDone += HandleClientDone;
             _webSocketServer.OnClientAck += HandleClientAcknowledge;
             _webSocketServer.OnClientConnected += HandleClientConnected;
+
+            // Start one dedicated processor loop for the lifetime of this service
+            _processorTask = Task.Run(() => ProcessorLoopAsync(_processorCts.Token), _processorCts.Token);
         }
 
         public void SetUiBridge(IUiBridge bridge)
@@ -83,12 +90,52 @@ namespace TwitchChatBot.Core.Services
                 });
             }
 
-            _ = ProcessQueueAsync();
+            SignalQueue();
         }
 
-        private async Task ProcessQueueAsync()
+        private void SignalQueue()
         {
-            while (true)
+            try
+            {
+                _queueSignal.Release();
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private async Task ProcessorLoopAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    await _queueSignal.WaitAsync(token).ConfigureAwait(false);
+                    await ProcessQueueAsync(token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Alert processor loop crashed; continuing.");
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+        private async Task ProcessQueueAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
             {
                 AlertItem? alert = null;
                 TaskCompletionSource<bool>? alertTcs = null;
@@ -133,11 +180,9 @@ namespace TwitchChatBot.Core.Services
                         message = alert.Message,
                         media = alert.Media
                     };
-                    
+
                     if (!_webSocketServer.HasClientsConnected)
                     {
-                        _logger.LogWarning("⚠️ No overlay websocket clients connected. Re-queueing alert. AlertId={AlertId}", alertId);
-
                         var now = DateTime.UtcNow;
 
                         if (_overlayOfflineSinceUtc == null)
@@ -150,18 +195,21 @@ namespace TwitchChatBot.Core.Services
                         if (offlineFor >= MaxOfflineQueueTime)
                         {
                             _logger.LogWarning("🧹 Overlay offline for {Seconds}s. Dropping alert to prevent backlog.", offlineFor.TotalSeconds);
+                            // drop this alert and keep processing anything else (or just return; either is fine)
                             continue;
                         }
 
-                        _logger.LogWarning("⏸️ No overlay clients connected. Holding alert (offline {Seconds}s).", offlineFor.TotalSeconds);
+                        // OPTIONAL: throttle this log if it's still noisy
+                        _logger.LogWarning("⏸️ No overlay websocket clients connected. Holding alerts (offline {Seconds}s).", offlineFor.TotalSeconds);
 
                         lock (_sync)
                         {
-                            _alertQueue.Enqueue(alert);
+                            RequeueAtFront(alert);
                         }
 
-                        await Task.Delay(RetryDelay).ConfigureAwait(false);
-                        continue;
+                        // IMPORTANT: Stop processing now.
+                        // ProcessorLoopAsync will wait until the next SignalQueue() (client connects or new alert).
+                        return;
                     }
 
                     await _webSocketServer.BroadcastAsync(payload).ConfigureAwait(false);
@@ -174,8 +222,8 @@ namespace TwitchChatBot.Core.Services
 
                     var ackCompleted = await Task.WhenAny(
                         ackTcs!.Task,
-                        Task.Delay(AckTimeout)
-                        ).ConfigureAwait(false);
+                        Task.Delay(AckTimeout, token)
+                    ).ConfigureAwait(false);
 
                     if (ackCompleted != ackTcs.Task)
                     {
@@ -199,12 +247,9 @@ namespace TwitchChatBot.Core.Services
 
                         ackTcs.TrySetResult(false);
 
-                        lock (_sync)
-                        {
-                            _alertQueue.Enqueue(alert);
-                        }
+                        RequeueAtFront(alert);
 
-                        await Task.Delay(RetryDelay).ConfigureAwait(false);
+                        await Task.Delay(RetryDelay, token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -213,15 +258,18 @@ namespace TwitchChatBot.Core.Services
 
                     var completed = await Task.WhenAny(
                         alertTcs!.Task,
-                        Task.Delay(AlertTimeout)
+                        Task.Delay(AlertTimeout, token)
                     ).ConfigureAwait(false);
 
                     if (completed != alertTcs.Task)
                     {
-                        _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion.");
-                        // IMPORTANT: complete it so this alert is “done” even if overlay is late
+                        _logger.LogWarning("⏱️ Alert timed out waiting for DONE. Forcing completion. AlertId={AlertId}", alertId);
                         alertTcs.TrySetResult(false);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -229,13 +277,18 @@ namespace TwitchChatBot.Core.Services
 
                     if (alert != null)
                     {
-                        lock (_sync)
-                        {
-                            _alertQueue.Enqueue(alert);
-                        }
+                        RequeueAtFront(alert);
                     }
 
-                    await Task.Delay(RetryDelay).ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Delay(RetryDelay, token).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+
                     continue;
                 }
                 finally
@@ -276,13 +329,19 @@ namespace TwitchChatBot.Core.Services
                 currentId = _currentAlertId;
             }
 
-            if (!string.IsNullOrWhiteSpace(alertId) && !string.Equals(alertId, currentId, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(alertId))
+            {
+                _logger.LogWarning("⚠️ DONE ignored because alertId is missing. CurrentAlertId={CurrentAlertId}", currentId);
+                return;
+            }
+
+            if (!string.Equals(alertId, currentId, StringComparison.Ordinal))
             {
                 _logger.LogWarning("⚠️ DONE ignored for non-current alert. DoneAlertId={DoneAlertId} CurrentAlertId={CurrentAlertId}", alertId, currentId);
                 return;
             }
 
-            _logger.LogInformation("✅ Client reported alert finished. AlertId={AlertId}", alertId ?? currentId);
+            _logger.LogInformation("✅ Client reported alert finished. AlertId={AlertId}", alertId);
             tcs?.TrySetResult(true);
         }
 
@@ -297,20 +356,51 @@ namespace TwitchChatBot.Core.Services
                 currentId = _currentAlertId;
             }
 
-            if (!string.IsNullOrWhiteSpace(alertId) && !string.Equals(alertId, currentId, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(alertId))
+            {
+                _logger.LogWarning("⚠️ ACK ignored because alertId is missing. CurrentAlertId={CurrentAlertId}", currentId);
+                return;
+            }
+
+            if (!string.Equals(alertId, currentId, StringComparison.Ordinal))
             {
                 _logger.LogWarning("⚠️ ACK ignored for non-current alert. AckAlertId={AckAlertId} CurrentAlertId={CurrentAlertId}", alertId, currentId);
                 return;
             }
 
-            _logger.LogDebug("📥 Client ACK received. AlertId={AlertId}", alertId ?? currentId);
+            _logger.LogDebug("📥 Client ACK received. AlertId={AlertId}", alertId);
             tcs?.TrySetResult(true);
+        }
+
+        private void RequeueAtFront(AlertItem alert)
+        {
+            lock (_sync)
+            {
+                if (_alertQueue.Count == 0)
+                {
+                    _alertQueue.Enqueue(alert);
+                    return;
+                }
+
+                var reordered = new Queue<AlertItem>(_alertQueue.Count + 1);
+                reordered.Enqueue(alert);
+
+                while (_alertQueue.Count > 0)
+                {
+                    reordered.Enqueue(_alertQueue.Dequeue());
+                }
+
+                while (reordered.Count > 0)
+                {
+                    _alertQueue.Enqueue(reordered.Dequeue());
+                }
+            }
         }
 
         private void HandleClientConnected()
         {
-            _logger.LogInformation("🔔 Overlay client connected. Kicking alert queue.");
-            _ = ProcessQueueAsync();
+            _logger.LogInformation("🔔 Overlay client connected. Signaling alert queue.");
+            SignalQueue();
         }
     }
 }

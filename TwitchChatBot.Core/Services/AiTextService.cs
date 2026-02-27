@@ -10,15 +10,9 @@ namespace TwitchChatBot.Core.Services
     {
         private readonly HttpClient _http;
 
-        public AiTextService()
+        public AiTextService(IHttpClientFactory httpClientFactory)
         {
-            _http = new HttpClient
-            {
-                BaseAddress = new Uri(AppSettings.OpenAI.BaseUrl)
-            };
-
-            _http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", AppSettings.OpenAI.ApiKey);
+            _http = httpClientFactory.CreateClient("openai");
         }
 
         public async Task<string?> GenerateAlertLineAsync(AlertContext context)

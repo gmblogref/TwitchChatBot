@@ -17,6 +17,12 @@ namespace TwitchChatBot.Core.Services
         private WatchStreakState? _watchStreakState;
         private readonly HashSet<string> _attendeesThisStream = new(StringComparer.OrdinalIgnoreCase); // tracked by UserId since it doesn't change
 
+        private readonly object _saveSync = new();
+        private CancellationTokenSource? _debouncedSaveCts;
+        private Task? _debouncedSaveTask;
+        private WatchStreakState? _pendingState;
+        private readonly SemaphoreSlim _saveGate = new(1, 1);
+        private static readonly TimeSpan SaveDebounceDelay = TimeSpan.FromSeconds(2);
 
         public WatchStreakService(
             ILogger<WatchStreakService> logger,
@@ -199,6 +205,53 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
+        public async Task FlushSavesAsync(CancellationToken ct = default)
+        {
+            Task? pendingTask;
+
+            lock (_saveSync)
+            {
+                pendingTask = _debouncedSaveTask;
+            }
+
+            if (pendingTask != null)
+            {
+                try
+                {
+                    await pendingTask;
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            WatchStreakState? snapshot;
+            lock (_saveSync)
+            {
+                snapshot = _pendingState;
+            }
+
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            await _saveGate.WaitAsync(ct);
+            try
+            {
+                await _watchStreakRepository.SaveAsync(snapshot, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ Failed to flush watch streak state.");
+            }
+            finally
+            {
+                _saveGate.Release();
+            }
+        }
+
         private static string GetIdentityKey(string userId, string userName)
         {
             if (!string.IsNullOrWhiteSpace(userId))
@@ -216,9 +269,15 @@ namespace TwitchChatBot.Core.Services
                 return;
             }
 
-            // Repo handles "file missing -> new state" via LoadOrCreateAsync
-            // We block here to keep the service API unchanged (BeginStream is sync).
             _watchStreakState = await _watchStreakRepository.GetStateAsync();
+
+            if (_watchStreakState == null)
+            {
+                _watchStreakState = new WatchStreakState
+                {
+                    Users = new Dictionary<string, WatchStreakUserStats>(StringComparer.OrdinalIgnoreCase)
+                };
+            }
 
             if (_watchStreakState.Users == null)
             {
@@ -329,16 +388,81 @@ namespace TwitchChatBot.Core.Services
             return null;
         }
 
-        private async Task SaveStateAsync(WatchStreakState? state, CancellationToken ct = default)
+        private Task SaveStateAsync(WatchStreakState? state, CancellationToken ct = default)
         {
             if (state == null)
             {
-                return;
+                return Task.CompletedTask;
             }
 
+            CancellationTokenSource? toCancel = null;
+            CancellationTokenSource localCts;
+
+            lock (_saveSync)
+            {
+                _pendingState = state;
+
+                toCancel = _debouncedSaveCts;
+                _debouncedSaveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                localCts = _debouncedSaveCts;
+
+                _debouncedSaveTask = DebouncedSaveWorkerAsync(localCts.Token);
+            }
+
+            if (toCancel != null)
+            {
+                try
+                {
+                    toCancel.Cancel();
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                try
+                {
+                    toCancel.Dispose();
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private async Task DebouncedSaveWorkerAsync(CancellationToken ct)
+        {
             try
             {
-                await _watchStreakRepository.SaveAsync(state, ct);
+                await Task.Delay(SaveDebounceDelay, ct);
+
+                WatchStreakState? snapshot;
+                lock (_saveSync)
+                {
+                    snapshot = _pendingState;
+                }
+
+                if (snapshot == null)
+                {
+                    return;
+                }
+
+                await _saveGate.WaitAsync(ct);
+                try
+                {
+                    await _watchStreakRepository.SaveAsync(snapshot, ct);
+                }
+                finally
+                {
+                    _saveGate.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // expected when new updates come in
             }
             catch (Exception ex)
             {

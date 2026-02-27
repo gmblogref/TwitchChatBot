@@ -14,7 +14,7 @@ namespace TwitchChatBot.Core.Controller
         private readonly IWebHostWrapper _webHostWrapper;
         private readonly IWatchStreakService _watchStreakService;
         private readonly IAppFlags _appFlags;
-
+        
         private int _started; // 0 = false, 1 = true
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
         private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);
@@ -50,73 +50,105 @@ namespace TwitchChatBot.Core.Controller
 
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("🚀 Starting ChatBotController...");
+
+            if (Interlocked.Exchange(ref _started, 1) == 1)
+            {
+                _logger.LogWarning("StartAsync ignored; already started.");
+                return;
+            }
+
             try
             {
-                _logger.LogInformation("🚀 Starting ChatBotController...");
-
-                if (Interlocked.Exchange(ref _started, 1) == 1)
-                    return; // already started
-
-                // Start WebSocket server to communicate with front end
+                _logger.LogInformation("Start: WebSocketServer.Start()");
                 _webSocketServer.Start();
 
+                _logger.LogInformation("Start: WebHostWrapper.StartAsync()");
                 await _webHostWrapper.StartAsync(cancellationToken);
 
-                // Connect to Twitch
+                _logger.LogInformation("Start: TwitchClient.ConnectAsync()");
                 await _twitchClient.ConnectAsync();
                 _logger.LogInformation("✅ Connected to Twitch.");
 
-                _twitchClient.OnMessageReceived += (s, e) =>
-                {
-                    _uiBridge!.AppendChat(e.Username, e.Message, e.Color);
-                };
-
-                _twitchClient.OnViewerListChanged += (s, viewers) =>
-                {
-                    _logger.LogInformation("✅ SetViewerListByGroup started.");
-                    _uiBridge!.SetViewerListByGroup(viewers);
-                    _logger.LogInformation("✅ SetViewerListByGroup finished.");
-                };
-
-                // Optional: Start any periodic timers like !ads
-                _twitchClient.StartAdTimer();
-                _logger.LogInformation("✅ Timer for ads started.");
-
-                // Connect to Twitch EventSub
+                _logger.LogInformation("Start: EventSub.StartAsync()");
                 await _eventSubService.StartAsync(cancellationToken);
-                _logger.LogInformation("✅ EventSub WebSocket started.");
 
+                _logger.LogInformation("Start: WatchStreak.BeginStreamAsync()");
                 await _watchStreakService.BeginStreamAsync();
+
+                _logger.LogInformation("Start: TwitchClient.StartAdTimer()");
+                _twitchClient.StartAdTimer();
 
                 _logger.LogInformation("🎉 ChatBotController started successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Failed to start ChatBotController.");
+                Interlocked.Exchange(ref _started, 0);
+                _logger.LogError(ex, "❌ Failed to start ChatBotController (see exception).");
+
+                // Optional: rollback partial start so next Start works
+                try { await StopBotAsync(cancellationToken); } catch { /* ignore */ }
             }
         }
 
-        public async Task StopAsync(CancellationToken ct = default)
+        public async Task StopBotAsync(CancellationToken ct = default)
         {
             if (Interlocked.Exchange(ref _started, 0) == 0)
+            {
                 return; // already stopped / never started
+            }
 
-            _logger.LogInformation("🛑 Stopping ChatBotController…");
+            _logger.LogInformation("🛑 StopBotAsync: stopping bot activity (restart-safe)…");
 
-            // stop in a forgiving way; each try/catch prevents one failure from blocking others
-            try { _twitchClient.StartAdTimer(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop ads"); }
-                    
+            try { _twitchClient.StopAdTimer(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop ads"); }
+
+            try { await _watchStreakService.EndStreamAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "End stream"); }
+            try { await _watchStreakService.FlushSavesAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Flush watch streak saves"); }
+
             try { await _eventSubService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop EventSub"); }
-
-            try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
 
             try { await _twitchClient.DisconnectAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
 
+            try { _webSocketServer.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop WebSocketServer"); }
+            try { await _webHostWrapper.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop WebHost"); }
+
+            _logger.LogInformation("🏁 StopBotAsync complete. OverlayClientsConnected={OverlayClientsConnected}", _webSocketServer.HasClientsConnected);
+        }
+
+        public async Task ShutdownAsync(CancellationToken ct = default)
+        {
+            _logger.LogInformation("🛑 ShutdownAsync: full application shutdown…");
+
+            try { await StopBotAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "StopBot during shutdown"); }
+
+            // Dispose only on app exit (singletons must not be reused after this)
             try { (_tsService as IDisposable)?.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose TTS"); }
 
-            try { await _watchStreakService.EndStreamAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "End stream"); }
+            try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
 
-            _logger.LogInformation("🏁 ChatBotController stopped.");
+            _logger.LogInformation("🏁 ShutdownAsync complete.");
+        }
+
+        private void TwitchClient_OnMessageReceived(object? sender, TwitchMessageEventArgs e)
+        {
+            if (_uiBridge == null)
+            {
+                return;
+            }
+
+            _uiBridge.AppendChat(e.Username, e.Message, e.Color);
+        }
+
+        private void TwitchClient_OnViewerListChanged(object? sender, List<ViewerEntry> viewers)
+        {
+            if (_uiBridge == null)
+            {
+                return;
+            }
+
+            _logger.LogInformation("✅ SetViewerListByGroup started.");
+            _uiBridge.SetViewerListByGroup(viewers);
+            _logger.LogInformation("✅ SetViewerListByGroup finished.");
         }
     }
 }

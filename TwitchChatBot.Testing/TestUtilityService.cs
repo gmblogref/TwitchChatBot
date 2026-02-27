@@ -34,6 +34,16 @@ public class TestUtilityService : ITestUtilityService
     public async Task TriggerHypeTrainTestAsync() =>
         await _twitchAlertTypesService.HandleHypeTrainAsync();
 
+    public async Task TriggerHypeTrainEndTestAsync() =>
+        await _twitchAlertTypesService.HandleHypeTrainEndAsync(new HypeTrainEnd
+        {
+            TopCheerBits = 5000,
+            TopCheerUser = "CheerUser",
+            TopGiftsubs = 10,
+            TopGiftsubUser = "GiftSubUser",
+            Level = 5
+        });
+
     public async Task TriggerRaidTestAsync(string userName, int viewers) =>
         await _twitchAlertTypesService.HandleRaidAsync(userName, viewers);
 
@@ -55,14 +65,14 @@ public class TestUtilityService : ITestUtilityService
     public async Task TriggerCommandTestAsync(string command) =>
         await _commandAlertService.HandleCommandAsync(
             "!" + command, 
-            AppSettings.TWITCH_BOT_ID,
+            AppSettings.Twitch.TWITCH_BOT_ID,
             "TestUser",
-            AppSettings.TWITCH_CHANNEL,
+            AppSettings.Twitch.TWITCH_CHANNEL,
             (channel, message) => _twitchClient.SendMessage(channel, message));
 
     // First Chatter Test
     public async Task TriggerFirstChatTestAsync(string username) =>
-        await _firstChatterAlertService.HandleFirstChatAsync(AppSettings.TWITCH_BOT_ID, username, username);
+        await _firstChatterAlertService.HandleFirstChatAsync(AppSettings.Twitch.TWITCH_BOT_ID, username, username);
 
     public void TriggerFirstChatClear() =>
         _firstChatterAlertService.ClearFirstChatters();

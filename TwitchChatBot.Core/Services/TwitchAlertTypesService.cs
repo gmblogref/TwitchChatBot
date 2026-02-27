@@ -123,6 +123,27 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
         }
 
+        public async Task HandleHypeTrainEndAsync(HypeTrainEnd hypeTrainEnd)
+        {
+            _logger.LogInformation("📣 Alert triggered: {Type}", "HypeTrainEnd");
+
+            var ttsMessage = $"🚂 The Hype Train has pulled into the station at Level {hypeTrainEnd.Level}! ";
+            
+            if (!string.IsNullOrWhiteSpace(hypeTrainEnd.TopCheerUser) && hypeTrainEnd.TopCheerBits > 0)
+            {
+                ttsMessage += $"Top cheerer: {hypeTrainEnd.TopCheerUser} with {hypeTrainEnd.TopCheerBits} bits! ";
+            }
+
+            if (!string.IsNullOrWhiteSpace(hypeTrainEnd.TopGiftsubUser) && hypeTrainEnd.TopGiftsubs > 0)
+            {
+                ttsMessage += $"Top gifter: {hypeTrainEnd.TopGiftsubUser} dropping {hypeTrainEnd.TopGiftsubs} subs! ";
+            }
+
+            ttsMessage += "Huge thanks to everyone who contributed — you all crushed it!";
+            
+            await _tsService.SpeakAsync(ttsMessage);
+        }
+
         public async Task HandleRaidAsync(string username, int viewers)
         {
             _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "Raid", username);
@@ -305,7 +326,7 @@ namespace TwitchChatBot.Core.Services
         {
             _logger.LogInformation("📣 Alert triggered: {Type} by {User}", "Many Gift Subs", username);
 
-            username = username ?? AppSettings.DefaultUserName;
+            username = username ?? AppSettings.Ads.DefaultUserName;
             var msg = $"🎁 {username} is dropping {numOfSubs} gift subs!";
 
             var giftSubMedia = await _twitchAlertMediaRepository.GetSubMysteryGiftMapAsync();
@@ -396,7 +417,7 @@ namespace TwitchChatBot.Core.Services
                 _alertService.EnqueueAlert(fixedMessage, null);
 
                 // Optional TTS message
-                if (!string.IsNullOrWhiteSpace(textTier.TtsMessage) && CheckIfTextMediaIsLimited(textTier))
+                if (!string.IsNullOrWhiteSpace(textTier.TtsMessage) && !CheckIfTextMediaIsLimited(textTier))
                 {
                     var ttsRaw = CoreHelperMethods.ReplacePlaceholders(textTier.TtsMessage, username);
 

@@ -10,7 +10,7 @@
         public string? TtsText { get; init; }
         public string? CommandText { get; set; }
         public string Target => string.IsNullOrEmpty(RawTarget) ? string.Empty : $"@{RawTarget}";
-        public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : AppSettings.TwitchUrl + $"{RawTarget}";
+        public string Url => string.IsNullOrEmpty(RawTarget) ? string.Empty : AppSettings.Twitch.TwitchUrl + $"{RawTarget}";
         public string Game { get; set; } = string.Empty;
     }
 }

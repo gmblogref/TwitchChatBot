@@ -6,41 +6,45 @@ namespace TwitchChatBot.Models
     {
         public static IConfiguration? Configuration { get; set; }
 
-        public static string TWITCH_BOT_USERNAME => GetStringSetting("AppSettings:TWITCH_BOT_USERNAME");
-        public static string TWITCH_OAUTH_BEARER_BOT => GetStringSetting("AppSettings:TWITCH_OAUTH_BEARER_BOT");
-        public static string TWITCH_BOT_ID => GetStringSetting("AppSettings:TWITCH_BOT_ID");
-        public static string TWITCH_OAUTH_TOKEN => GetStringSetting("AppSettings:TWITCH_OAUTH_TOKEN");
-        public static string TWITCH_CHANNEL => GetStringSetting("AppSettings:TWITCH_CHANNEL");
-        public static string BOT_CLIENT_ID => GetStringSetting("AppSettings:BOT_CLIENT_ID");
-        public static string BOT_CLIENT_SECRET => GetStringSetting("AppSettings:BOT_CLIENT_SECRET");
-        public static string TWITCH_ACCESS_TOKEN => GetStringSetting("AppSettings:TWITCH_ACCESS_TOKEN");
-        public static string TWITCH_CLIENT_ID => GetStringSetting("AppSettings:TWITCH_CLIENT_ID");
-        public static string REFRESH_TOKEN => GetStringSetting("AppSettings:REFRESH_TOKEN");
-        public static string TWITCH_USER_ID => GetStringSetting("AppSettings:TWITCH_USER_ID");
-        public static string TWITCH_APP_ACCESS_TOKEN => GetStringSetting("AppSettings:TWITCH_APP_ACCESS_TOKEN");
-        public static string TwitchUrl => GetStringSetting("AppSettings:TwitchUrl");
-        public static int AdInitialMinutes => GetIntSetting("AppSettings:AdInitialMinutes");
-        public static int AdIntervalMinutes => GetIntSetting("AppSettings:AdIntervalMinutes");
-        public static string DefaultUserName => GetStringSetting("AppSettings:DefaultUserName");
-        
+        public static class Twitch
+        {
+            public static string TWITCH_BOT_USERNAME => GetStringSetting("Twitch:BotUsername");
+            public static string TWITCH_CHANNEL => GetStringSetting("Twitch:Channel");
+            public static string TWITCH_BOT_ID => GetStringSetting("Twitch:BotUserId");
+            public static string TWITCH_USER_ID => GetStringSetting("Twitch:BroadcasterUserId");
+            public static string TwitchUrl => GetStringSetting("Twitch:TwitchUrl");
+        }
 
+        public static class Auth
+        {
+            public static string BOT_CLIENT_ID => GetStringSetting("Auth:BotClientId");
+            public static string BOT_CLIENT_SECRET => GetStringSetting("Auth:BotClientSecret");
+            public static string TWITCH_CLIENT_ID => GetStringSetting("Auth:TwitchClientId");
+            public static string TWITCH_OAUTH_TOKEN => GetStringSetting("Auth:OAuthToken");
+            public static string TWITCH_OAUTH_BEARER_BOT => GetStringSetting("Auth:OAuthBearerBot");
+            public static string TWITCH_ACCESS_TOKEN => GetStringSetting("Auth:AccessToken");
+            public static string TWITCH_APP_ACCESS_TOKEN => GetStringSetting("Auth:AppAccessToken");
+            public static string REFRESH_TOKEN => GetStringSetting("Auth:RefreshToken");
+        }
+
+        public static class Ads
+        {
+            public static int AdInitialMinutes => GetIntSetting("Ads:AdInitialMinutes");
+            public static int AdIntervalMinutes => GetIntSetting("Ads:AdIntervalMinutes");
+            public static string DefaultUserName => GetStringSetting("Ads:DefaultUserName");
+        }
+        
         public static class WebHost
         {
             public static string BaseUrl => GetStringSetting("Webhost:BaseUrl");
             public static string WebRoot => GetStringSetting("Webhost:WebRoot");
         }
 
-        public static class Streamlabs
-        {
-            public static string STREAMLABS_SOCKET_TOKEN => GetStringSetting("Streamlabs:STREAMLABS_SOCKET_TOKEN");
-            public static string Url => GetStringSetting("Streamlabs:Url");
-        }
-
-        public static class EventSub
+       public static class EventSub
         {
             public static string Uri => GetStringSetting("EventSub:Uri");
-            public static string EVENTSUB_SECRET => GetStringSetting("EventSub:EVENTSUB_SECRET");
-            public static string EVENTSUB_CALLBACK_URL => GetStringSetting("EventSub:EVENTSUB_CALLBACK_URL");
+            public static string EVENTSUB_SECRET => GetStringSetting("EventSub:Secret");
+            public static string EVENTSUB_CALLBACK_URL => GetStringSetting("EventSub:CallbackUrl");
             public static string PostSubscriptionsUrl => GetStringSetting("EventSub:PostSubscriptionsurl");
             public static string Validate => GetStringSetting("EventSub:Validate");
         }

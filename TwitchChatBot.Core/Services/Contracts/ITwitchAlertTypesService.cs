@@ -1,9 +1,13 @@
-﻿public interface ITwitchAlertTypesService
+﻿using System.Text.Json;
+using TwitchChatBot.Models;
+
+public interface ITwitchAlertTypesService
 {
     Task HandleChannelPointRedemptionAsync(string username, string rewardTitle);
     Task HandleCheerAsync(string username, int bits, string message);
     Task HandleFollowAsync(string username);
     Task HandleHypeTrainAsync();
+    Task HandleHypeTrainEndAsync(HypeTrainEnd hypeTrainEnd);
     Task HandleRaidAsync(string username, int viewers);
     Task HandleResubAsync(string username, int months, string userMessage, string subTier);
     Task HandleSubGiftAsync(string username, string recipient, string subTier);

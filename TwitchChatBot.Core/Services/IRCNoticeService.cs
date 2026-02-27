@@ -60,7 +60,7 @@ namespace TwitchChatBot.Core.Services
             var display = tags.TryGetValue("display-name", out var dn) ? dn : login;
             if (string.IsNullOrWhiteSpace(display))
             {
-                display = AppSettings.DefaultUserName;
+                display = AppSettings.Ads.DefaultUserName;
             }
 
             // Some USERNOTICEs carry user-entered text in "user-message". If absent, fall back to system message.
