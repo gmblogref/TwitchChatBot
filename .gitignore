@@ -12,6 +12,7 @@
 
 # Local application configuration (NEVER commit secrets)
 **/appsettings.json
+**/appsettings.Development.json
 **/appsettings.*.json
 !**/appsettings.example.json
 !**/appsettings.*.example.json
