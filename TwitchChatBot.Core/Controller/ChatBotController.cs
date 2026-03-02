@@ -13,9 +13,9 @@ namespace TwitchChatBot.Core.Controller
         private readonly IWebSocketServer _webSocketServer;
         private readonly IWebHostWrapper _webHostWrapper;
         private readonly IWatchStreakService _watchStreakService;
-        private readonly IAppFlags _appFlags;
         
         private int _started; // 0 = false, 1 = true
+        private bool _twitchEventsWired;
         private IUiBridge? _uiBridge; // <- Now nullable and injected via setter
         private readonly TimeSpan _nukeResetInterval = TimeSpan.FromMinutes(25);
 
@@ -27,8 +27,7 @@ namespace TwitchChatBot.Core.Controller
         ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
         IWebHostWrapper webHostWrapper,
-        IWatchStreakService watchStreakService,
-        IAppFlags appFlags)
+        IWatchStreakService watchStreakService)
         {
             _ccommandAlertService = ccommandAlertService;
             _eventSubService = eventSubService;
@@ -38,7 +37,6 @@ namespace TwitchChatBot.Core.Controller
             _webSocketServer = webSocketServer;
             _webHostWrapper = webHostWrapper;
             _watchStreakService = watchStreakService;
-            _appFlags = appFlags;
         }
 
         public bool IsStarted => Interlocked.CompareExchange(ref _started, 1, 1) == 1;
@@ -66,6 +64,9 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogInformation("Start: WebHostWrapper.StartAsync()");
                 await _webHostWrapper.StartAsync(cancellationToken);
 
+                // Wire Twitch events BEFORE connect so we don't miss early messages
+                WireTwitchEvents();
+
                 _logger.LogInformation("Start: TwitchClient.ConnectAsync()");
                 await _twitchClient.ConnectAsync();
                 _logger.LogInformation("✅ Connected to Twitch.");
@@ -87,7 +88,12 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogError(ex, "❌ Failed to start ChatBotController (see exception).");
 
                 // Optional: rollback partial start so next Start works
-                try { await StopBotAsync(cancellationToken); } catch { /* ignore */ }
+                try 
+                { 
+                    await StopBotAsync(cancellationToken); 
+                } 
+                catch 
+                { /* ignore */ }
             }
         }
 
@@ -109,6 +115,9 @@ namespace TwitchChatBot.Core.Controller
 
             try { await _twitchClient.DisconnectAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
 
+            // Unwire after disconnect (either is fine), but do it consistently
+            UnwireTwitchEvents();
+
             try { _webSocketServer.Stop(); } catch (Exception ex) { _logger.LogWarning(ex, "Stop WebSocketServer"); }
             try { await _webHostWrapper.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop WebHost"); }
 
@@ -119,14 +128,65 @@ namespace TwitchChatBot.Core.Controller
         {
             _logger.LogInformation("🛑 ShutdownAsync: full application shutdown…");
 
-            try { await StopBotAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "StopBot during shutdown"); }
+            try 
+            { 
+                await StopBotAsync(ct); 
+            } 
+            catch (Exception ex) 
+            { 
+                _logger.LogWarning(ex, "StopBot during shutdown"); 
+            }
 
             // Dispose only on app exit (singletons must not be reused after this)
-            try { (_tsService as IDisposable)?.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose TTS"); }
+            try 
+            { 
+                (_tsService as IDisposable)?.Dispose();
+            } 
+            catch (Exception ex) 
+            {
+                _logger.LogWarning(ex, "Dispose TTS"); 
+            }
 
-            try { _twitchClient.Dispose(); } catch (Exception ex) { _logger.LogWarning(ex, "Dispose Twitch"); }
+            try 
+            { 
+                _twitchClient.Dispose();
+            } 
+            catch (Exception ex) 
+            {
+                _logger.LogWarning(ex, "Dispose Twitch"); 
+            }
 
             _logger.LogInformation("🏁 ShutdownAsync complete.");
+        }
+
+        private void WireTwitchEvents()
+        {
+            if (_twitchEventsWired)
+            {
+                return;
+            }
+
+            _twitchClient.OnMessageReceived += TwitchClient_OnMessageReceived;
+            _twitchClient.OnViewerListChanged += TwitchClient_OnViewerListChanged;
+
+            _twitchEventsWired = true;
+
+            _logger.LogInformation("🔗 Twitch events wired.");
+        }
+
+        private void UnwireTwitchEvents()
+        {
+            if (!_twitchEventsWired)
+            {
+                return;
+            }
+
+            _twitchClient.OnMessageReceived -= TwitchClient_OnMessageReceived;
+            _twitchClient.OnViewerListChanged -= TwitchClient_OnViewerListChanged;
+
+            _twitchEventsWired = false;
+
+            _logger.LogInformation("🧵 Twitch events unwired.");
         }
 
         private void TwitchClient_OnMessageReceived(object? sender, TwitchMessageEventArgs e)
