@@ -29,7 +29,7 @@ namespace TwitchChatBot.Models
 
         public static class Ads
         {
-            public static int AdInitialMinutes => GetIntSetting("Ads:AdInitialMinutes");
+            public static int AdInitialSeconds => GetIntSetting("Ads:AdInitialSeconds");
             public static int AdIntervalMinutes => GetIntSetting("Ads:AdIntervalMinutes");
             public static string DefaultUserName => GetStringSetting("Ads:DefaultUserName");
         }

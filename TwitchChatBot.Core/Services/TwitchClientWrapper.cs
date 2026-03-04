@@ -287,7 +287,7 @@ namespace TwitchChatBot.Core.Services
 
             },
             null,
-            TimeSpan.FromSeconds(AppSettings.Ads.AdInitialMinutes),
+            TimeSpan.FromSeconds(AppSettings.Ads.AdInitialSeconds),
             TimeSpan.FromMinutes(AppSettings.Ads.AdIntervalMinutes));
         }
 
