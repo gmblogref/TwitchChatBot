@@ -225,7 +225,7 @@ namespace TwitchChatBot.Core.Services
             // Only commands that actually need a target should parse one out here.
             // Example: !so @user (or !so user)
             string rawTarget = string.Empty;
-            if (command is "!so" or "!raid" or "!ban" or "!nuke") // extend as needed
+            if (command is "!so" or "!raid" or "!ban" or "!nuke" or "!welcome") // extend as needed
             {
                 var parts = remainder.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                 rawTarget = parts.Length > 0 ? parts[0].TrimStart('@') : string.Empty;
