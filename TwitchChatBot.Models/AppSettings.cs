@@ -56,7 +56,8 @@ namespace TwitchChatBot.Models
             public static string FirstChattersMedia => GetStringSetting("MediaMapFiles:FirstChattersMedia");
             public static string CommandAlertMedia => GetStringSetting("MediaMapFiles:CommandAlertMedia");
             public static string UserWatchStreakMedia => GetStringSetting("MediaMapFiles:UserWatchStreakMedia");
-        }
+			public static string WheelMedia => GetStringSetting("MediaMapFiles:WheelMedia");
+		}
 
         public static class MediaBase
         {
