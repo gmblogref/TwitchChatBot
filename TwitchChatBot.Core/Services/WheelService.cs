@@ -177,6 +177,11 @@ namespace TwitchChatBot.Core.Services
 			{
 				case "channelpoints":
 					{
+						if (string.IsNullOrWhiteSpace(item.ActionValue))
+						{
+							return;
+						}
+
 						await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(
 							AppSettings.Twitch.TWITCH_CHANNEL!,
 							item.ActionValue);

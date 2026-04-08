@@ -21,7 +21,7 @@ namespace TwitchChatBot.Data
         {
             await GetCommandsAsync(cancellationToken);
 
-            return _commandMediaMap?.CommandMediaItems.FirstOrDefault(x => x.Command.Equals(command));
+            return _commandMediaMap?.CommandMediaItems.FirstOrDefault(x => x.Command.Equals(command, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<IReadOnlyList<string>> GetAllCommandNamesAsync(CancellationToken cancellationToken = default)
@@ -40,12 +40,16 @@ namespace TwitchChatBot.Data
             if (_commandMediaMap != null && _commandMediaMap.CommandMediaItems.Count > 0)
                 return;
 
-            _commandMediaMap = await DataHelperMethods.LoadAsync<CommandMediaMap>(
-                _filePath,
-                _logger,
-                AppSettings.MediaMapFiles.CommandAlertMedia,
-                cancellationToken
-            );
-        }
+			_commandMediaMap = await DataHelperMethods.LoadOrCreateAsync<CommandMediaMap>(
+				_filePath,
+				_logger,
+				AppSettings.MediaMapFiles.CommandAlertMedia,
+				() => new CommandMediaMap
+				{
+					CommandMediaItems = new List<CommandMediaItem>()
+				},
+				cancellationToken
+				);
+		}
     }
 }

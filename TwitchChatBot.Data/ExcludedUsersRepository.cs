@@ -25,15 +25,16 @@ namespace TwitchChatBot.Data
         
         private async Task GetExcludedUsersAsync(CancellationToken cancellationToken = default)
         {
-            if (_excludedUsers != null)
+            if (_excludedUsers != null && _excludedUsers.Count >0)
                 return;
 
-            _excludedUsers = await DataHelperMethods.LoadAsync<HashSet<string>>(
-                _filePath,
-                _logger,
-                AppSettings.MediaMapFiles.ExcludedUsersMedia,
-                cancellationToken
-            );
-        }
+			_excludedUsers = await DataHelperMethods.LoadOrCreateAsync<HashSet<string>>(
+				_filePath,
+				_logger,
+				AppSettings.MediaMapFiles.ExcludedUsersMedia,
+				() => new HashSet<string>(),
+				cancellationToken
+				);
+		}
     }
 }

@@ -179,39 +179,37 @@ namespace TwitchChatBot.Data
             }
         }
 
-        private async Task<FirstChatterMediaMap?> TryLoadNewFormatAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                var map = await DataHelperMethods.LoadAsync<FirstChatterMediaMap>(
-                    _filePath,
-                    _logger,
-                    AppSettings.MediaMapFiles.FirstChattersMedia,
-                    cancellationToken);
+		private async Task<FirstChatterMediaMap?> TryLoadNewFormatAsync(CancellationToken cancellationToken)
+		{
+			var map = await DataHelperMethods.LoadOrCreateAsync<FirstChatterMediaMap>(
+				_filePath,
+				_logger,
+				AppSettings.MediaMapFiles.FirstChattersMedia,
+				() => new FirstChatterMediaMap
+				{
+					FirstChatterMediaItems = new List<FirstChatterMediaItem>()
+				},
+				cancellationToken
+			);
 
-                if (map != null && map.FirstChatterMediaItems != null)
-                {
-                    // Normalize null lists
-                    foreach (var item in map.FirstChatterMediaItems)
-                    {
-                        if (item.AllowedDaysOfWeek == null)
-                        {
-                            item.AllowedDaysOfWeek = new List<DayOfWeek>();
-                        }
-                    }
+			if (map.FirstChatterMediaItems != null)
+			{
+				// Normalize null lists
+				foreach (var item in map.FirstChatterMediaItems)
+				{
+					if (item.AllowedDaysOfWeek == null)
+					{
+						item.AllowedDaysOfWeek = new List<DayOfWeek>();
+					}
+				}
 
-                    return map;
-                }
-            }
-            catch
-            {
-                // Intentionally swallow here; we'll try legacy.
-            }
+				return map;
+			}
 
-            return null;
-        }
+			return null;
+		}
 
-        private async Task<FirstChatterMediaMap?> TryLoadAndMigrateLegacyAsync(CancellationToken cancellationToken)
+		private async Task<FirstChatterMediaMap?> TryLoadAndMigrateLegacyAsync(CancellationToken cancellationToken)
         {
             try
             {

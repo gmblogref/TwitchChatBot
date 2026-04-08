@@ -44,12 +44,13 @@ namespace TwitchChatBot.Data
 				return;
 			}
 
-			_wheels = await DataHelperMethods.LoadAsync<List<Wheel>>(
+			_wheels = await DataHelperMethods.LoadOrCreateAsync<List<Wheel>>(
 				_filePath,
 				_logger,
 				AppSettings.MediaMapFiles.WheelMedia,
+				() => new List<Wheel>(),
 				cancellationToken
-			) ?? new List<Wheel>();
+			);
 		}
 	}
 }

@@ -50,19 +50,22 @@ namespace TwitchChatBot.Data
         public async Task<List<string>?> GetWatchStreakMediaAsync(CancellationToken cancellationToken = default)
             => (await GetTwitchAlertMediaMapAsync(cancellationToken)).WatchStreak;
 
-        private async Task<TwitchAlertMediaMap> GetTwitchAlertMediaMapAsync(CancellationToken cancellationToken = default)
-        {
-            if (_twitchAlertMediaMap != null)
-                return _twitchAlertMediaMap;
+		private async Task<TwitchAlertMediaMap> GetTwitchAlertMediaMapAsync(CancellationToken cancellationToken = default)
+		{
+			if (_twitchAlertMediaMap != null)
+			{
+				return _twitchAlertMediaMap;
+			}
 
-            _twitchAlertMediaMap = await DataHelperMethods.LoadAsync<TwitchAlertMediaMap>(
-                _filePath,
-                _logger,
-                AppSettings.MediaMapFiles.CommandAlertMedia,
-                cancellationToken
-            );
+			_twitchAlertMediaMap = await DataHelperMethods.LoadOrCreateAsync<TwitchAlertMediaMap>(
+				_filePath,
+				_logger,
+				AppSettings.MediaMapFiles.TwitchAlertMedia,
+				() => new TwitchAlertMediaMap(),
+				cancellationToken
+			);
 
-            return _twitchAlertMediaMap;
-        }
-    }
+			return _twitchAlertMediaMap;
+		}
+	}
 }
