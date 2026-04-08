@@ -51,31 +51,35 @@ namespace TwitchChatBot.Data
             );
         }
 
-        private async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
-        {
-            lock (_sync)
-            {
-                if (_watchStreakState != null)
-                {
-                    return;
-                }
-            }
+		private async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
+		{
+			lock (_sync)
+			{
+				if (_watchStreakState != null)
+				{
+					return;
+				}
+			}
 
-            var loaded = await DataHelperMethods.LoadAsync<WatchStreakState>(
-                _filePath,
-                _logger,
-                AppSettings.MediaMapFiles.UserWatchStreakMedia,
-                cancellationToken
-            );
+			var loaded = await DataHelperMethods.LoadOrCreateAsync<WatchStreakState>(
+				_filePath,
+				_logger,
+				AppSettings.MediaMapFiles.UserWatchStreakMedia,
+				() => new WatchStreakState
+				{
+					Users = new Dictionary<string, WatchStreakUserStats>(StringComparer.OrdinalIgnoreCase)
+				},
+				cancellationToken
+			);
 
-            lock (_sync)
-            {
-                _watchStreakState = loaded ?? new WatchStreakState();
-                EnsureShape(_watchStreakState);
-            }
-        }
+			lock (_sync)
+			{
+				_watchStreakState = loaded;
+				EnsureShape(_watchStreakState);
+			}
+		}
 
-        private static void EnsureShape(WatchStreakState state)
+		private static void EnsureShape(WatchStreakState state)
         {
             if (state.Users == null)
             {

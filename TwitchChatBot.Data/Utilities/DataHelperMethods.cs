@@ -155,5 +155,8 @@ namespace TwitchChatBot.Data.Utilities
 
         public static string GetUserWatchStreakMediaPath()
             => Path.GetFullPath(AppSettings.MediaMapFiles.UserWatchStreakMedia);
-    }
+
+		public static string GetWheelMediaPath()
+			=> Path.GetFullPath(AppSettings.MediaMapFiles.WheelMedia);
+	}
 }

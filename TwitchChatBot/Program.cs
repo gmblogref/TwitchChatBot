@@ -65,9 +65,10 @@ namespace TwitchChatBot
             services.TryAddSingleton<IFirstChatterMediaRepository, FirstChatterMediaRepository>();
             services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
             services.TryAddSingleton<IWatchStreakRepository, WatchStreakRepository>();
+			services.TryAddSingleton<IWheelRepository, WheelRepository>();
 
-            // ⚙️ Core Services
-            services.TryAddSingleton<IAlertService, AlertService>();
+			// ⚙️ Core Services
+			services.TryAddSingleton<IAlertService, AlertService>();
             services.TryAddSingleton<ICommandAlertService, CommandAlertService>();
             services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IExcludedUsersService, ExcludedUsersService>();
@@ -84,8 +85,9 @@ namespace TwitchChatBot
             services.TryAddSingleton<IIRCNoticeService, IRCNoticeService>();
             services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
             services.TryAddSingleton<IAiTextService, AiTextService>();
+			services.TryAddSingleton<IWheelService, WheelService>();
 
-            services.TryAddSingleton<IFirstChatterAlertService>(sp =>
+			services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(
                 sp.GetRequiredService<ILogger<FirstChatterAlertService>>(),
                 sp.GetRequiredService<IFirstChatterMediaRepository>(),
