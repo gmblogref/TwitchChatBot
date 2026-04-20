@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using TwitchChatBot.Core.Controller;
 using TwitchChatBot.Core.Logging;
+using TwitchChatBot.Core.Providers;
 using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Data;
@@ -85,6 +86,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<IIRCNoticeService, IRCNoticeService>();
             services.TryAddSingleton<IHelixLookupService, HelixLookupService>();
             services.TryAddSingleton<IAiTextService, AiTextService>();
+			services.TryAddSingleton<IRandomProvider, RandomProvider>();
 			services.TryAddSingleton<IWheelService, WheelService>();
 
 			services.TryAddSingleton<IFirstChatterAlertService>(sp =>

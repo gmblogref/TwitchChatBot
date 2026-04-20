@@ -8,7 +8,7 @@ namespace TwitchChatBot.Core.Services.Contracts
 
 		Task<Wheel?> GetWheelAsync(string wheelId);
 
-		Task AddWheelAsync(Wheel wheel);
+		Task<bool> AddWheelAsync(Wheel wheel);
 
 		Task AddItemAsync(string wheelId, WheelItem item);
 
@@ -20,6 +20,12 @@ namespace TwitchChatBot.Core.Services.Contracts
 
 		Task<WheelItem?> SpinAsync(string wheelId);
 
-		Task ExecuteAsync(WheelItem item);
+		Task TriggerWheelAlertAsync(WheelItem item);
+
+		Task<bool> RenameWheelAsync(string wheelId, string newName);
+
+		Task<bool> DeleteWheelAsync(string wheelId);
+
+		Task UpdateItemAsync(string wheelId, WheelItem item);
 	}
 }

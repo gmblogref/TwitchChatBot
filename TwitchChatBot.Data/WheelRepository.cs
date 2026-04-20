@@ -39,11 +39,6 @@ namespace TwitchChatBot.Data
 
 		private async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
 		{
-			if (_wheels != null)
-			{
-				return;
-			}
-
 			_wheels = await DataHelperMethods.LoadOrCreateAsync<List<Wheel>>(
 				_filePath,
 				_logger,
