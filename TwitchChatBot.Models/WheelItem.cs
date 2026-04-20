@@ -2,13 +2,15 @@
 {
 	public class WheelItem
 	{
-		public string Id { get; set; } = Guid.NewGuid().ToString();
+		public string Id { get; set; } = string.Empty;
+
+		public int Position { get; set; }
 
 		public string DisplayName { get; set; } = string.Empty;
 
-		public string ActionType { get; set; } = string.Empty;
+		public string? AlertType { get; set; }
 
-		public string ActionValue { get; set; } = string.Empty;
+		public string? AlertKey { get; set; }
 
 		public int Weight { get; set; } = 1;
 

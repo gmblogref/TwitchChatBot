@@ -64,6 +64,11 @@ namespace TwitchChatBot.Models
             public static string TwitchAlertsFolder => GetStringSetting("MediaBase:TwitchAlertsFolder");
         }
 
+		public static class UiMedia
+		{
+			public static string SpinButton => GetStringSetting("UiMedia:SpinButton");
+		}
+
         public static class Chatters
         {
             public static string ModsUrl => GetStringSetting("Chatters:ModsUrl");
