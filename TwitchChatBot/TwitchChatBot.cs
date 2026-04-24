@@ -636,6 +636,7 @@ namespace TwitchChatBot
 
 				var visibleItems = selectedWheel.Items
 					.Where(x => !x.IsHidden)
+					.OrderBy(x => x.Position)
 					.ToList();
 
 				if (visibleItems.Count == 0)
@@ -1268,13 +1269,35 @@ namespace TwitchChatBot
 
 				_hasUnsavedChanges = false;
 
-				await LoadEntriesAsync(selectedWheel.Id);
+				await ReloadCurrentWheelAsync();
 
 				wheelSpinnerControl.Invalidate();
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "Failed to shuffle entries.");
+			}
+		}
+
+		private async Task ReloadCurrentWheelAsync()
+		{
+			if (comboBoxWheels.SelectedItem is not Wheel currentWheel)
+			{
+				return;
+			}
+
+			var wheelId = currentWheel.Id;
+
+			await LoadWheelsAsync();
+
+			for (int i = 0; i < comboBoxWheels.Items.Count; i++)
+			{
+				if (comboBoxWheels.Items[i] is Wheel wheel &&
+					wheel.Id == wheelId)
+				{
+					comboBoxWheels.SelectedIndex = i;
+					return;
+				}
 			}
 		}
 
