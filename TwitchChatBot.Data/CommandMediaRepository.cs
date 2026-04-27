@@ -30,6 +30,7 @@ namespace TwitchChatBot.Data
             return (_commandMediaMap?.CommandMediaItems ?? Enumerable.Empty<CommandMediaItem>())
                 .Select(c => c.Command)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
+				.Where(c => !c.StartsWith("!Wheel", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList()
                 .AsReadOnly();

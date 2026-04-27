@@ -225,23 +225,43 @@ namespace TwitchChatBot.Core.Services
             _logger.LogInformation("🔊 Polly synth: {Voice} (pref: Neural) \"{Preview}\"",
                 voice, finalText.Length > 80 ? finalText[..80] + "…" : finalText);
 
-            try
-            {
-                using var resp = await polly.SynthesizeSpeechAsync(req, ct);
-                await using var fs = File.Create(mp3Path);
-                await resp.AudioStream.CopyToAsync(fs, ct);
-            }
-            catch (AmazonPollyException ex) when (ex.Message.Contains("Neural", StringComparison.OrdinalIgnoreCase))
-            {
-                // Voice/region may not support Neural; retry with Standard.
-                _logger.LogInformation("ℹ️ Voice {Voice} not Neural in {Region}. Retrying with Standard.", voice, _region.SystemName);
-                req.Engine = Engine.Standard;
-                using var resp = await polly.SynthesizeSpeechAsync(req, ct);
-                await using var fs = File.Create(mp3Path);
-                await resp.AudioStream.CopyToAsync(fs, ct);
-            }
+			try
+			{
+				using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
+				{
+					await using (var fs = File.Create(mp3Path))
+					{
+						await resp.AudioStream.CopyToAsync(fs, ct);
+						await fs.FlushAsync(ct);
+					}
+				}
+			}
+			catch (AmazonPollyException ex) when (ex.Message.Contains("Neural", StringComparison.OrdinalIgnoreCase))
+			{
+				_logger.LogInformation(
+					"ℹ️ Voice {Voice} not Neural in {Region}. Retrying with Standard.",
+					voice,
+					_region.SystemName);
 
-            _alertService.EnqueueAlert("", publicPath);
+				req.Engine = Engine.Standard;
+
+				using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
+				{
+					await using (var fs = File.Create(mp3Path))
+					{
+						await resp.AudioStream.CopyToAsync(fs, ct);
+						await fs.FlushAsync(ct);
+					}
+				}
+			}
+
+			await Task.Delay(100, ct);
+
+			// Log file size for diagnostics; can be useful to identify issues with Polly responses (e.g., very small files may indicate errors).
+			var fileInfo = new FileInfo(mp3Path);
+			_logger.LogInformation("TTS MP3 Size: {Bytes}", fileInfo.Length);
+
+			_alertService.EnqueueAlert("", publicPath);
             _logger.LogInformation("✅ Polly TTS ready: {File}", mp3Path);
         }
 
