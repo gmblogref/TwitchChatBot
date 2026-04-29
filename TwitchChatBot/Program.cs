@@ -67,11 +67,15 @@ namespace TwitchChatBot
             services.TryAddSingleton<ITwitchAlertMediaRepository, TwitchAlertMediaRepository>();
             services.TryAddSingleton<IWatchStreakRepository, WatchStreakRepository>();
 			services.TryAddSingleton<IWheelRepository, WheelRepository>();
+			services.TryAddSingleton<IDonationMediaRepository, DonationMediaRepository>();
+
+			// WebSocket Servers
+			services.TryAddSingleton<IEventSubService, EventSubSocketService>();
+			services.TryAddSingleton<IStreamlabsDonationProviderService, StreamlabsDonationSocketService>();
 
 			// ⚙️ Core Services
 			services.TryAddSingleton<IAlertService, AlertService>();
             services.TryAddSingleton<ICommandAlertService, CommandAlertService>();
-            services.TryAddSingleton<IEventSubService, EventSubSocketService>();
             services.TryAddSingleton<IExcludedUsersService, ExcludedUsersService>();
             services.TryAddSingleton<ITtsService, TtsService>();
             services.TryAddSingleton<ITwitchAlertTypesService, TwitchAlertTypesService>();
@@ -88,6 +92,7 @@ namespace TwitchChatBot
             services.TryAddSingleton<IAiTextService, AiTextService>();
 			services.TryAddSingleton<IRandomProvider, RandomProvider>();
 			services.TryAddSingleton<IWheelService, WheelService>();
+			services.TryAddSingleton<IDonationAlertService, DonationAlertService>();
 
 			services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(

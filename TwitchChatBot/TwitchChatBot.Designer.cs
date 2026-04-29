@@ -31,7 +31,7 @@ namespace TwitchChatBot
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TwitchChatBot));
-			DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+			DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
 			buttonStartBot = new Button();
 			tabControlChatBot = new TabControl();
 			tabPageMainChat = new TabPage();
@@ -95,6 +95,7 @@ namespace TwitchChatBot
 			labelLogging = new Label();
 			buttonTestBot = new Button();
 			buttonStopBot = new Button();
+			buttonTestDonation = new Button();
 			tabControlChatBot.SuspendLayout();
 			tabPageMainChat.SuspendLayout();
 			tabPageUtilities.SuspendLayout();
@@ -459,14 +460,14 @@ namespace TwitchChatBot
 			// 
 			dataGridViewEntries.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 			dataGridViewEntries.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-			dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
-			dataGridViewCellStyle1.BackColor = SystemColors.Control;
-			dataGridViewCellStyle1.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-			dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
-			dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
-			dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
-			dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
-			dataGridViewEntries.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+			dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter;
+			dataGridViewCellStyle2.BackColor = SystemColors.Control;
+			dataGridViewCellStyle2.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+			dataGridViewCellStyle2.ForeColor = SystemColors.WindowText;
+			dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
+			dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
+			dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
+			dataGridViewEntries.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
 			dataGridViewEntries.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			dataGridViewEntries.Location = new Point(836, 66);
 			dataGridViewEntries.Name = "dataGridViewEntries";
@@ -502,6 +503,7 @@ namespace TwitchChatBot
 			// 
 			// groupBoxButtonTests
 			// 
+			groupBoxButtonTests.Controls.Add(buttonTestDonation);
 			groupBoxButtonTests.Controls.Add(buttonTestHypeTrainEnd);
 			groupBoxButtonTests.Controls.Add(buttonTestWatchStreak);
 			groupBoxButtonTests.Controls.Add(labelUserName);
@@ -673,7 +675,7 @@ namespace TwitchChatBot
 			groupBoxTextEntryTests.Controls.Add(buttonTestCommand);
 			groupBoxTextEntryTests.Location = new Point(569, 45);
 			groupBoxTextEntryTests.Name = "groupBoxTextEntryTests";
-			groupBoxTextEntryTests.Size = new Size(585, 325);
+			groupBoxTextEntryTests.Size = new Size(585, 359);
 			groupBoxTextEntryTests.TabIndex = 17;
 			groupBoxTextEntryTests.TabStop = false;
 			groupBoxTextEntryTests.Text = "Text Entry Tests";
@@ -682,7 +684,7 @@ namespace TwitchChatBot
 			// 
 			comboBoxTtsSpeaker.FormattingEnabled = true;
 			comboBoxTtsSpeaker.Items.AddRange(new object[] { "Matthew", "Joanna", "Brian", "Emma", "Justin", "Kimberly", "Amy", "Russel", "Nicole", "Olivia", "Stephen", "Salli", "Joey", "Ivy", "Kendra" });
-			comboBoxTtsSpeaker.Location = new Point(209, 248);
+			comboBoxTtsSpeaker.Location = new Point(209, 260);
 			comboBoxTtsSpeaker.Name = "comboBoxTtsSpeaker";
 			comboBoxTtsSpeaker.Size = new Size(151, 40);
 			comboBoxTtsSpeaker.TabIndex = 17;
@@ -690,7 +692,7 @@ namespace TwitchChatBot
 			// 
 			// textBoxTtsText
 			// 
-			textBoxTtsText.Location = new Point(366, 248);
+			textBoxTtsText.Location = new Point(366, 260);
 			textBoxTtsText.Name = "textBoxTtsText";
 			textBoxTtsText.Size = new Size(206, 40);
 			textBoxTtsText.TabIndex = 16;
@@ -699,7 +701,7 @@ namespace TwitchChatBot
 			// buttonTestTts
 			// 
 			buttonTestTts.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-			buttonTestTts.Location = new Point(6, 248);
+			buttonTestTts.Location = new Point(6, 260);
 			buttonTestTts.Name = "buttonTestTts";
 			buttonTestTts.Size = new Size(163, 40);
 			buttonTestTts.TabIndex = 15;
@@ -728,7 +730,7 @@ namespace TwitchChatBot
 			// 
 			// textFirstChatter
 			// 
-			textFirstChatter.Location = new Point(209, 203);
+			textFirstChatter.Location = new Point(209, 213);
 			textFirstChatter.Name = "textFirstChatter";
 			textFirstChatter.Size = new Size(206, 40);
 			textFirstChatter.TabIndex = 14;
@@ -737,7 +739,7 @@ namespace TwitchChatBot
 			// buttonTestFirstChat
 			// 
 			buttonTestFirstChat.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-			buttonTestFirstChat.Location = new Point(6, 203);
+			buttonTestFirstChat.Location = new Point(6, 214);
 			buttonTestFirstChat.Name = "buttonTestFirstChat";
 			buttonTestFirstChat.Size = new Size(163, 40);
 			buttonTestFirstChat.TabIndex = 13;
@@ -758,7 +760,7 @@ namespace TwitchChatBot
 			// 
 			// textCommand
 			// 
-			textCommand.Location = new Point(209, 156);
+			textCommand.Location = new Point(209, 167);
 			textCommand.Name = "textCommand";
 			textCommand.Size = new Size(206, 40);
 			textCommand.TabIndex = 12;
@@ -775,7 +777,7 @@ namespace TwitchChatBot
 			// buttonTestCommand
 			// 
 			buttonTestCommand.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-			buttonTestCommand.Location = new Point(6, 156);
+			buttonTestCommand.Location = new Point(6, 167);
 			buttonTestCommand.Name = "buttonTestCommand";
 			buttonTestCommand.Size = new Size(163, 40);
 			buttonTestCommand.TabIndex = 11;
@@ -846,6 +848,17 @@ namespace TwitchChatBot
 			buttonStopBot.Text = "Stop Bot";
 			buttonStopBot.UseVisualStyleBackColor = false;
 			buttonStopBot.Click += buttonStopBot_Click;
+			// 
+			// buttonTestDonation
+			// 
+			buttonTestDonation.Font = new Font("Arial Black", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+			buttonTestDonation.Location = new Point(207, 291);
+			buttonTestDonation.Name = "buttonTestDonation";
+			buttonTestDonation.Size = new Size(163, 40);
+			buttonTestDonation.TabIndex = 18;
+			buttonTestDonation.Text = "Donations";
+			buttonTestDonation.UseVisualStyleBackColor = true;
+			buttonTestDonation.Click += buttonTestDonation_Click;
 			// 
 			// TwitchChatBot
 			// 
@@ -948,5 +961,6 @@ namespace TwitchChatBot
 		private Panel panelSpinResultOverlay;
 		private Button buttonSpinResultOk;
 		private Label labelSpinResult;
+		private Button buttonTestDonation;
 	}
 }

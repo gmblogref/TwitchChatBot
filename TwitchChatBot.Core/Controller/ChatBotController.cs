@@ -7,6 +7,7 @@ namespace TwitchChatBot.Core.Controller
     {
         private readonly ICommandAlertService _ccommandAlertService;
         private readonly IEventSubService _eventSubService;
+		private readonly IStreamlabsDonationProviderService _streamlabsDonationProviderService;
         private readonly ILogger<ChatBotController> _logger;
         private readonly ITtsService _tsService;
         private readonly ITwitchClientWrapper _twitchClient;
@@ -27,7 +28,8 @@ namespace TwitchChatBot.Core.Controller
         ITwitchClientWrapper twitchClient,
         IWebSocketServer webSocketServer,
         IWebHostWrapper webHostWrapper,
-        IWatchStreakService watchStreakService)
+        IWatchStreakService watchStreakService,
+		IStreamlabsDonationProviderService streamlabsDonationProviderService)
         {
             _ccommandAlertService = ccommandAlertService;
             _eventSubService = eventSubService;
@@ -37,7 +39,8 @@ namespace TwitchChatBot.Core.Controller
             _webSocketServer = webSocketServer;
             _webHostWrapper = webHostWrapper;
             _watchStreakService = watchStreakService;
-        }
+			_streamlabsDonationProviderService = streamlabsDonationProviderService;
+		}
 
         public bool IsStarted => Interlocked.CompareExchange(ref _started, 1, 1) == 1;
 
@@ -74,7 +77,10 @@ namespace TwitchChatBot.Core.Controller
                 _logger.LogInformation("Start: EventSub.StartAsync()");
                 await _eventSubService.StartAsync(cancellationToken);
 
-                _logger.LogInformation("Start: WatchStreak.BeginStreamAsync()");
+				_logger.LogInformation("Start: StreamlabsDonationProviderService.StartAsync()");
+				await _streamlabsDonationProviderService.StartAsync(cancellationToken);
+
+				_logger.LogInformation("Start: WatchStreak.BeginStreamAsync()");
                 await _watchStreakService.BeginStreamAsync();
 
                 _logger.LogInformation("Start: TwitchClient.StartAdTimer()");
@@ -113,7 +119,9 @@ namespace TwitchChatBot.Core.Controller
 
             try { await _eventSubService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop EventSub"); }
 
-            try { await _twitchClient.DisconnectAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
+			try { await _streamlabsDonationProviderService.StopAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "Stop Streamlabs donation provider"); }
+
+			try { await _twitchClient.DisconnectAsync(); } catch (Exception ex) { _logger.LogWarning(ex, "Disconnect Twitch"); }
 
             // Unwire after disconnect (either is fine), but do it consistently
             UnwireTwitchEvents();
