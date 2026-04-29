@@ -57,6 +57,7 @@ namespace TwitchChatBot.Models
             public static string CommandAlertMedia => GetStringSetting("MediaMapFiles:CommandAlertMedia");
             public static string UserWatchStreakMedia => GetStringSetting("MediaMapFiles:UserWatchStreakMedia");
 			public static string WheelMedia => GetStringSetting("MediaMapFiles:WheelMedia");
+			public static string DonationMedia => GetStringSetting("MediaMapFiles:DonationMedia");
 		}
 
         public static class MediaBase
@@ -145,7 +146,13 @@ namespace TwitchChatBot.Models
             public static int RetryTaskDelay => GetIntSetting("AlertSettings:RetryTaskDelay");
         }
 
-        public static string GetStringSetting(string key)
+		public static class Streamlabs
+		{
+			public static string SocketUrl => GetStringSetting("Streamlabs:SocketUrl");
+			public static string SocketToken => GetStringSetting("Streamlabs:SocketToken");
+		}
+
+		public static string GetStringSetting(string key)
         {
             var value = Configuration![key];
 

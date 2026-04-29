@@ -158,5 +158,8 @@ namespace TwitchChatBot.Data.Utilities
 
 		public static string GetWheelMediaPath()
 			=> Path.GetFullPath(AppSettings.MediaMapFiles.WheelMedia);
+
+		public static string GetDonationMediaPath()
+			=> Path.GetFullPath(AppSettings.MediaMapFiles.DonationMedia);
 	}
 }

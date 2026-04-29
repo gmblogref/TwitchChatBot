@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitchChatBot.Core.Controller;
+using TwitchChatBot.Core.Services;
 using TwitchChatBot.Core.Services.Contracts;
 using TwitchChatBot.Models;
 using TwitchChatBot.UI;
@@ -16,6 +17,7 @@ namespace TwitchChatBot
 		private readonly IAlertReplayService _alertReplayService;
 		private readonly IWheelService _wheelService;
 		private readonly IAppFlags _appFlags;
+		private readonly IDonationAlertService _donationAlertService;
 
 		private bool _isSpinning = false;
 		private bool _hasUnsavedChanges = false;
@@ -30,6 +32,7 @@ namespace TwitchChatBot
 			IAlertReplayService alertReplayService,
 			IAppFlags appFlags,
 			IWheelService wheelService,
+			IDonationAlertService donationAlertService,
 			ILogger<TwitchChatBot> logger)
 		{
 			InitializeComponent();
@@ -40,6 +43,7 @@ namespace TwitchChatBot
 			_alertReplayService = alertReplayService;
 			_appFlags = appFlags;
 			_wheelService = wheelService;
+			_donationAlertService = donationAlertService;
 			_logger = logger;
 
 			InitializeAlertHistoryUi();
@@ -687,7 +691,7 @@ namespace TwitchChatBot
 			panelSpinResultOverlay.Tag = winner;
 
 			FitSpinResultText();
-			
+
 			panelSpinResultOverlay.Visible = true;
 			panelSpinResultOverlay.BringToFront();
 		}
@@ -1358,6 +1362,37 @@ namespace TwitchChatBot
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Error deleting wheel: {ex.Message}");
+			}
+		}
+
+		private async void buttonTestDonation_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				var donorName = string.IsNullOrWhiteSpace(textUserName.Text)
+					? "TestUser"
+					: textUserName.Text.Trim();
+
+				decimal amount = 5.00m;
+
+				if (decimal.TryParse(textAmount.Text, out var parsedAmount))
+				{
+					amount = parsedAmount;
+				}
+
+				var donation = new DonationEvent
+				{
+					DonorName = donorName,
+					Amount = amount,
+					Message = "This is a test donation.",
+					Provider = "Test"
+				};
+
+				await _donationAlertService.HandleDonationAsync(donation);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed test donation.");
 			}
 		}
 	}
