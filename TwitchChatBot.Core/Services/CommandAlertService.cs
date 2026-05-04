@@ -439,7 +439,11 @@ namespace TwitchChatBot.Core.Services
                 else if (isTargetBroadcaster)
                 {
                     var entry = await _commandMediaRepository.GetCommandMediaItemAsync("!nukeSacks");
-                    _alertService.EnqueueAlert("fullscreen", "", CoreHelperMethods.ToPublicMediaPath(entry!.Media!));
+                    _alertService.EnqueueAlert(new AlertItem
+					{
+						Type = "fullscreen",
+						MediaPath = CoreHelperMethods.ToPublicMediaPath(entry!.Media!)
+					});
                 }
                 else
                 {

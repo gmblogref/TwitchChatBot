@@ -14,8 +14,9 @@ namespace TwitchChatBot.Core.Services
         private readonly ITtsService _tsService;
         private readonly IAlertHistoryService _alertHistoryService;
         private readonly IAiTextService _aiTextService;
+		private readonly IHelixLookupService _helixLookupService;
 
-        private readonly HashSet<string> _limitedChannelPointTts = new(StringComparer.OrdinalIgnoreCase);
+		private readonly HashSet<string> _limitedChannelPointTts = new(StringComparer.OrdinalIgnoreCase);
 
         public TwitchAlertTypesService(
             ILogger<TwitchAlertTypesService> logger,
@@ -23,7 +24,8 @@ namespace TwitchChatBot.Core.Services
             IAlertService alertService,
             ITtsService tsService,
             IAlertHistoryService alertHistoryService,
-            IAiTextService aiTextService)
+            IAiTextService aiTextService,
+			IHelixLookupService helixLookupService)
         {
             _logger = logger;
             _twitchAlertMediaRepository = twitchAlertMediaRepository;
@@ -31,7 +33,8 @@ namespace TwitchChatBot.Core.Services
             _tsService = tsService;
             _alertHistoryService = alertHistoryService;
             _aiTextService = aiTextService;
-        }
+			_helixLookupService = helixLookupService;
+		}
 
         public async Task HandleCheerAsync(string username, int bits, string message)
         {
@@ -151,7 +154,18 @@ namespace TwitchChatBot.Core.Services
             var media = await _twitchAlertMediaRepository.GetRaidMediaAsync();
             var msg = $"🚨 {username} is raiding with {viewers} viewers!";
 
-            _alertHistoryService.Add(new AlertHistoryEntry
+			string? profileImageUrl = null;
+
+			try
+			{
+				profileImageUrl = await _helixLookupService.GetProfileImageUrlByLoginAsync(username);
+			}
+			catch
+			{
+				// Fail silently (requirement met)
+			}
+
+			_alertHistoryService.Add(new AlertHistoryEntry
             {
                 Type = AlertHistoryType.TwitchRaid,
                 Display = $"Raid: {username} ({viewers})",
@@ -159,9 +173,18 @@ namespace TwitchChatBot.Core.Services
                 Viewers = viewers
             });
 
-            EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
+			EnqueueAlertWithMediaExtraData(
+				msg,
+				media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)],
+				new Dictionary<string, string?>
+				{
+					["raider"] = username,
+					["viewers"] = viewers.ToString(),
+					["profileImage"] = profileImageUrl
+				}
+			);
 
-            var voice = AppSettings.Voices.Raid ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+			var voice = AppSettings.Voices.Raid ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
 
             // Try AI first (Step 2: raids only)
             string? aiText = null;
@@ -504,10 +527,26 @@ namespace TwitchChatBot.Core.Services
             if (string.IsNullOrWhiteSpace(mediaPath))
                 return;
 
-            _alertService.EnqueueAlert(message, CoreHelperMethods.ToPublicMediaPath(mediaPath));
+            _alertService.EnqueueAlert(new AlertItem
+			{
+				Type = "alert",
+				Message = message,
+				MediaPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath)
+			});
         }
 
-        private string GetNiceTierString(string subTier)
+		private void EnqueueAlertWithMediaExtraData(string message, string mediaPath, Dictionary<string, string?> extraData)
+		{
+			_alertService.EnqueueAlert(new AlertItem
+			{
+				Type = "alert",
+				Message = message,
+				MediaPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath),
+				ExtraData = extraData
+			});
+		}
+
+		private string GetNiceTierString(string subTier)
         {
             return subTier switch
             {

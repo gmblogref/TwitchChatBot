@@ -17,6 +17,7 @@ namespace TwitchChatBot.Tests.Core
 		private readonly Mock<ITtsService> _ttsServiceMock = new();
 		private readonly Mock<IAlertHistoryService> _alertHistoryServiceMock = new();
 		private readonly Mock<IAiTextService> _aiTextServiceMock = new();
+		private readonly Mock<IHelixLookupService> _helixLookupServiceMock = new();
 
 		private readonly TwitchAlertTypesService _sut;
 
@@ -30,7 +31,8 @@ namespace TwitchChatBot.Tests.Core
 				_alertServiceMock.Object,
 				_ttsServiceMock.Object,
 				_alertHistoryServiceMock.Object,
-				_aiTextServiceMock.Object);
+				_aiTextServiceMock.Object,
+				_helixLookupServiceMock.Object);
 		}
 
 		// =========================

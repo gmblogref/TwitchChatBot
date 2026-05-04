@@ -2,8 +2,8 @@
 {
 	public class SpinResult
 	{
-		public string EntryId { get; set; }
-		public string DisplayName { get; set; }
+		public string EntryId { get; set; } = string.Empty;
+		public string DisplayName { get; set; } = string.Empty;
 		public string? AlertType { get; set; }
 		public string? AlertKey { get; set; }
 	}

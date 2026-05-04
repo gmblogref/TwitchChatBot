@@ -8,5 +8,7 @@
 
         Task<IReadOnlyList<string>> GetModeratorLoginsAsync(string broadcasterId, CancellationToken ct = default);
         Task<IReadOnlyList<string>> GetVipLoginsAsync(string broadcasterId, CancellationToken ct = default);
-    }
+
+		Task<string?> GetProfileImageUrlByLoginAsync(string login, CancellationToken ct = default);
+	}
 }

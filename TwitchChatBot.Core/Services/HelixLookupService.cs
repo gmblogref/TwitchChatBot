@@ -21,7 +21,11 @@ namespace TwitchChatBot.Core.Services
         private readonly Dictionary<string, string> _idToLastGame = new();
         private readonly Queue<string> _idToLastGameInsertionOrder = new();
 
-        public HelixLookupService(ILogger<HelixLookupService> logger, IHttpClientFactory httpFactory)
+		private readonly Dictionary<string, string> _loginToProfileImage = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Queue<string> _loginToProfileImageInsertionOrder = new();
+		private const int MaxLoginToProfileImageCacheEntries = 200;
+
+		public HelixLookupService(ILogger<HelixLookupService> logger, IHttpClientFactory httpFactory)
         {
             _logger = logger;
             _httpClient = httpFactory.CreateClient("twitch-helix");
@@ -260,7 +264,60 @@ namespace TwitchChatBot.Core.Services
             return result;
         }
 
-        private async Task<string?> ResolveGameNameAsync(string gameId, CancellationToken ct)
+		public async Task<string?> GetProfileImageUrlByLoginAsync(string login, CancellationToken ct = default)
+		{
+			if (string.IsNullOrWhiteSpace(login))
+			{
+				return null;
+			}
+
+			login = login.Trim();
+
+			// Optional: add cache if you want (recommended)
+			lock (_cacheSync)
+			{
+				if (_loginToProfileImage.TryGetValue(login, out var cached))
+				{
+					return cached;
+				}
+			}
+
+			var url = AppSettings.Commands.UsersByLogin.Replace("{login}", Uri.EscapeDataString(login));
+
+			using var resp = await _httpClient.GetAsync(url, ct);
+			if (!resp.IsSuccessStatusCode)
+			{
+				_logger.LogWarning("GetProfileImage {Login}: {Status}", login, resp.StatusCode);
+				return null;
+			}
+
+			using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+
+			var data = doc.RootElement.GetProperty("data");
+			if (data.GetArrayLength() == 0)
+			{
+				return null;
+			}
+
+			var profileImage = data[0].GetProperty("profile_image_url").GetString();
+
+			if (!string.IsNullOrEmpty(profileImage))
+			{
+				lock (_cacheSync)
+				{
+					AddToBoundedCache(
+						_loginToProfileImage,
+						_loginToProfileImageInsertionOrder,
+						MaxLoginToProfileImageCacheEntries,
+						login,
+						profileImage!);
+				}
+			}
+
+			return profileImage;
+		}
+
+		private async Task<string?> ResolveGameNameAsync(string gameId, CancellationToken ct)
         {
             var url = AppSettings.Commands.GamesByGameId.Replace("{gameid}", Uri.EscapeDataString(gameId));
             using var resp = await _httpClient.GetAsync(url, ct);
