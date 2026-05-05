@@ -531,7 +531,7 @@ namespace TwitchChatBot.Core.Services
 			{
 				Type = "alert",
 				Message = message,
-				MediaPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath)
+				MediaPath = CoreHelperMethods.ToPublicMediaPath(mediaPath)
 			});
         }
 
@@ -541,7 +541,7 @@ namespace TwitchChatBot.Core.Services
 			{
 				Type = "alert",
 				Message = message,
-				MediaPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath),
+				MediaPath = CoreHelperMethods.ToPublicMediaPath(mediaPath),
 				ExtraData = extraData
 			});
 		}
