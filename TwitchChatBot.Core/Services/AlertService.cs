@@ -177,8 +177,9 @@ namespace TwitchChatBot.Core.Services
                         type = alert!.Type,
                         alertId,
                         message = alert.Message,
-                        media = alert.MediaPath
-                    };
+                        media = alert.MediaPath,
+						extraData = alert.ExtraData
+					};
 
                     if (!_webSocketServer.HasClientsConnected)
                     {

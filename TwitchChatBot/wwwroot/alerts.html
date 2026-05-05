@@ -73,109 +73,112 @@
             playAlert(data);
         }
 
-        function waitForEndOrTimeout(mediaEl, timeoutMs) {
-            return new Promise(resolve => {
-                let done = false;
+		function waitForEndOrTimeout(mediaEl, timeoutMs) {
+			return new Promise(resolve => {
+				let resolved = false;
 
-                const finish = () => {
-                    if (done) return;
-                    done = true;
-                    cleanup();
-                    resolve();
-                };
+				const finish = () => {
+					if (resolved) return;
+					resolved = true;
 
-                const cleanup = () => {
-                    mediaEl.onended = null;
-                    mediaEl.onerror = null;
-                };
+					mediaEl.onended = null;
+					mediaEl.onerror = null;
 
-                mediaEl.onended = finish;
-                mediaEl.onerror = finish;
+					resolve();
+				};
 
-                setTimeout(finish, timeoutMs);
-            });
-        }
+				// End events
+				mediaEl.onended = finish;
+				mediaEl.onerror = finish;
+
+				// 🔥 HARD timeout fallback
+				setTimeout(() => {
+					console.warn("FORCED TIMEOUT:", mediaEl.src);
+					finish();
+				}, timeoutMs);
+			});
+		}
 
         connectWebSocket();
 
 		async function playAlert(data) {
-			console.log("PLAY ALERT:", data);
-
 			playing = true;
 
-			const message = data.message;
-			const media = data.mediapath;
+			try {
+				const message = data.message || "";
+				const media = data.media; // keep consistent with backend
 
-			// Hide alert text initially
-			alertBox.innerHTML = "";
-			alertBox.style.opacity = 0;
+				// reset UI
+				alertBox.innerHTML = "";
+				alertBox.style.opacity = 0;
+				alertBox.style.display = "block";
+				mediaBox.innerHTML = "";
 
-			mediaBox.innerHTML = "";
+				// --- PLAY MEDIA ---
+				if (media && media.toLowerCase().includes(".mp4")) {
+					const video = document.createElement("video");
+					video.src = media;
+					video.autoplay = true;
+					video.playsInline = true;
+					video.muted = false;
+					video.volume = 1.0;
 
-			// --- PLAY MEDIA FIRST ---
-			if (media?.endsWith(".mp4")) {
-				const video = document.createElement("video");
-				video.src = media;
-				video.autoplay = true;
-				video.playsInline = true;
-				video.muted = false;
-				video.volume = 1.0;
+					mediaBox.appendChild(video);
 
-				mediaBox.appendChild(video);
+					await video.play().catch(() => null);
+					await waitForEndOrTimeout(video, 30000);
 
-				await video.play().catch(() => null);
-				await waitForEndOrTimeout(video, 30000);
-
-			} else if (media?.endsWith(".gif")) {
-				const img = document.createElement("img");
-				img.src = media;
-				mediaBox.appendChild(img);
-
-				await sleep(5000);
-
-			} else if (media?.endsWith(".mp3")) {
-				const audio = new Audio(media);
-				audio.volume = 1.0;
-
-				await audio.play().catch(() => null);
-				await waitForEndOrTimeout(audio, 30000);
-			} else {
-				await sleep(5000);
-			}
-
-			// --- NOW SHOW RAID INFO (ICON + TEXT) ---
-			if (data.extraData?.profileImage || message) {
-				const container = document.createElement("div");
-				container.className = "alert-container";
-
-				if (data.extraData?.profileImage) {
+				} else if (media && media.toLowerCase().includes(".gif")) {
 					const img = document.createElement("img");
-					img.src = data.extraData.profileImage;
-					img.className = "raid-profile";
-					container.appendChild(img);
+					img.src = media;
+					mediaBox.appendChild(img);
+					await sleep(5000);
+
+				} else if (media && media.toLowerCase().includes(".mp3")) {
+					const audio = new Audio(media);
+					await audio.play().catch(() => null);
+					await waitForEndOrTimeout(audio, 30000);
+
+				} else {
+					await sleep(3000);
 				}
 
-				const text = document.createElement("div");
-				text.className = "alert-text";
-				text.textContent = message || "";
+				// --- SHOW ICON + TEXT ---
+				if (data.extraData?.profileImage || message) {
+					const container = document.createElement("div");
+					container.className = "alert-container";
 
-				container.appendChild(text);
+					if (data.extraData?.profileImage) {
+						const img = document.createElement("img");
+						img.src = data.extraData.profileImage;
+						img.className = "raid-profile";
+						container.appendChild(img);
+					}
 
-				alertBox.appendChild(container);
-				alertBox.style.opacity = 1;
+					const text = document.createElement("div");
+					text.className = "alert-text";
+					text.textContent = message;
 
-				// Keep it on screen
-				await sleep(4000);
+					container.appendChild(text);
+
+					alertBox.innerHTML = "";
+					alertBox.appendChild(container);
+					alertBox.style.opacity = 1;
+
+					await sleep(4000);
+				}
+
+			} catch (err) {
+				console.error("Alert error:", err);
 			}
 
 			// --- CLEANUP ---
 			alertBox.style.opacity = 0;
-			mediaBox.innerHTML = "";
 			alertBox.innerHTML = "";
+			mediaBox.innerHTML = "";
 
 			playing = false;
 
-			// Notify server
 			if (ws && ws.readyState === WebSocket.OPEN) {
 				ws.send(JSON.stringify({ type: "done", alertId: currentAlertId }));
 			}
