@@ -52,48 +52,47 @@ namespace TwitchChatBot.Core.Services
         // Overload for default alert type
         public void EnqueueAlert(string message, string? mediaPath = null)
         {
-            EnqueueAlert("alert", message, mediaPath);
+            EnqueueAlert(new AlertItem
+			{
+				Type = "alert",
+				Message = message,
+				MediaPath = mediaPath
+			});
         }
 
-        // New overload that lets you specify type
-        public void EnqueueAlert(string type, string message, string? mediaPath = null)
-        {
-            // If media is not found do not try to play it
-            if (!string.IsNullOrWhiteSpace(mediaPath))
-            {
-                var absPath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath);
+		public void EnqueueAlert(AlertItem alert)
+		{
+			// If media is not found do not try to play it
+			if (!string.IsNullOrWhiteSpace(alert.MediaPath))
+			{
+				var absPath = CoreHelperMethods.ToAbsoluteMediaPath(alert.MediaPath);
 
-                if (!File.Exists(absPath))
-                {
-                    _logger.LogWarning(
-                        "⚠️ Alert skipped — media file not found. Type={Type} MediaPath={MediaPath}",
-                        type,
-                        absPath);
+				if (!File.Exists(absPath))
+				{
+					_logger.LogWarning(
+						"⚠️ Alert skipped — media file not found. Type={Type} MediaPath={MediaPath}",
+						alert.Type,
+						absPath);
 
-                    return;
-                }
-            }
+					return;
+				}
+			}
 
-            lock (_sync)
-            {
-                if (_alertQueue.Count >= MaxQueueSize)
-                {
-                    _logger.LogWarning("⚠️ Alert queue full ({Max}). Dropping oldest alert.", MaxQueueSize);
-                    _alertQueue.Dequeue();
-                }
+			lock (_sync)
+			{
+				if (_alertQueue.Count >= MaxQueueSize)
+				{
+					_logger.LogWarning("⚠️ Alert queue full ({Max}). Dropping oldest alert.", MaxQueueSize);
+					_alertQueue.Dequeue();
+				}
 
-                _alertQueue.Enqueue(new AlertItem
-                {
-                    Type = type,
-                    Message = message,
-                    Media = mediaPath
-                });
-            }
+				_alertQueue.Enqueue(alert);
+			}
 
-            SignalQueue();
-        }
+			SignalQueue();
+		}
 
-        private void SignalQueue()
+		private void SignalQueue()
         {
             try
             {
@@ -178,8 +177,9 @@ namespace TwitchChatBot.Core.Services
                         type = alert!.Type,
                         alertId,
                         message = alert.Message,
-                        media = alert.Media
-                    };
+                        media = alert.MediaPath,
+						extraData = alert.ExtraData
+					};
 
                     if (!_webSocketServer.HasClientsConnected)
                     {
@@ -218,7 +218,7 @@ namespace TwitchChatBot.Core.Services
                         "📤 Alert sent: {Type}, {Message}, Media: {Media}",
                         alert.Type,
                         alert.Message,
-                        alert.Media);
+                        alert.MediaPath);
 
                     var ackCompleted = await Task.WhenAny(
                         ackTcs!.Task,

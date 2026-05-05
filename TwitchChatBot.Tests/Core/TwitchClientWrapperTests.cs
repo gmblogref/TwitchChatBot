@@ -228,13 +228,13 @@ namespace TwitchChatBot.Tests.Core
 		}
 
 		[Fact]
-		public void HandleOnUserLeft_Should_RemoveUserFromTracking()
+		public async Task HandleOnUserLeft_Should_RemoveUserFromTracking()
 		{
 			AddRoleUser("_modList", "moduser");
 			_helixLookupServiceMock.Setup(x => x.GetUserIdByLoginAsync("moduser", default)).ReturnsAsync("123");
 
-			InvokePrivateAsync("HandleOnUserJoined", "moduser").GetAwaiter().GetResult();
-			InvokePrivate("HandleOnUserLeft", "moduser");
+			await InvokePrivateAsync("HandleOnUserJoined", "moduser");
+			await InvokePrivateAsync("HandleOnUserLeft", "moduser");
 
 			var result = _sut.GetGroupedViewers();
 

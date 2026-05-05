@@ -14,6 +14,9 @@ namespace TwitchChatBot.UI.Services
 		private SocketIO? _socket;
 		private bool _isRunning;
 
+		private CancellationTokenSource? _cts;
+		private Task? _runTask;
+
 		public StreamlabsDonationSocketService(
 			ILogger<StreamlabsDonationSocketService> logger,
 			IDonationAlertService donationAlertService)
@@ -22,13 +25,87 @@ namespace TwitchChatBot.UI.Services
 			_donationAlertService = donationAlertService;
 		}
 
-		public async Task StartAsync(CancellationToken cancellationToken = default)
+		public Task StartAsync(CancellationToken cancellationToken = default)
 		{
 			if (_isRunning)
+			{
+				return Task.CompletedTask;
+			}
+
+			_isRunning = true;
+
+			_logger.LogInformation("▶️ Starting Streamlabs donation service.");
+
+			_cts = new CancellationTokenSource();
+
+			_runTask = Task.Run(async () =>
+			{
+				try
+				{
+					await RunAsync(_cts.Token);
+				}
+				catch (OperationCanceledException)
+				{
+					_logger.LogInformation("Streamlabs donation service canceled.");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Streamlabs donation service crashed.");
+				}
+			}, _cts.Token);
+
+			return Task.CompletedTask;
+		}
+
+		public async Task StopAsync(CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("🛑 Stopping Streamlabs WebSocket...");
+
+			if (!_isRunning)
 			{
 				return;
 			}
 
+			_isRunning = false;
+
+			try
+			{
+				_cts?.Cancel();
+
+				if (_runTask != null)
+				{
+					await _runTask;
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// expected
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while stopping donation service.");
+			}
+
+			if (_socket != null)
+			{
+				try
+				{
+					await _socket.DisconnectAsync();
+				}
+				catch (Exception ex)
+				{
+					_logger.LogWarning(ex, "Error during socket disconnect.");
+				}
+
+				_socket.Dispose();
+				_socket = null;
+			}
+
+			_logger.LogInformation("✅ Streamlabs donation service stopped.");
+		}
+
+		private async Task RunAsync(CancellationToken cancellationToken)
+		{
 			var token = AppSettings.Streamlabs.SocketToken;
 
 			if (string.IsNullOrWhiteSpace(token))
@@ -37,11 +114,18 @@ namespace TwitchChatBot.UI.Services
 				return;
 			}
 
-			_socket = new SocketIO(new Uri($"{AppSettings.Streamlabs.SocketUrl}?token={token}"));
+			var uri = new Uri($"{AppSettings.Streamlabs.SocketUrl}?token={token}");
+
+			_socket = new SocketIO(uri);
 
 			_socket.OnConnected += (_, _) =>
 			{
-				_logger.LogInformation("Connected to Streamlabs donations.");
+				_logger.LogInformation("🔌 Connected to Streamlabs donations.");
+			};
+
+			_socket.OnDisconnected += (_, _) =>
+			{
+				_logger.LogWarning("⚠️ Disconnected from Streamlabs.");
 			};
 
 			_socket.On("event", async response =>
@@ -51,25 +135,11 @@ namespace TwitchChatBot.UI.Services
 
 			await _socket.ConnectAsync();
 
-			_isRunning = true;
-		}
-
-		public async Task StopAsync(CancellationToken cancellationToken = default)
-		{
-			_logger.LogInformation("🛑 Stopping Streamlabs WebSocket...");
-			if (!_isRunning)
+			// Keep alive loop
+			while (!cancellationToken.IsCancellationRequested)
 			{
-				return;
+				await Task.Delay(1000, cancellationToken);
 			}
-
-			if (_socket != null)
-			{
-				await _socket.DisconnectAsync();
-				_socket.Dispose();
-				_socket = null;
-			}
-
-			_isRunning = false;
 		}
 
 		private async Task HandleEventAsync(dynamic response)

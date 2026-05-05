@@ -197,7 +197,12 @@ namespace TwitchChatBot.Core.Services
 
         public async Task SendMessageAsync(string channel, string message)
         {
-            if (_twitchClient.IsConnected &&
+			_logger.LogInformation(
+				"Connected: {Connected}, JoinedChannels: {Count}",
+				_twitchClient.IsConnected,
+				_twitchClient.JoinedChannels.Count);
+
+			if (_twitchClient.IsConnected &&
                 _twitchClient.JoinedChannels.Any(c => c.Channel.Equals(channel, StringComparison.OrdinalIgnoreCase)))
             {
                 await _twitchClient.SendMessageAsync(channel, message);
