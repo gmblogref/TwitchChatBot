@@ -14,7 +14,7 @@ namespace TwitchChatBot.Tests.Core
 	public class WheelServiceTests
 	{
 		private readonly Mock<IWheelRepository> _wheelRepositoryMock = new();
-		private readonly Mock<ITwitchClientWrapper> _twitchClientWrapperMock = new();
+		private readonly Mock<IChatMessageService> _chatMessageServiceMock = new();
 		private readonly Mock<ITwitchAlertTypesService> _twitchAlertTypeMock = new();
 		private readonly Mock<ICommandAlertService> _commandAlertServiceMock = new();
 		private readonly Mock<IAlertService> _alertServiceMock = new();
@@ -30,7 +30,7 @@ namespace TwitchChatBot.Tests.Core
 
 			_sut = new WheelService(
 				_wheelRepositoryMock.Object,
-				_twitchClientWrapperMock.Object,
+				_chatMessageServiceMock.Object,
 				_twitchAlertTypeMock.Object,
 				_commandAlertServiceMock.Object,
 				_alertServiceMock.Object,

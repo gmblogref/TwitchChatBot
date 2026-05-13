@@ -13,8 +13,9 @@ namespace TwitchChatBot.UI.Services
         private readonly ILogger<EventSubSocketService> _logger;
         private readonly ITwitchAlertTypesService _twitchAlertTypesService;
         private readonly IHttpClientFactory _httpClientFactory;
+		private readonly IChannelPointRedemptionService _channelPointRedemptionService;
 
-        private readonly SemaphoreSlim _connectLock = new(1, 1);
+		private readonly SemaphoreSlim _connectLock = new(1, 1);
 
         private ClientWebSocket? _socket;
         private Task? _listenerTask;
@@ -31,11 +32,13 @@ namespace TwitchChatBot.UI.Services
         public EventSubSocketService(
             ILogger<EventSubSocketService> logger,
             ITwitchAlertTypesService twitchAlertTypesService,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+			IChannelPointRedemptionService channelPointRedemptionService)
         {
             _logger = logger;
             _twitchAlertTypesService = twitchAlertTypesService;
             _httpClientFactory = httpClientFactory;
+			_channelPointRedemptionService = channelPointRedemptionService;
         }
 
         public Task StartAsync(CancellationToken cancellationToken = default)
@@ -315,9 +318,7 @@ namespace TwitchChatBot.UI.Services
                                     }
                                 case TwitchEventTypes.ChannelPointsRedemption:
                                     {
-                                        userName = eventPayload.GetProperty("user_name").GetString() ?? userName;
-                                        var rewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? "";
-                                        await _twitchAlertTypesService.HandleChannelPointRedemptionAsync(userName, rewardTitle);
+										await HandleChannelPointRedemptionAsync(eventPayload);
                                         break;
                                     }
                                 case TwitchEventTypes.HypeTrainBegin:
@@ -363,7 +364,26 @@ namespace TwitchChatBot.UI.Services
             }
         }
 
-        private async Task SubscribeToEvents(string? sessionId)
+		private async Task HandleChannelPointRedemptionAsync(JsonElement eventPayload)
+		{
+			var redemption = new ChannelPointRedemptionEvent
+			{
+				RedemptionId = eventPayload.GetProperty("id").GetString() ?? string.Empty,
+				UserId = eventPayload.GetProperty("user_id").GetString() ?? string.Empty,
+				UserName = eventPayload.GetProperty("user_name").GetString() ?? "someone",
+				UserLogin = eventPayload.GetProperty("user_login").GetString() ?? string.Empty,
+				Status = eventPayload.GetProperty("status").GetString() ?? string.Empty,
+				UserInput = eventPayload.TryGetProperty("user_input", out var userInput)
+					? userInput.GetString() ?? string.Empty
+					: string.Empty,
+				RewardId = eventPayload.GetProperty("reward").GetProperty("id").GetString() ?? string.Empty,
+				RewardTitle = eventPayload.GetProperty("reward").GetProperty("title").GetString() ?? string.Empty
+			};
+
+			await _channelPointRedemptionService.HandleRedemptionAsync(redemption);
+		}
+
+		private async Task SubscribeToEvents(string? sessionId)
         {
             if (sessionId == null)
             {
