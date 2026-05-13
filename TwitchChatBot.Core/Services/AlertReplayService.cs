@@ -12,7 +12,7 @@ namespace TwitchChatBot.Core.Services
         private readonly ICommandAlertService _command;
         private readonly ITwitchAlertTypesService _twitch;
         private readonly ITtsService _tts;
-        private readonly ITwitchClientWrapper _twitchClient; // for sendMessage delegate
+        private readonly IChatMessageService _chatMessageService; // for sendMessage delegate
         private readonly IAppFlags _appFlags;
 
         public AlertReplayService(
@@ -22,7 +22,7 @@ namespace TwitchChatBot.Core.Services
             ICommandAlertService commandAlertService,
             ITwitchAlertTypesService twitchAlertTypesService,
             ITtsService ttsService,
-            ITwitchClientWrapper twitchClient,
+            IChatMessageService chatMessageService,
             IAppFlags appFlags)
         {
             _logger = logger;
@@ -31,7 +31,7 @@ namespace TwitchChatBot.Core.Services
             _command = commandAlertService;
             _twitch = twitchAlertTypesService;
             _tts = ttsService;
-            _twitchClient = twitchClient;
+            _chatMessageService = chatMessageService;
             _appFlags = appFlags;
         }
 
@@ -56,7 +56,7 @@ namespace TwitchChatBot.Core.Services
 
                     case AlertHistoryType.Cmd:
                         if (!string.IsNullOrWhiteSpace(e.CommandText))
-                            await _command.HandleCommandAsync(e.CommandText, e.UserId, e.Username ?? AppSettings.Ads.DefaultUserName, AppSettings.Twitch.TWITCH_CHANNEL, _twitchClient.SendMessage);
+                            await _command.HandleCommandAsync(e.CommandText, e.UserId, e.Username ?? AppSettings.Ads.DefaultUserName, AppSettings.Twitch.TWITCH_CHANNEL, _chatMessageService.SendMessage);
                         else
                             _logger.LogWarning("Replay Cmd: missing CommandText.");
                         break;

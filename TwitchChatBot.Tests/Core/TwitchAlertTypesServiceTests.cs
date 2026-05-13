@@ -103,10 +103,12 @@ namespace TwitchChatBot.Tests.Core
 
 			await _sut.HandleCheerAsync("Tyler", 350, "@chat lets go");
 
-			_alertServiceMock.Verify(x =>
-				x.EnqueueAlert(
-					It.IsAny<string>(),
-					It.Is<string>(m => m.Contains("tier350.mp4"))),
+			_alertServiceMock.Verify(
+				x => x.EnqueueAlert(It.Is<AlertItem>(item =>
+				item.Message.Contains("cheered", StringComparison.OrdinalIgnoreCase) &&
+				item.Message.Contains("350", StringComparison.OrdinalIgnoreCase) &&
+				item.MediaPath != null &&
+				item.MediaPath.Contains("tier350.mp4", StringComparison.OrdinalIgnoreCase))),
 				Times.Once);
 
 			_ttsServiceMock.Verify(x =>
@@ -147,10 +149,12 @@ namespace TwitchChatBot.Tests.Core
 
 			await _sut.HandleFollowAsync("Tyler");
 
-			_alertServiceMock.Verify(x =>
-				x.EnqueueAlert(
-					It.IsAny<string>(),
-					It.Is<string>(m => m.Contains("follow.mp4"))),
+			_alertServiceMock.Verify(
+				x => x.EnqueueAlert(It.Is<AlertItem>(item =>
+				item.Message.Contains("Tyler", StringComparison.OrdinalIgnoreCase) &&
+				item.Message.Contains("just followed", StringComparison.OrdinalIgnoreCase) &&
+				item.MediaPath != null &&
+				item.MediaPath.Contains("follow.mp4", StringComparison.OrdinalIgnoreCase))),
 				Times.Once);
 
 			_ttsServiceMock.Verify(x =>
@@ -200,10 +204,11 @@ namespace TwitchChatBot.Tests.Core
 
 			await _sut.HandleChannelPointRedemptionAsync("Tyler", "KOBE");
 
-			_alertServiceMock.Verify(x =>
-				x.EnqueueAlert(
-					It.IsAny<string>(),
-					It.Is<string>(m => m.Contains("kobe.mp4"))),
+			_alertServiceMock.Verify(
+				x => x.EnqueueAlert(It.Is<AlertItem>(item =>
+				item.Message.Contains("redeemed", StringComparison.OrdinalIgnoreCase) &&
+				item.MediaPath != null &&
+				item.MediaPath.Contains("kobe.mp4", StringComparison.OrdinalIgnoreCase))),
 				Times.Once);
 
 			_ttsServiceMock.Verify(x =>

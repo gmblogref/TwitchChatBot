@@ -234,7 +234,7 @@ namespace TwitchChatBot.Tests.Core
 			_helixLookupServiceMock.Setup(x => x.GetUserIdByLoginAsync("moduser", default)).ReturnsAsync("123");
 
 			await InvokePrivateAsync("HandleOnUserJoined", "moduser");
-			await InvokePrivateAsync("HandleOnUserLeft", "moduser");
+			InvokePrivate("HandleOnUserLeft", "moduser");
 
 			var result = _sut.GetGroupedViewers();
 

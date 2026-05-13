@@ -9,7 +9,7 @@ namespace TwitchChatBot.Core.Services
 	public class WheelService : IWheelService
 	{
 		private readonly IWheelRepository _wheelRepository;
-		private readonly ITwitchClientWrapper _twitchClientWrapper;
+		private readonly IChatMessageService _chatMessageService;
 		private readonly ITwitchAlertTypesService _twitchAlertTypesService;
 		private readonly ICommandAlertService _commandAlertService;
 		private readonly IAlertService _alertService;
@@ -21,7 +21,7 @@ namespace TwitchChatBot.Core.Services
 		
 		public WheelService(
 			IWheelRepository wheelRepository,
-			ITwitchClientWrapper twitchClientWrapper,
+			IChatMessageService chatMessageService,
 			ITwitchAlertTypesService twitchAlertTypesService,
 			ICommandAlertService commandAlertService,
 			IAlertService alertService,
@@ -30,7 +30,7 @@ namespace TwitchChatBot.Core.Services
 
 		{
 			_wheelRepository = wheelRepository;
-			_twitchClientWrapper = twitchClientWrapper;
+			_chatMessageService = chatMessageService;
 			_twitchAlertTypesService = twitchAlertTypesService;
 			_commandAlertService = commandAlertService;
 			_alertService = alertService;
@@ -301,7 +301,7 @@ namespace TwitchChatBot.Core.Services
 								if (!string.IsNullOrWhiteSpace(item.AlertKey))
 								{
 									await _commandAlertService.HandleCommandAsync(item.AlertKey, AppSettings.Twitch.TWITCH_USER_ID, 
-										AppSettings.Twitch.TWITCH_CHANNEL!, AppSettings.Twitch.TWITCH_CHANNEL!, _twitchClientWrapper.SendMessage);
+										AppSettings.Twitch.TWITCH_CHANNEL!, AppSettings.Twitch.TWITCH_CHANNEL!, _chatMessageService.SendMessage);
 									return;
 								}
 								_logger.LogWarning("Wheel item missing AlertKey for command");

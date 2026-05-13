@@ -522,7 +522,7 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private void EnqueueAlertWithMedia(string message, string mediaPath)
+		private void EnqueueAlertWithMedia(string message, string mediaPath)
         {
             if (string.IsNullOrWhiteSpace(mediaPath))
                 return;
