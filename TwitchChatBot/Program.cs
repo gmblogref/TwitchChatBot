@@ -94,6 +94,7 @@ namespace TwitchChatBot
 			services.TryAddSingleton<IWheelService, WheelService>();
 			services.TryAddSingleton<IDonationAlertService, DonationAlertService>();
 			services.TryAddSingleton<IChannelPointRedemptionLockService, ChannelPointRedemptionLockService>();
+			services.TryAddSingleton<IChannelPointRedemptionStatusService, ChannelPointRedemptionStatusService>();
 			services.TryAddSingleton<IChannelPointRedemptionService, ChannelPointRedemptionService>();
 			services.AddSingleton<IChatMessageService, ChatMessageService>();
 
