@@ -23,7 +23,8 @@ namespace TwitchChatBot.Core.Services
         private readonly IIRCNoticeService _ircNoticeService;
         private readonly ITwitchAlertTypesService _twitchAlertTypesService;
         private readonly IHelixLookupService _helixLookupService;
-        private System.Threading.Timer? _adTimer;
+		private readonly IGiftSubBundleSuppressionService _giftSubBundleSuppressionService;
+		private System.Threading.Timer? _adTimer;
         private bool _disposed = false;
 
         private readonly HashSet<string> _connectedUsers = new(StringComparer.OrdinalIgnoreCase);
@@ -59,7 +60,8 @@ namespace TwitchChatBot.Core.Services
                 IWatchStreakService watchStreakService,
                 IIRCNoticeService ircNoticeService,
                 ITwitchAlertTypesService twitchAlertTypesService,
-                IHelixLookupService helixLookupService)
+                IHelixLookupService helixLookupService,
+				IGiftSubBundleSuppressionService giftSubBundleSuppressionService)
         {
             _logger = logger;
             _commandAlertService = commandAlertService;
@@ -70,8 +72,9 @@ namespace TwitchChatBot.Core.Services
             _ircNoticeService = ircNoticeService;
             _twitchAlertTypesService = twitchAlertTypesService;
             _helixLookupService = helixLookupService;
+			_giftSubBundleSuppressionService = giftSubBundleSuppressionService;
 
-            try
+			try
             {
                 var credentials = new ConnectionCredentials(AppSettings.Twitch.TWITCH_BOT_USERNAME, AppSettings.Auth.TWITCH_OAUTH_TOKEN);
                 _twitchClient = new TwitchClient();
@@ -455,14 +458,14 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private async Task HandleOnNewSubscriberAsync(TwitchLib.Client.Events.OnNewSubscriberArgs e)
+        private async Task HandleOnNewSubscriberAsync(OnNewSubscriberArgs e)
         {
             var user = e.Subscriber?.DisplayName ?? e.Subscriber?.Login ?? AppSettings.Ads.DefaultUserName;
             var tier = ConvertPlanToTier(e.Subscriber?.MsgParamSubPlan);
             await _twitchAlertTypesService.HandleSubscriptionAsync(user, tier);
         }
 
-        private async Task HandleOnReSubscriberAsync(TwitchLib.Client.Events.OnReSubscriberArgs e)
+        private async Task HandleOnReSubscriberAsync(OnReSubscriberArgs e)
         {
             // DisplayName/Login
             var username = e.ReSubscriber?.DisplayName ?? e.ReSubscriber?.Login ?? AppSettings.Ads.DefaultUserName;
@@ -482,25 +485,42 @@ namespace TwitchChatBot.Core.Services
             await _twitchAlertTypesService.HandleResubAsync(username, months, message, tier);
         }
 
-        private async Task HandleOnGiftedSubscriptionAsync(TwitchLib.Client.Events.OnGiftedSubscriptionArgs e)
+        private async Task HandleOnGiftedSubscriptionAsync(OnGiftedSubscriptionArgs e)
         {
             var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.Ads.DefaultUserName;
-            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? e.GiftedSubscription?.MsgParamRecipientUserName ?? AppSettings.Ads.DefaultUserName;
+            var recipient = e.GiftedSubscription?.MsgParamRecipientUserName ?? AppSettings.Ads.DefaultUserName;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
-            await _twitchAlertTypesService.HandleSubGiftAsync(gifter, recipient, tier);
+
+			if (_giftSubBundleSuppressionService.ShouldSuppressIndividualGift(gifter))
+			{
+				_logger.LogInformation(
+					"🎁 Suppressed individual gifted sub from {Gifter} to {Recipient}.",
+					gifter,
+					recipient);
+
+				return;
+			}
+
+			await _twitchAlertTypesService.HandleSubGiftAsync(gifter, recipient, tier);
         }
 
-        private async Task HandleOnCommunitySubscriptionAsync(TwitchLib.Client.Events.OnCommunitySubscriptionArgs e)
+        private async Task HandleOnCommunitySubscriptionAsync(OnCommunitySubscriptionArgs e)
         {
             var gifter = e.GiftedSubscription?.DisplayName ?? e.GiftedSubscription?.Login ?? AppSettings.Ads.DefaultUserName;
             var count = (e.GiftedSubscription?.MsgParamMassGiftCount ?? 0) > 0
                 ? e.GiftedSubscription!.MsgParamMassGiftCount
                 : 1;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
-            await _twitchAlertTypesService.HandleSubMysteryGiftAsync(gifter, count, tier);
+
+			if (count > 1)
+			{
+				_giftSubBundleSuppressionService.TrackBundle(gifter, count);
+			}
+
+			await _twitchAlertTypesService.HandleSubMysteryGiftAsync(gifter, count, tier);
         }
 
-        private async Task HandleOnRaidNotificationAsync(TwitchLib.Client.Events.OnRaidNotificationArgs e)
+        private async Task HandleOnRaidNotificationAsync(OnRaidNotificationArgs e)
         {
             var raiderDisplay = e.RaidNotification?.MsgParamDisplayName ?? AppSettings.Ads.DefaultUserName;
             var raiderUserId = e.RaidNotification?.UserId ?? string.Empty;
