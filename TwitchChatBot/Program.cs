@@ -97,6 +97,7 @@ namespace TwitchChatBot
 			services.TryAddSingleton<IChannelPointRedemptionStatusService, ChannelPointRedemptionStatusService>();
 			services.TryAddSingleton<IChannelPointRedemptionService, ChannelPointRedemptionService>();
 			services.AddSingleton<IChatMessageService, ChatMessageService>();
+			services.TryAddSingleton<IGiftSubBundleSuppressionService, GiftSubBundleSuppressionService>();
 
 			services.TryAddSingleton<IFirstChatterAlertService>(sp =>
             new FirstChatterAlertService(

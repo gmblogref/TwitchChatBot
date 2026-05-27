@@ -24,6 +24,7 @@ namespace TwitchChatBot.Tests.Core
 		private readonly Mock<IIRCNoticeService> _ircNoticeServiceMock = new();
 		private readonly Mock<ITwitchAlertTypesService> _twitchAlertTypesServiceMock = new();
 		private readonly Mock<IHelixLookupService> _helixLookupServiceMock = new();
+		private readonly Mock<IGiftSubBundleSuppressionService> _giftSubBundleSuppressionServiceMock = new();
 
 		private readonly TwitchClientWrapper _sut;
 
@@ -40,7 +41,8 @@ namespace TwitchChatBot.Tests.Core
 				_watchStreakServiceMock.Object,
 				_ircNoticeServiceMock.Object,
 				_twitchAlertTypesServiceMock.Object,
-				_helixLookupServiceMock.Object);
+				_helixLookupServiceMock.Object,
+				_giftSubBundleSuppressionServiceMock.Object);
 		}
 
 		// =========================
@@ -101,6 +103,52 @@ namespace TwitchChatBot.Tests.Core
 
 			var args = (OnMessageReceivedArgs)FormatterServices.GetUninitializedObject(typeof(OnMessageReceivedArgs));
 			SetAutoProperty(args, "ChatMessage", chatMessage);
+
+			return args;
+		}
+
+		private OnGiftedSubscriptionArgs GiftedSubscriptionArgs(
+			string gifter,
+			string recipient,
+			TwitchLib.Client.Enums.SubscriptionPlan plan = TwitchLib.Client.Enums.SubscriptionPlan.Tier1)
+		{
+			var giftedSubscription = FormatterServices.GetUninitializedObject(
+				typeof(GiftedSubscription));
+
+			SetAutoProperty(giftedSubscription, "DisplayName", gifter);
+			SetAutoProperty(giftedSubscription, "Login", gifter);
+			SetAutoProperty(giftedSubscription, "MsgParamRecipientUserName", recipient);
+			SetAutoProperty(giftedSubscription, "MsgParamSubPlan", plan);
+
+			var args = (OnGiftedSubscriptionArgs)FormatterServices.GetUninitializedObject(
+				typeof(OnGiftedSubscriptionArgs));
+
+			SetAutoProperty(args, "GiftedSubscription", giftedSubscription);
+
+			return args;
+		}
+
+		private OnCommunitySubscriptionArgs CommunitySubscriptionArgs(
+			string gifter,
+			int count,
+			TwitchLib.Client.Enums.SubscriptionPlan plan = TwitchLib.Client.Enums.SubscriptionPlan.Tier1)
+		{
+			var communitySubscription = FormatterServices.GetUninitializedObject(
+				typeof(CommunitySubscription));
+
+			SetAutoProperty(communitySubscription, "DisplayName", gifter);
+			SetAutoProperty(communitySubscription, "Login", gifter);
+			SetAutoProperty(communitySubscription, "MsgParamSubPlan", plan);
+
+			if (count > 0)
+			{
+				SetAutoProperty(communitySubscription, "MsgParamMassGiftCount", count);
+			}
+
+			var args = (OnCommunitySubscriptionArgs)FormatterServices.GetUninitializedObject(
+				typeof(OnCommunitySubscriptionArgs));
+
+			SetAutoProperty(args, "GiftedSubscription", communitySubscription);
 
 			return args;
 		}
@@ -239,6 +287,102 @@ namespace TwitchChatBot.Tests.Core
 			var result = _sut.GetGroupedViewers();
 
 			result.Should().NotContain(x => x.Username == "moduser");
+		}
+
+		[Fact]
+		public async Task HandleOnGiftedSubscriptionAsync_Should_SuppressIndividualGift_WhenSuppressionIsActive()
+		{
+			// Arrange
+			var args = GiftedSubscriptionArgs("GiftBoss", "ViewerOne");
+
+			_giftSubBundleSuppressionServiceMock
+				.Setup(x => x.ShouldSuppressIndividualGift("GiftBoss"))
+				.Returns(true);
+
+			// Act
+			await InvokePrivateAsync("HandleOnGiftedSubscriptionAsync", args);
+
+			// Assert
+			_giftSubBundleSuppressionServiceMock.Verify(
+				x => x.ShouldSuppressIndividualGift("GiftBoss"),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubGiftAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+				Times.Never);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubMysteryGiftAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()),
+				Times.Never);
+		}
+
+		[Fact]
+		public async Task HandleOnGiftedSubscriptionAsync_Should_HandleSubGift_WhenSuppressionIsNotActive()
+		{
+			// Arrange
+			var args = GiftedSubscriptionArgs("GiftBoss", "ViewerOne");
+
+			_giftSubBundleSuppressionServiceMock
+				.Setup(x => x.ShouldSuppressIndividualGift("GiftBoss"))
+				.Returns(false);
+
+			// Act
+			await InvokePrivateAsync("HandleOnGiftedSubscriptionAsync", args);
+
+			// Assert
+			_giftSubBundleSuppressionServiceMock.Verify(
+				x => x.ShouldSuppressIndividualGift("GiftBoss"),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubGiftAsync("GiftBoss", "ViewerOne", "1000"),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubMysteryGiftAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()),
+				Times.Never);
+		}
+
+		[Fact]
+		public async Task HandleOnCommunitySubscriptionAsync_Should_TrackBundle_And_HandleMysteryGift()
+		{
+			// Arrange
+			var args = CommunitySubscriptionArgs("GiftBoss", 20);
+
+			// Act
+			await InvokePrivateAsync("HandleOnCommunitySubscriptionAsync", args);
+
+			// Assert
+			_giftSubBundleSuppressionServiceMock.Verify(
+				x => x.TrackBundle("GiftBoss", 20),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubMysteryGiftAsync("GiftBoss", 20, "1000"),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubGiftAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+				Times.Never);
+		}
+
+		[Fact]
+		public async Task HandleOnCommunitySubscriptionAsync_Should_DefaultCountToOne_WhenMassGiftCountIsZero()
+		{
+			// Arrange
+			var args = CommunitySubscriptionArgs("GiftBoss", 0);
+
+			// Act
+			await InvokePrivateAsync("HandleOnCommunitySubscriptionAsync", args);
+
+			// Assert
+			_giftSubBundleSuppressionServiceMock.Verify(
+				x => x.TrackBundle("GiftBoss", 1),
+				Times.Once);
+
+			_twitchAlertTypesServiceMock.Verify(
+				x => x.HandleSubMysteryGiftAsync("GiftBoss", 1, "1000"),
+				Times.Once);
 		}
 	}
 }
