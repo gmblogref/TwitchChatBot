@@ -512,10 +512,7 @@ namespace TwitchChatBot.Core.Services
                 : 1;
             var tier = ConvertPlanToTier(e.GiftedSubscription?.MsgParamSubPlan);
 
-			if (count > 1)
-			{
-				_giftSubBundleSuppressionService.TrackBundle(gifter, count);
-			}
+			_giftSubBundleSuppressionService.TrackBundle(gifter, count);
 
 			await _twitchAlertTypesService.HandleSubMysteryGiftAsync(gifter, count, tier);
         }
