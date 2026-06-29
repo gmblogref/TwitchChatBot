@@ -31,7 +31,7 @@ namespace TwitchChatBot.Tests.Core
 		}
 
 		[Fact]
-		public void TryUseRewardGroup_ShouldAllowFirstRewardInLockGroup()
+		public void TryUseRewardGroup_ShouldAllowReward_WhenRewardIsJusticeForPuppies()
 		{
 			var service = CreateService();
 
@@ -41,12 +41,12 @@ namespace TwitchChatBot.Tests.Core
 				"Justice For Puppies");
 
 			result.IsAllowed.Should().BeTrue();
-			result.GroupName.Should().Be("DogTreats");
+			result.GroupName.Should().BeEmpty();
 			result.Message.Should().BeEmpty();
 		}
 
 		[Fact]
-		public void TryUseRewardGroup_ShouldBlockSecondRewardInSameLockGroupForSameUser()
+		public void TryUseRewardGroup_ShouldAllowTripleJustice_WhenSameUserAlreadyUsedJusticeForPuppies()
 		{
 			var service = CreateService();
 
@@ -60,34 +60,33 @@ namespace TwitchChatBot.Tests.Core
 				"TestUser",
 				"Triple Justice");
 
-			result.IsAllowed.Should().BeFalse();
-			result.GroupName.Should().Be("DogTreats");
-			result.Message.Should().Contain("@TestUser");
-			result.Message.Should().Contain("Justice For Puppies");
-			result.Message.Should().Contain("Triple Justice");
+			result.IsAllowed.Should().BeTrue();
+			result.GroupName.Should().BeEmpty();
+			result.Message.Should().BeEmpty();
 		}
 
 		[Fact]
-		public void TryUseRewardGroup_ShouldNotBlockDifferentUsersInSameLockGroup()
+		public void TryUseRewardGroup_ShouldAllowJusticeForPuppies_WhenSameUserAlreadyUsedTripleJustice()
 		{
 			var service = CreateService();
 
-			var firstUserResult = service.TryUseRewardGroup(
+			service.TryUseRewardGroup(
 				"user-123",
-				"FirstUser",
-				"Justice For Puppies");
-
-			var secondUserResult = service.TryUseRewardGroup(
-				"user-456",
-				"SecondUser",
+				"TestUser",
 				"Triple Justice");
 
-			firstUserResult.IsAllowed.Should().BeTrue();
-			secondUserResult.IsAllowed.Should().BeTrue();
+			var result = service.TryUseRewardGroup(
+				"user-123",
+				"TestUser",
+				"Justice For Puppies");
+
+			result.IsAllowed.Should().BeTrue();
+			result.GroupName.Should().BeEmpty();
+			result.Message.Should().BeEmpty();
 		}
 
 		[Fact]
-		public void TryUseRewardGroup_ShouldMatchRewardTitlesCaseInsensitive()
+		public void TryUseRewardGroup_ShouldAllowDogTreatRewards_WhenRewardTitlesHaveDifferentCasing()
 		{
 			var service = CreateService();
 
@@ -101,12 +100,13 @@ namespace TwitchChatBot.Tests.Core
 				"TestUser",
 				"TRIPLE JUSTICE");
 
-			result.IsAllowed.Should().BeFalse();
-			result.GroupName.Should().Be("DogTreats");
+			result.IsAllowed.Should().BeTrue();
+			result.GroupName.Should().BeEmpty();
+			result.Message.Should().BeEmpty();
 		}
 
 		[Fact]
-		public void Clear_ShouldResetUsedRewardGroups()
+		public void Clear_ShouldNotBlockDogTreatRewards_WhenCalledBetweenRedemptions()
 		{
 			var service = CreateService();
 
@@ -127,12 +127,12 @@ namespace TwitchChatBot.Tests.Core
 				"TestUser",
 				"Triple Justice");
 
-			blockedResult.IsAllowed.Should().BeFalse();
+			blockedResult.IsAllowed.Should().BeTrue();
 			allowedAfterClearResult.IsAllowed.Should().BeTrue();
 		}
 
 		[Fact]
-		public void TryUseRewardGroup_ShouldFallbackToUserName_WhenUserIdIsEmpty()
+		public void TryUseRewardGroup_ShouldAllowTripleJustice_WhenUserIdIsEmptyAndSameUserAlreadyUsedJusticeForPuppies()
 		{
 			var service = CreateService();
 
@@ -146,8 +146,9 @@ namespace TwitchChatBot.Tests.Core
 				"TestUser",
 				"Triple Justice");
 
-			result.IsAllowed.Should().BeFalse();
-			result.GroupName.Should().Be("DogTreats");
+			result.IsAllowed.Should().BeTrue();
+			result.GroupName.Should().BeEmpty();
+			result.Message.Should().BeEmpty();
 		}
 
 		private ChannelPointRedemptionLockService CreateService()

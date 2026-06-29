@@ -9,19 +9,7 @@ namespace TwitchChatBot.Core.Services
 		private readonly ILogger<ChannelPointRedemptionLockService> _logger;
 		private readonly HashSet<string> _usedRewardGroups = new(StringComparer.OrdinalIgnoreCase);
 
-		// TODO: Move reward lock groups to JSON configuration after mutual exclusion behavior is proven.
-		private readonly List<ChannelPointRewardLockGroup> _lockGroups = new()
-		{
-			new ChannelPointRewardLockGroup
-			{
-				GroupName = "DogTreats",
-				RewardTitles = new List<string>
-				{
-					"Justice For Puppies",
-					"Triple Justice"
-				}
-			}
-		};
+		private readonly List<ChannelPointRewardLockGroup> _lockGroups = new();
 
 		public ChannelPointRedemptionLockService(ILogger<ChannelPointRedemptionLockService> logger)
 		{
