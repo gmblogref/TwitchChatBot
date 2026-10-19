@@ -52,32 +52,18 @@ The system uses dependency injection and separation of concerns to keep alert lo
 
 ## Configuration
 
-The repository includes an `appsettings.example.json` file containing configuration keys only.
+The tracked `TwitchChatBot/appsettings.example.json` file defines the configuration structure and contains placeholders only. Copy it to `TwitchChatBot/appsettings.json` for required base settings. Store local credentials in `TwitchChatBot/appsettings.Development.json`; both local files are ignored by Git and must never be committed.
 
-⚠️ This file does **not** contain any secrets.
+Configuration loads in this order:
 
-To run the application:
+1. `appsettings.json` supplies required base settings.
+2. `appsettings.Development.json`, when present, overrides matching base values and is the recommended location for local credentials.
 
-1. Copy the template config:
-   - Rename `TwitchChatBot/appsettings.example.json` to `TwitchChatBot/appsettings.json`
-2. Fill in your values in `appsettings.json` (local only).
-   - **Do not commit this file.** It is ignored by `.gitignore`.
-3. Populate required values such as:
-   - Twitch Client ID
-   - Access Tokens
-   - EventSub configuration
-   - Media paths
-4. Do **not** commit any real tokens or credentials.
-5. (Recommended) Create an override file for secrets:
-   - Create `TwitchChatBot/appsettings.Development.json`
-   - Put sensitive values (tokens/secrets) there.
-   - This file is also ignored by `.gitignore`.
+The Streamlabs donation integration and OpenAI API key are optional. Leaving the Streamlabs URL or token blank disables that integration. All other runtime-used keys represented by the example template are validated at startup; placeholder credentials satisfy the configuration schema but do not authenticate against external services.
 
-The application loads configuration in this order:
-- `appsettings.json`
-- `appsettings.Development.json` (overrides base values if present)
+Local builds continue to copy `appsettings.json` and `appsettings.Development.json` beside the executable so the existing development workflow works. Publish output excludes those local files and includes only `appsettings.example.json`. After publishing, each developer or operator must provide their own `appsettings.json` (and optional override) beside the application before running it.
 
-Sensitive configuration files are excluded via `.gitignore`.
+Do not distribute existing `bin/Debug`, `bin/Release`, or other generated output folders without inspecting them: earlier or local builds may contain copied personal credentials. The publish exclusion does not remove configuration files already present in generated folders.
 
 ---
 

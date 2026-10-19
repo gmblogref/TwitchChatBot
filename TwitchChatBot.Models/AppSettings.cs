@@ -4,6 +4,78 @@ namespace TwitchChatBot.Models
 {
     public static class AppSettings
     {
+        private static readonly IReadOnlyCollection<string> RequiredStringSettings = new[]
+        {
+            "Twitch:BotUsername",
+            "Twitch:Channel",
+            "Twitch:BotUserId",
+            "Twitch:BroadcasterUserId",
+            "Twitch:TwitchUrl",
+            "Auth:TwitchClientId",
+            "Auth:OAuthToken",
+            "Auth:OAuthBearerBot",
+            "Auth:AccessToken",
+            "Ads:DefaultUserName",
+            "Webhost:BaseUrl",
+            "Webhost:WebRoot",
+            "EventSub:Uri",
+            "EventSub:PostSubscriptionsurl",
+            "EventSub:Validate",
+            "MediaMapFiles:TwitchAlertMedia",
+            "MediaMapFiles:ExcludedUsersMedia",
+            "MediaMapFiles:FirstChattersMedia",
+            "MediaMapFiles:CommandAlertMedia",
+            "MediaMapFiles:UserWatchStreakMedia",
+            "MediaMapFiles:WheelMedia",
+            "MediaMapFiles:DonationMedia",
+            "MediaBase:TwitchAlertsFolder",
+            "Chatters:ModsUrl",
+            "Chatters:VipUrl",
+            "TTS:PollyRegion",
+            "TTS:DefaultSpeaker",
+            "TTS:Voices:Cheer",
+            "TTS:Voices:Subscribe",
+            "TTS:Voices:SubscriptionMessage",
+            "TTS:Voices:GiftSubs",
+            "TTS:Voices:Raid",
+            "TTS:Voices:Follow",
+            "TTS:Voices:SingleGiftSub",
+            "TTS:Voices:WatchStreak",
+            "TTS:Voices:ChannelPoints",
+            "TTS:Templates:Follow",
+            "TTS:Templates:Raid",
+            "TTS:Templates:CheerNoMessage",
+            "TTS:Templates:SubNoMessage",
+            "TTS:Templates:ReSub",
+            "TTS:Templates:MysteryGift",
+            "TTS:Templates:SingleGiftSub",
+            "TTS:Templates:WatchStreak",
+            "Commands:UsersByLogin",
+            "Commands:StreamsByUserId",
+            "Commands:ChannelInfoByBroadcasterId",
+            "Commands:VideosByUserId",
+            "Commands:GamesByGameId",
+            "OpenAI:BaseUrl",
+            "OpenAI:Model",
+            "OpenAI:DefaultAlertTone"
+        };
+
+        private static readonly IReadOnlyDictionary<string, int> RequiredIntegerSettings =
+            new Dictionary<string, int>
+            {
+                ["Ads:AdInitialSeconds"] = 0,
+                ["Ads:AdIntervalMinutes"] = 1,
+                ["TTS:MaxChars"] = 1,
+                ["OpenAI:DefaultAlertMaxWords"] = 1,
+                ["OpenAI:WatchStreakThreshold"] = 0,
+                ["OpenAI:GiftSubThreshold"] = 0,
+                ["AlertSettings:AlertTimeOut"] = 1,
+                ["AlertSettings:AcknowledgeTimeOut"] = 1,
+                ["AlertSettings:MaxQueueSize"] = 1,
+                ["AlertSettings:MaxOfflineQueueTime"] = 1,
+                ["AlertSettings:RetryTaskDelay"] = 1
+            };
+
         public static IConfiguration? Configuration { get; set; }
 
         public static class Twitch
@@ -129,8 +201,8 @@ namespace TwitchChatBot.Models
         public static class OpenAI
         {
             public static string BaseUrl => GetStringSetting("OpenAI:BaseUrl");
-            public static string ApiKey => GetStringSetting("OpenAI:ApiKey");
-            public static string Model => GetStringSetting("OpenAI:Model") ?? "gpt-4o-mini";
+            public static string ApiKey => GetOptionalStringSetting("OpenAI:ApiKey") ?? string.Empty;
+            public static string Model => GetStringSetting("OpenAI:Model");
             public static string DefaultAlertTone => GetStringSetting("OpenAI:DefaultAlertTone");
             public static int DefaultAlertMaxWords => GetIntSetting("OpenAI:DefaultAlertMaxWords");
             public static int WatchStreakThreshold => GetIntSetting("OpenAI:WatchStreakThreshold");
@@ -148,20 +220,77 @@ namespace TwitchChatBot.Models
 
 		public static class Streamlabs
 		{
-			public static string SocketUrl => GetStringSetting("Streamlabs:SocketUrl");
-			public static string SocketToken => GetStringSetting("Streamlabs:SocketToken");
+			public static string SocketUrl => GetOptionalStringSetting("Streamlabs:SocketUrl") ?? string.Empty;
+			public static string SocketToken => GetOptionalStringSetting("Streamlabs:SocketToken") ?? string.Empty;
+			public static bool IsConfigured =>
+				!string.IsNullOrWhiteSpace(SocketUrl) &&
+				!string.IsNullOrWhiteSpace(SocketToken);
 		}
+
+        public static IReadOnlyList<string> ValidateRequiredSettings(IConfiguration configuration)
+        {
+            var errors = new List<string>();
+
+            foreach (string key in RequiredStringSettings)
+            {
+                if (string.IsNullOrWhiteSpace(configuration[key]))
+                {
+                    errors.Add($"Missing required configuration key: '{key}'.");
+                }
+            }
+
+            IConfigurationSection allowedVoices = configuration.GetSection("TTS:AllowedVoices");
+            bool hasAllowedVoices =
+                allowedVoices.GetChildren().Any(child => !string.IsNullOrWhiteSpace(child.Value)) ||
+                !string.IsNullOrWhiteSpace(configuration["TTS:AllowedVoices"]);
+            if (!hasAllowedVoices)
+            {
+                errors.Add("Missing required configuration section: 'TTS:AllowedVoices'.");
+            }
+
+            foreach (KeyValuePair<string, int> setting in RequiredIntegerSettings)
+            {
+                string? value = configuration[setting.Key];
+
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add($"Missing required configuration key: '{setting.Key}'.");
+                    continue;
+                }
+
+                if (!int.TryParse(value, out int parsedValue))
+                {
+                    errors.Add($"Configuration key '{setting.Key}' must be a valid integer.");
+                    continue;
+                }
+
+                if (parsedValue < setting.Value)
+                {
+                    errors.Add($"Configuration key '{setting.Key}' must be at least {setting.Value}.");
+                }
+            }
+
+            return errors;
+        }
 
 		public static string GetStringSetting(string key)
         {
-            var value = Configuration![key];
+            IConfiguration configuration = Configuration
+                ?? throw new InvalidOperationException("Application configuration has not been initialized.");
+            string? value = configuration[key];
 
             if (value == null)
             {
                 throw new ArgumentOutOfRangeException($"Couldn't locate an application setting with key of: '{key}'");
             }
 
-            return value ?? string.Empty;
+            return value;
+        }
+
+        public static string? GetOptionalStringSetting(string key)
+        {
+            string? value = Configuration?[key];
+            return string.IsNullOrWhiteSpace(value) ? null : value;
         }
 
         public static HashSet<string> GetListStringSetting(string key)
@@ -170,7 +299,9 @@ namespace TwitchChatBot.Models
             // 1) JSON array: "ClearNukeUsers": ["a","b"]
             // 2) config style: "ClearNukeUsers": "a,b" (optional fallback)
 
-            var section = Configuration!.GetSection(key);
+            IConfiguration configuration = Configuration
+                ?? throw new InvalidOperationException("Application configuration has not been initialized.");
+            IConfigurationSection section = configuration.GetSection(key);
 
             // If it’s a JSON array, it will have children
             if (section.Exists() && section.GetChildren().Any())
@@ -184,7 +315,7 @@ namespace TwitchChatBot.Models
             }
 
             // Optional fallback: comma-separated string
-            var value = Configuration![key];
+            string? value = configuration[key];
 
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -198,14 +329,21 @@ namespace TwitchChatBot.Models
                 
         public static int GetIntSetting(string key)
         {
-            var value = Configuration![key];
+            IConfiguration configuration = Configuration
+                ?? throw new InvalidOperationException("Application configuration has not been initialized.");
+            string? value = configuration[key];
 
             if (value == null)
             {
                 throw new ArgumentOutOfRangeException($"Couldn't locate an application setting with key of: '{key}'");
             }
 
-            return int.TryParse(value, out var result) ? result : 0;
+            if (!int.TryParse(value, out int result))
+            {
+                throw new FormatException($"Application setting '{key}' must be a valid integer.");
+            }
+
+            return result;
         }
     }
 }

@@ -32,6 +32,12 @@ namespace TwitchChatBot.UI.Services
 				return Task.CompletedTask;
 			}
 
+			if (!AppSettings.Streamlabs.IsConfigured)
+			{
+				_logger.LogInformation("Streamlabs donation service is disabled because its optional configuration is incomplete.");
+				return Task.CompletedTask;
+			}
+
 			_isRunning = true;
 
 			_logger.LogInformation("▶️ Starting Streamlabs donation service.");
@@ -50,7 +56,9 @@ namespace TwitchChatBot.UI.Services
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Streamlabs donation service crashed.");
+					_logger.LogError(
+						"Streamlabs donation service stopped after {ExceptionType}.",
+						ex.GetType().Name);
 				}
 			}, _cts.Token);
 
@@ -83,7 +91,9 @@ namespace TwitchChatBot.UI.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error while stopping donation service.");
+				_logger.LogError(
+					"Error while stopping donation service. ExceptionType={ExceptionType}.",
+					ex.GetType().Name);
 			}
 
 			if (_socket != null)
@@ -94,7 +104,9 @@ namespace TwitchChatBot.UI.Services
 				}
 				catch (Exception ex)
 				{
-					_logger.LogWarning(ex, "Error during socket disconnect.");
+					_logger.LogWarning(
+						"Error during socket disconnect. ExceptionType={ExceptionType}.",
+						ex.GetType().Name);
 				}
 
 				_socket.Dispose();
@@ -106,15 +118,20 @@ namespace TwitchChatBot.UI.Services
 
 		private async Task RunAsync(CancellationToken cancellationToken)
 		{
-			var token = AppSettings.Streamlabs.SocketToken;
+			string socketUrl = AppSettings.Streamlabs.SocketUrl;
+			string token = AppSettings.Streamlabs.SocketToken;
 
-			if (string.IsNullOrWhiteSpace(token))
+			if (string.IsNullOrWhiteSpace(socketUrl) || string.IsNullOrWhiteSpace(token))
 			{
-				_logger.LogWarning("Missing Streamlabs socket token.");
+				_logger.LogInformation("Streamlabs donation service is disabled because its optional configuration is incomplete.");
 				return;
 			}
 
-			var uri = new Uri($"{AppSettings.Streamlabs.SocketUrl}?token={token}");
+			if (!Uri.TryCreate($"{socketUrl}?token={token}", UriKind.Absolute, out Uri? uri))
+			{
+				_logger.LogWarning("Streamlabs donation service is disabled because 'Streamlabs:SocketUrl' is invalid.");
+				return;
+			}
 
 			_socket = new SocketIO(uri);
 
@@ -199,7 +216,9 @@ namespace TwitchChatBot.UI.Services
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Failed processing Streamlabs event.");
+				_logger.LogError(
+					"Failed processing Streamlabs event. ExceptionType={ExceptionType}.",
+					ex.GetType().Name);
 			}
 		}
 	}
