@@ -323,7 +323,7 @@ namespace TwitchChatBot.Core.Services
                 }
 
                 _hasAwsCreds = true;
-                _logger.LogInformation("✅ AWS credentials detected for AccessKey: {KeyId}", immutableCreds.AccessKey);
+                _logger.LogInformation("✅ AWS credentials detected.");
             }
             catch (Exception ex)
             {

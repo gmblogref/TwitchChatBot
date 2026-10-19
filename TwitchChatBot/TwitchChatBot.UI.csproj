@@ -38,15 +38,22 @@
 	</ItemGroup>
 
 	<ItemGroup>
-				<None Update="appsettings.example.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		<None Update="appsettings.*.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
+		</None>
+		<None Update="appsettings.example.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
 		</None>
 		<None Update="appsettings.Development.json">
 			<DependentUpon>appsettings.json</DependentUpon>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</None>
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</None>
 	</ItemGroup>
 	<ItemGroup>

@@ -129,12 +129,16 @@ namespace TwitchChatBot.UI.Services
                 }
                 catch (WebSocketException ex)
                 {
-                    _logger.LogWarning(ex, "⚠️ EventSub WebSocket exception. Will attempt reconnect.");
+                    _logger.LogWarning(
+                        "⚠️ EventSub WebSocket exception ({ExceptionType}). Will attempt reconnect.",
+                        ex.GetType().Name);
                     await DelayBeforeReconnectAsync(lifetimeToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚠️ EventSub listener loop crashed. Will attempt reconnect.");
+                    _logger.LogWarning(
+                        "⚠️ EventSub listener loop stopped after {ExceptionType}. Will attempt reconnect.",
+                        ex.GetType().Name);
                     await DelayBeforeReconnectAsync(lifetimeToken);
                 }
             }
@@ -160,16 +164,16 @@ namespace TwitchChatBot.UI.Services
 
                 if (isReconnectUrl)
                 {
-                    _logger.LogInformation("🔄 Connecting to EventSub via reconnect_url: {Uri}", uri);
+                    _logger.LogInformation("🔄 Connecting to EventSub via a reconnect URL.");
                 }
                 else
                 {
-                    _logger.LogInformation("🔌 Connecting to primary EventSub URI: {Uri}", uri);
+                    _logger.LogInformation("🔌 Connecting to the primary EventSub endpoint.");
                 }
 
                 await _socket.ConnectAsync(uri, cancellationToken);
 
-                _logger.LogInformation("✅ EventSub WebSocket connected: {Uri}", uri);
+                _logger.LogInformation("✅ EventSub WebSocket connected.");
             }
             finally
             {
@@ -267,7 +271,7 @@ namespace TwitchChatBot.UI.Services
                     case "session_reconnect":
                         {
                             var reconnectUrl = root.GetProperty("payload").GetProperty("session").GetProperty("reconnect_url").GetString();
-                            _logger.LogInformation("🔁 EventSub session_reconnect → {Url}", reconnectUrl);
+                            _logger.LogInformation("🔁 EventSub session_reconnect received.");
 
                             if (!string.IsNullOrWhiteSpace(reconnectUrl))
                             {
@@ -360,7 +364,9 @@ namespace TwitchChatBot.UI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️ Failed to parse or handle EventSub payload.");
+                _logger.LogWarning(
+                    "⚠️ Failed to parse or handle EventSub payload. ExceptionType={ExceptionType}.",
+                    ex.GetType().Name);
             }
         }
 
@@ -506,7 +512,10 @@ namespace TwitchChatBot.UI.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ Exception while subscribing to {Type}", type);
+                    _logger.LogError(
+                        "❌ Exception while subscribing to {Type}. ExceptionType={ExceptionType}.",
+                        type,
+                        ex.GetType().Name);
                 }
             }
         }
@@ -526,7 +535,9 @@ namespace TwitchChatBot.UI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to validate token for user id.");
+                _logger.LogWarning(
+                    "Failed to validate token for user id. ExceptionType={ExceptionType}.",
+                    ex.GetType().Name);
                 return null;
             }
         }

@@ -20,12 +20,41 @@ namespace TwitchChatBot
         [STAThread]
         static void Main()
         {
-            var config = BuildConfiguration();
+            ApplicationConfiguration.Initialize();
+
+            IConfiguration config;
+
+            try
+            {
+                config = BuildConfiguration();
+            }
+            catch (FileNotFoundException)
+            {
+                ShowConfigurationError("The required appsettings.json file could not be found beside the application.");
+                return;
+            }
+            catch (InvalidDataException)
+            {
+                ShowConfigurationError("A configuration file contains malformed JSON. Check appsettings.json and appsettings.Development.json.");
+                return;
+            }
+            catch (FormatException)
+            {
+                ShowConfigurationError("A configuration file contains malformed JSON. Check appsettings.json and appsettings.Development.json.");
+                return;
+            }
+
             AppSettings.Configuration = config;
 
-            var services = ConfigureServices(config);
+            IReadOnlyList<string> validationErrors = AppSettings.ValidateRequiredSettings(config);
+            if (validationErrors.Count > 0)
+            {
+                string errorList = string.Join(Environment.NewLine, validationErrors.Select(error => $"- {error}"));
+                ShowConfigurationError($"Configuration validation failed:{Environment.NewLine}{Environment.NewLine}{errorList}");
+                return;
+            }
 
-            ApplicationConfiguration.Initialize();
+            var services = ConfigureServices(config);
 
             var serviceProvider = services.BuildServiceProvider();
 
@@ -47,6 +76,15 @@ namespace TwitchChatBot
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
                 .Build();
+        }
+
+        private static void ShowConfigurationError(string message)
+        {
+            MessageBox.Show(
+                message,
+                "Configuration Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
 
         private static IServiceCollection ConfigureServices(IConfiguration config)
