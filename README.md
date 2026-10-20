@@ -75,7 +75,51 @@ At a high level, configuration covers Twitch identities and authentication, Even
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete key inventory, precedence rules, validation behavior, persisted runtime data, safe examples, and troubleshooting guidance.
 
+See [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) for Twitch account ownership, developer-application registration, OAuth token and scope setup, EventSub/Helix behavior, and first-run verification.
+
 Both local configuration files are ignored by Git. At build time they are copied beside the executable because configuration is loaded from the application directory. Placeholder values satisfy only part of the configuration shape and do not authenticate with external services.
+
+## AI-Assisted Setup
+
+Developers may use ChatGPT, Claude, Codex, or another AI coding assistant to help configure their own TwitchChatBot installation. Copy the prompt below into the assistant, keep all credential values private, and follow the setup one step at a time.
+
+```text
+"I'm setting up TwitchChatBot for my own Twitch channel.
+
+First, read:
+- AGENTS.md
+- docs/CONFIGURATION.md
+- docs/TWITCH_SETUP.md
+
+Use these files as the authoritative source for how
+this application is currently implemented.
+
+Walk me through the setup one step at a time.
+
+Help me:
+1. Configure my Twitch Developer application.
+2. Set up my broadcaster and bot accounts.
+3. Generate OAuth tokens using the documented
+   official Twitch tools.
+4. Determine the required OAuth scopes.
+5. Find my broadcaster and bot Twitch User IDs.
+6. Configure my local appsettings.json.
+7. Verify IRC, EventSub, and Helix connectivity.
+8. Troubleshoot any authentication or connection errors.
+
+Do not assume planned functionality is implemented.
+
+Do not ask me to paste OAuth tokens, client secrets,
+or other private credentials into this conversation.
+
+Use placeholders for sensitive configuration values.
+
+Do not modify application source code unless I
+explicitly request a change.
+
+Give me one setup step at a time and wait for me
+to confirm completion before continuing."
+```
 
 ## Build
 
@@ -132,6 +176,8 @@ The Release output must retain its supporting files and valid local configuratio
 ### Twitch
 
 Twitch chat uses `TwitchLib.Client`. EventSub WebSockets and Twitch Helix requests support alerts, subscriptions, channel-point handling, profile images, moderation, and role lookup. A developer must supply their own Twitch application details, account identifiers, and appropriate OAuth/access tokens.
+
+Follow the [Twitch Developer and OAuth Setup Guide](docs/TWITCH_SETUP.md) to create the developer application, authorize the bot and broadcaster identities, configure the current scopes and token formats, and validate the integration safely.
 
 ### AWS Polly
 
@@ -224,3 +270,4 @@ This repository provides source code for developer-led local builds; it does not
 - [AGENTS.md](AGENTS.md) — durable architecture, process, testing, security, and contribution rules.
 - [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
+- [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) — Twitch accounts, developer application, OAuth scopes and tokens, EventSub, Helix, and first-run verification.

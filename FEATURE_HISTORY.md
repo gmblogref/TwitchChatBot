@@ -286,3 +286,31 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - Added safe representative JSON, troubleshooting, and security guidance without including private values, and linked the detailed reference from the README while preserving the Story 1.4 onboarding flow.
 - Documentation validation compared the inventory against `appsettings.example.json`, `AppSettings` accessors and validation, production consumers, configuration tests, project copy rules, and JSON repositories. Markdown links, JSON examples, secret exposure, and whitespace were checked; no application tests were run for this documentation-only story.
 - No application code, project files, configuration files, dependencies, workflows, behavior, or `AGENTS.md` were changed. Application version remains 3.0.0.
+
+## Story 1.6 — Twitch Developer and OAuth Setup Guide
+
+- **Status:** ACCEPTED — Documentation complete; PR/merge pending.
+- **Developer acceptance:** Granted on 2026-10-20.
+- **Source control:** Developer acceptance complete; commit, push, pull request, and merge to protected `main` remain pending.
+
+### Documentation Deliverables
+
+- Created `docs/TWITCH_SETUP.md` as the source-backed Twitch developer and OAuth onboarding guide.
+- Updated `README.md` with Twitch setup navigation and ready-to-copy AI-Assisted Setup instructions.
+- Documented broadcaster and bot accounts, OAuth tokens, required and feature-dependent scopes, token ownership, validation, and manual renewal.
+- Documented current IRC/TwitchLib, EventSub WebSocket, and Twitch Helix responsibilities and authorization requirements.
+- Documented exact local configuration keys and placement, configuration precedence, first-run verification, troubleshooting, credential security, and existing implementation limitations.
+
+### Phase C Acceptance Audit
+
+- The read-only acceptance audit passed with one documentation correction required.
+- Incorrect moderator/VIP pagination statements were corrected to reflect that both Helix lookup methods follow Twitch pagination cursors.
+- Subsequent documentation validation passed, including relative links, referenced files, Markdown structure, credential safety, pending source-control language, and application version verification.
+- No acceptance blockers remain.
+
+### Scope Confirmation
+
+- Changes were documentation-only; no application source code was changed.
+- No authentication, IRC, EventSub, Helix, configuration-schema, dependency, workflow, or application behavior changes were made.
+- Application version remains 3.0.0.
+- No builds or automated tests were required for this documentation-only story.
