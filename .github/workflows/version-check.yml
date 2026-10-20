@@ -52,8 +52,30 @@ jobs:
             Write-Error "Could not find <Version> in $proj. Add <Version>x.y.z</Version> to the csproj."
           }
 
-          if ($baseVersion -eq $headVersion) {
+          function ConvertTo-SemanticVersion([string]$value, [string]$source) {
+            $value = $value.Trim()
+
+            if ($value -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+              Write-Error "$source version '$value' is malformed or unsupported. Expected major.minor.patch using non-negative integers."
+            }
+
+            try {
+              return [version]::Parse($value)
+            }
+            catch {
+              Write-Error "$source version '$value' contains a component outside the supported numeric range."
+            }
+          }
+
+          $baseSemanticVersion = ConvertTo-SemanticVersion $baseVersion "Base"
+          $headSemanticVersion = ConvertTo-SemanticVersion $headVersion "PR"
+
+          if ($headSemanticVersion -eq $baseSemanticVersion) {
             Write-Error "Version was not bumped. Base=$baseVersion Head=$headVersion"
+          }
+
+          if ($headSemanticVersion -lt $baseSemanticVersion) {
+            Write-Error "PR version must be greater than the version on main. Base=$baseVersion Head=$headVersion"
           }
 
           Write-Host "OK: Version bumped from $baseVersion to $headVersion"
