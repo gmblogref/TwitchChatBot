@@ -1,4 +1,5 @@
 ﻿using System.Drawing.Drawing2D;
+using System.ComponentModel;
 using TwitchChatBot.Models;
 
 namespace TwitchChatBot.Controls
@@ -8,6 +9,7 @@ namespace TwitchChatBot.Controls
 		private List<WheelItem> _items = new List<WheelItem>();
 		private float _rotationAngle = 0f;
 
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public List<WheelItem> Items
 		{
 			get { return _items; }
@@ -18,6 +20,7 @@ namespace TwitchChatBot.Controls
 			}
 		}
 
+		[DefaultValue(0f)]
 		public float RotationAngle
 		{
 			get { return _rotationAngle; }

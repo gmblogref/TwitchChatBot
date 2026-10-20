@@ -1,8 +1,8 @@
-# Twitch Chat Bot (.NET 8)
+# Twitch Chat Bot (.NET 10)
 
 ## Overview
 
-Twitch Chat Bot is a .NET 8 WinForms desktop application that integrates with Twitch Chat and EventSub WebSocket APIs to provide real-time alert handling and interactive stream automation. It processes events such as cheers, subscriptions, watch streaks, commands, and channel point redemptions, triggering configurable media and logic defined within the application.
+Twitch Chat Bot is a .NET 10 WinForms desktop application that integrates with Twitch Chat and EventSub WebSocket APIs to provide real-time alert handling and interactive stream automation. It processes events such as cheers, subscriptions, watch streaks, commands, and channel point redemptions, triggering configurable media and logic defined within the application.
 
 The system is built to be fully self-hosted, extensible, and version-controlled, allowing complete ownership of alert behavior and stream integrations.
 
@@ -42,11 +42,15 @@ The system uses dependency injection and separation of concerns to keep alert lo
 
 ## Technology Stack
 
-- .NET 8  
+- .NET 10 LTS
 - WinForms  
 - Twitch EventSub WebSockets  
 - GitHub Actions (CI)  
 - JSON-based configuration repositories  
+
+Windows 11 is recommended for development. Development requires Visual Studio 2026 with the .NET desktop development workload and the .NET SDK selected by the repository-root `global.json`. The UI targets `net10.0-windows`.
+
+Framework-dependent runtime installations require the .NET 10 Desktop Runtime and ASP.NET Core Runtime for the machine architecture.
 
 ---
 
