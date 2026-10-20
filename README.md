@@ -73,6 +73,8 @@ Replace placeholders with local values and valid local paths. The application lo
 
 At a high level, configuration covers Twitch identities and authentication, EventSub endpoints, local media-map and media-folder paths, the embedded web host, AWS Polly voices and region, alert behavior, and optional Streamlabs and OpenAI settings. Detailed provider, OAuth, media, and environment setup is intentionally outside this onboarding guide.
 
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete key inventory, precedence rules, validation behavior, persisted runtime data, safe examples, and troubleshooting guidance.
+
 Both local configuration files are ignored by Git. At build time they are copied beside the executable because configuration is loaded from the application directory. Placeholder values satisfy only part of the configuration shape and do not authenticate with external services.
 
 ## Build
@@ -221,3 +223,4 @@ This repository provides source code for developer-led local builds; it does not
 
 - [AGENTS.md](AGENTS.md) — durable architecture, process, testing, security, and contribution rules.
 - [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
