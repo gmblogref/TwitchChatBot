@@ -3,7 +3,8 @@
 This file records implemented behavior and completed story outcomes. It is not the future-feature backlog. Statuses mean:
 
 - **COMPLETE**: implementation is accepted or has explicit developer/merged-PR validation.
-- **IMPLEMENTED — Pending Validation**: implementation exists, but a required manual or live validation gap remains.
+- **COMPLETE — Developer Confirmed**: the developer has explicitly confirmed story acceptance; any limitation in independently attributable historical evidence is documented separately.
+- **IMPLEMENTED — Pending Live Validation**: implementation exists, but a required live validation gap remains.
 - **IN PROGRESS**: approved work is being implemented or awaits developer acceptance.
 - **PLANNED / BACKLOG**: retained only when needed to distinguish a known future change from current behavior.
 
@@ -19,9 +20,9 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### EventSub WebSocket Handling
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE
 - `EventSubSocketService` maintains the EventSub WebSocket lifecycle, subscription setup, reconnect handling, and routing of supported events into alert and channel-point services.
-- Story 1.2.1 runtime validation did not exercise every live EventSub event type.
+- The existing functionality is developer accepted. Story 1.2.1 runtime validation did not exercise every supported live EventSub event type, so its modernization validation was not exhaustive.
 - **Evidence:** `TwitchChatBot/Services/EventSubSocketService.cs` and its registered service contracts and handlers.
 
 ### Alert Processing and Media Playback
@@ -41,10 +42,10 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### Chat Commands
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE
 - `CommandAlertService` parses configured commands, resolves command media, supports special command behavior, and integrates with alert, moderation, role, TTS, and First Chatter services.
-- Unit-test coverage exists, but no separate historical live-command acceptance report was located during Story 1.3 review.
-- **Evidence:** `TwitchChatBot.Core/Services/CommandAlertService.cs`, `TwitchChatBot.Tests/Core/CommandAlertServiceTests.cs`.
+- Merged implementation history and developer acceptance confirm the existing functionality. No separate historical live-command acceptance report was located during Story 1.3 review.
+- **Evidence:** merged command work including [PR #37](https://github.com/gmblogref/TwitchChatBot/pull/37), `TwitchChatBot.Core/Services/CommandAlertService.cs`, and `TwitchChatBot.Tests/Core/CommandAlertServiceTests.cs`.
 
 ### First Chatter Detection
 
@@ -56,10 +57,34 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### Watch Streak Tracking
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE
 - Watch streak state tracks stream attendance, current and longest streaks, debounced persistence, and testing/replay safeguards.
-- Unit-test coverage exists, but no separate historical live acceptance report was located during Story 1.3 review.
-- **Evidence:** `TwitchChatBot.Core/Services/WatchStreakService.cs`, `TwitchChatBot.Data/WatchStreakRepository.cs`, and their unit tests.
+- Merged implementation history and developer acceptance confirm the existing functionality. No separate historical live acceptance report was located during Story 1.3 review.
+- **Evidence:** merged Watch Streak work including [PR #46](https://github.com/gmblogref/TwitchChatBot/pull/46), `TwitchChatBot.Core/Services/WatchStreakService.cs`, `TwitchChatBot.Data/WatchStreakRepository.cs`, and their unit tests.
+
+### AI-Generated Alert Text
+
+- **Status:** COMPLETE
+- `AiTextService` generates bounded alert text for raids, watch streaks, resubscription milestones, and gift-sub bundles through the configured OpenAI client; unavailable or unsuccessful generation returns no generated line rather than blocking the alert path.
+- **Evidence:** [PR #63](https://github.com/gmblogref/TwitchChatBot/pull/63), `TwitchChatBot.Core/Services/AiTextService.cs`, and `TwitchChatBot.Tests/Core/AiTextServiceTests.cs`.
+
+### Alert History and Missed-Alert Replay
+
+- **Status:** COMPLETE
+- Alert history retains recent alert entries for the running application, and replay dispatches supported entries back through their corresponding alert, command, TTS, or Twitch handling path while suppressing duplicate history entries during replay.
+- **Evidence:** [PR #32](https://github.com/gmblogref/TwitchChatBot/pull/32), `TwitchChatBot.Core/Services/AlertHistoryService.cs`, and `TwitchChatBot.Core/Services/AlertReplayService.cs`.
+
+### Moderation and Nuke Commands
+
+- **Status:** COMPLETE
+- Moderation support resolves Twitch users and performs configured timeout actions through Helix. The Nuke command limits use per user until its reset interval and integrates with command handling.
+- **Evidence:** merged command and moderation work including [PR #37](https://github.com/gmblogref/TwitchChatBot/pull/37), `TwitchChatBot.Core/Services/ModerationService.cs`, `TwitchChatBot.Core/Services/NukeService.cs`, and `TwitchChatBot.Core/Services/CommandAlertService.cs`.
+
+### Twitch Role and Viewer-List Functionality
+
+- **Status:** COMPLETE
+- Viewer-list behavior is wired into the application, and `TwitchRoleService` resolves moderator and VIP logins through Helix for role-aware behavior.
+- **Evidence:** [PR #16](https://github.com/gmblogref/TwitchChatBot/pull/16), [PR #87](https://github.com/gmblogref/TwitchChatBot/pull/87), `TwitchChatBot.Core/Services/TwitchRoleService.cs`, and `TwitchChatBot.Tests/Core/TwitchRoleServiceTests.cs`.
 
 ## Implemented Feature Milestones
 
@@ -73,10 +98,10 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### Streamlabs Donation Integration — PR #93
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE
 - Added an optional Socket.IO Streamlabs provider, donation models and media repository, tiered donation alert selection, alert history, and donation TTS.
 - Missing Streamlabs URL or token disables the provider without blocking the rest of the application.
-- The feature is present, but Story 1.2.1 did not independently validate the optional live Streamlabs integration. Future donation-provider improvements remain separate pending work.
+- The existing functionality is accepted, but Story 1.2.1 did not independently revalidate the optional live Streamlabs provider. Future donation-provider improvements remain separate pending work.
 - **Evidence:** [PR #93](https://github.com/gmblogref/TwitchChatBot/pull/93), `StreamlabsDonationSocketService`, `DonationAlertService`, and `DonationMediaRepository`.
 
 ### Raid Profile Image Display — PR #94
@@ -103,7 +128,7 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### Gift Sub Bundle Suppression — PR #97
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** IMPLEMENTED — Pending Live Validation
 - Bulk/community gift subscriptions track an expected gift count and suppress related individual gift events from the same gifter within a bounded time window.
 - Normal single gifted subscriptions remain unsuppressed, and Hype Train alerts remain separate.
 - The PR reported automated-test success but explicitly left live Twitch validation pending; no newer live-validation evidence was located.
@@ -113,17 +138,23 @@ This file records implemented behavior and completed story outcomes. It is not t
 
 ### Story 1.0 — Public Repository Audit
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE — Developer Confirmed
 - Repository artifacts show public-repository hygiene through ignored private configuration, a placeholder configuration template, documented setup, and protected pull-request integration rules.
-- No dedicated Story 1.0 completion report or uniquely attributable PR was located during Story 1.3 review, so no historical runtime or test result is claimed here.
+- The developer confirmed completion. No dedicated Story 1.0 completion report or uniquely attributable PR was located during Story 1.3 review, so that historical attribution limitation is preserved and no historical runtime or test result is claimed here.
 - **Evidence:** `.gitignore`, `README.md`, `TwitchChatBot/appsettings.example.json`, and the later configuration-hardening work in PR #99.
 
 ### Story 1.2 — Documentation and Dependency Inventory
 
-- **Status:** IMPLEMENTED — Pending Validation
+- **Status:** COMPLETE — Developer Confirmed
 - The current repository documents its architecture, framework, configuration model, and release process, and all six project files provide the authoritative dependency inventory.
-- No dedicated Story 1.2 completion report or uniquely attributable PR was located during Story 1.3 review; no dependency upgrade is attributed to this documentation/inventory entry.
+- The developer confirmed completion. No dedicated Story 1.2 completion report or uniquely attributable PR was located during Story 1.3 review; that historical attribution limitation is preserved, and no dependency upgrade is attributed to this documentation/inventory entry.
 - **Evidence:** `README.md`, `TwitchChatBot.sln`, and all six `.csproj` files.
+
+### Earlier Configuration and Security Improvements — PRs #80, #81, and #83–#85
+
+- **Status:** COMPLETE
+- Earlier merged work documented local configuration setup, refined ignore rules for private application settings, removed an empty tracked configuration file, and documented the placeholder example-file workflow before the broader PR #99 hardening.
+- **Evidence:** [PR #80](https://github.com/gmblogref/TwitchChatBot/pull/80), [PR #81](https://github.com/gmblogref/TwitchChatBot/pull/81), [PR #83](https://github.com/gmblogref/TwitchChatBot/pull/83), [PR #84](https://github.com/gmblogref/TwitchChatBot/pull/84), [PR #85](https://github.com/gmblogref/TwitchChatBot/pull/85), `.gitignore`, `README.md`, and `TwitchChatBot/appsettings.example.json`.
 
 ### Configuration Security Hardening — PR #99
 
