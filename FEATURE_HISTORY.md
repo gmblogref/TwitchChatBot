@@ -254,9 +254,23 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 
 ## Story 1.3 — AGENTS.md and FEATURE_HISTORY.md Refinement; Version-Check Correction
 
-- **Status:** IN PROGRESS
-- **Working branch:** `task/markdown-refinement` (developer managed).
+- **Status:** COMPLETE
+- **Pull request:** [PR #101](https://github.com/gmblogref/TwitchChatBot/pull/101), merged.
+- **Implementation branch:** `task/markdown-refinement` (developer managed).
 - Refines repository guidance and reconstructs feature history from current implementation, merged pull requests, and confirmed completion reports.
 - Corrects the version-check workflow to require a numerically greater `major.minor.patch` version for `.cs` or `.csproj` pull requests while preserving the documentation-only skip behavior.
 - No application code, project file, dependency, application version, build workflow, or repository setting is changed by this story.
-- Developer-owned pull-request checks and acceptance remain pending.
+- The completed changes are present on `main` in the repository history for PR #101.
+
+## Story 1.4 — README and Windows Developer Onboarding
+
+- **Status:** IN PROGRESS — Documentation complete; awaiting developer acceptance.
+- **Working branch:** `task/readme-onboarding` (developer managed).
+- Replaced the brief README with a public-facing project introduction and Windows-only developer onboarding guide covering implemented capabilities, prerequisites, repository cloning, configuration setup, Debug and Release builds, Visual Studio startup, local execution, and the Release executable path.
+- Documented the Twitch, AWS Polly, optional Streamlabs, optional OpenAI, and local browser/OBS overlay integrations without replacing the detailed configuration, OAuth, provider, media, or environment documentation reserved for later stories.
+- Documented the six-project architecture, automated-test command, protected-`main` pull-request workflow, required GitHub Actions checks, numeric application-version policy, and secret-handling requirements.
+- Added the standard MIT License with verified repository-owner attribution, documented public source-code reuse permissions, and linked the README to the root `LICENSE` file. No application packaging or installer work was performed.
+- Preserved validation boundaries: not every supported live EventSub event type was exercised during modernization, the optional live Streamlabs provider was not independently revalidated, and Gift Sub Bundle Suppression remains pending live Twitch validation.
+- Documentation validation confirmed Markdown structure, relative links, referenced files, commands, SDK selection, Visual Studio baseline, solution projects, Release executable path, workflow names, version-bump behavior, and absence of exposed private paths or credentials. `git diff --check` completed without errors.
+- A solution-level Release build completed successfully with the eight known CS8602 warnings and zero errors; automated tests were not run for this documentation-only story.
+- Application code, projects, dependencies, configuration templates, workflows, behavior, and `AGENTS.md` were unchanged. Application version remains 3.0.0.
