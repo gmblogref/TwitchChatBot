@@ -264,7 +264,8 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 
 ## Story 1.4 — README and Windows Developer Onboarding
 
-- **Status:** IN PROGRESS — Documentation complete; awaiting developer acceptance.
+- **Status:** COMPLETE — Developer Accepted — PR #102 Merged.
+- **Pull request:** [PR #102](https://github.com/gmblogref/TwitchChatBot/pull/102), merged.
 - **Working branch:** `task/readme-onboarding` (developer managed).
 - Replaced the brief README with a public-facing project introduction and Windows-only developer onboarding guide covering implemented capabilities, prerequisites, repository cloning, configuration setup, Debug and Release builds, Visual Studio startup, local execution, and the Release executable path.
 - Documented the Twitch, AWS Polly, optional Streamlabs, optional OpenAI, and local browser/OBS overlay integrations without replacing the detailed configuration, OAuth, provider, media, or environment documentation reserved for later stories.
@@ -274,3 +275,14 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - Documentation validation confirmed Markdown structure, relative links, referenced files, commands, SDK selection, Visual Studio baseline, solution projects, Release executable path, workflow names, version-bump behavior, and absence of exposed private paths or credentials. `git diff --check` completed without errors.
 - A solution-level Release build completed successfully with the eight known CS8602 warnings and zero errors; automated tests were not run for this documentation-only story.
 - Application code, projects, dependencies, configuration templates, workflows, behavior, and `AGENTS.md` were unchanged. Application version remains 3.0.0.
+
+## Story 1.5 — Configuration Reference
+
+- **Status:** IN PROGRESS — Documentation implementation complete; awaiting developer review and acceptance.
+- **Implementation branch:** `task/configuration-reference` (created from the accepted Story 1.4 baseline).
+- Added `docs/CONFIGURATION.md` as the detailed source-backed reference for all tracked application settings, including exact key paths, safe examples, types, requirement and secret classifications, commit policy, consumers, validation, fallbacks, and failure consequences.
+- Documented the exact two-file JSON load order and precedence, unsupported application environment-variable and command-line overrides, local build and publish copy behavior, startup validation, AWS SDK credential resolution, and the separation between startup settings and persisted runtime JSON.
+- Documented repository-backed persistence behavior, First Chatter and Watch Streak migrations/normalization, and settings that are unused, legacy, accessor-only, or ambiguous rather than presenting them as active controls.
+- Added safe representative JSON, troubleshooting, and security guidance without including private values, and linked the detailed reference from the README while preserving the Story 1.4 onboarding flow.
+- Documentation validation compared the inventory against `appsettings.example.json`, `AppSettings` accessors and validation, production consumers, configuration tests, project copy rules, and JSON repositories. Markdown links, JSON examples, secret exposure, and whitespace were checked; no application tests were run for this documentation-only story.
+- No application code, project files, configuration files, dependencies, workflows, behavior, or `AGENTS.md` were changed. Application version remains 3.0.0.
