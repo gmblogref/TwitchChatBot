@@ -314,3 +314,15 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - No authentication, IRC, EventSub, Helix, configuration-schema, dependency, workflow, or application behavior changes were made.
 - Application version remains 3.0.0.
 - No builds or automated tests were required for this documentation-only story.
+
+## Story 1.7 — Optional Integration Documentation
+
+- **Status:** IN PROGRESS — Documentation implementation complete; awaiting developer review and acceptance.
+- Added `docs/STREAMLABS_SETUP.md` for the current Socket.IO donation provider, externally managed socket-token flow, exact settings, donation payload and media handling, Polly dependency, safe verification, failure isolation, and known limitations.
+- Added `docs/OPENAI_SETUP.md` for the direct Responses API integration, API-key and billing setup, supported alert prompts, data sent, model and threshold settings, security, costs, troubleshooting, and event-specific speech fallback behavior.
+- Added `docs/AWS_POLLY_SETUP.md` for AWS SDK for .NET v4 credential resolution, least-privilege `polly:SynthesizeSpeech` permission, region and voice configuration, MP3 output, failure behavior, pricing, budgets, and billing precautions.
+- Updated the README with concise navigation to all three provider guides while preserving the existing onboarding flow.
+- Corrected the configuration reference to distinguish visual-alert continuation from missing speech fallbacks for qualifying watch streaks, gift bundles, and annual resubscription milestones, and documented the implemented `{streak}` watch-streak placeholder.
+- Verified external guidance against official Streamlabs, OpenAI, and AWS documentation and the SocketIOClient project documentation, while distinguishing provider behavior from repository-confirmed application behavior.
+- Changes are documentation-only. No application code, project files, configuration schema, dependencies, workflows, or application behavior were changed. Application version remains 3.0.0.
+- Documentation validation is complete; builds and automated tests were not run. Developer acceptance, commit, push, pull request, and merge remain pending.
