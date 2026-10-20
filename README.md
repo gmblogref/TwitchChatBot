@@ -183,13 +183,19 @@ Follow the [Twitch Developer and OAuth Setup Guide](docs/TWITCH_SETUP.md) to cre
 
 AWS Polly provides text-to-speech. Configure a region and supported voices in local application settings, and supply AWS credentials through the normal AWS credential chain, such as environment variables or the shared AWS credentials file. Polly use may incur AWS charges.
 
+Follow the [AWS Polly Text-to-Speech Setup Guide](docs/AWS_POLLY_SETUP.md) for credential resolution, least-privilege IAM permission, region and voice configuration, safe verification, failure behavior, and billing precautions.
+
 ### Streamlabs
 
 Streamlabs donation handling is optional and uses a Socket.IO connection. Leaving its socket URL or token blank disables the provider without preventing the rest of the application from running. The accepted implementation was not independently revalidated against the live provider during the .NET 10 modernization.
 
+Follow the [Streamlabs Donation Setup Guide](docs/STREAMLABS_SETUP.md) for the externally managed socket-token flow, donation media, connectivity checks, Polly dependency, and current limitations.
+
 ### OpenAI
 
-AI-generated alert text is optional and uses the configured OpenAI HTTP endpoint, model, and API key. An unavailable or unsuccessful generation request does not replace the core alert path. Keep the API key only in ignored local configuration.
+AI-generated alert text is optional and uses the configured OpenAI Responses API endpoint, model, and API key. The visual alert continues when generation fails, but qualifying watch-streak, gift-bundle, and annual-resub paths currently have no speech fallback. Keep the API key only in ignored local configuration.
+
+Follow the [OpenAI Alert-Text Setup Guide](docs/OPENAI_SETUP.md) for API-key and billing setup, the data sent for each supported alert type, event-specific speech fallbacks, costs, and troubleshooting.
 
 ## Browser and OBS Overlays
 
@@ -271,3 +277,6 @@ This repository provides source code for developer-led local builds; it does not
 - [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
 - [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) — Twitch accounts, developer application, OAuth scopes and tokens, EventSub, Helix, and first-run verification.
+- [docs/STREAMLABS_SETUP.md](docs/STREAMLABS_SETUP.md) — optional Streamlabs Socket.IO donation setup, media, validation, and limitations.
+- [docs/OPENAI_SETUP.md](docs/OPENAI_SETUP.md) — optional OpenAI Responses API setup, supported alerts, fallbacks, security, and costs.
+- [docs/AWS_POLLY_SETUP.md](docs/AWS_POLLY_SETUP.md) — AWS credentials, least-privilege Polly access, voices, speech output, and billing precautions.

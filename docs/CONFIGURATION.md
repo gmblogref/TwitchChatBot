@@ -143,6 +143,8 @@ These values select JSON data files used by repositories. The path strings are s
 
 ### Text-to-speech and AWS Polly
 
+See [AWS Polly Text-to-Speech Setup](AWS_POLLY_SETUP.md) for the SDK v4 credential chain, least-privilege IAM permission, voice and region selection, runtime verification, and billing precautions.
+
 | Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
 | --- | --- | --- | --- | --- | --- |
 | `TTS:Engine` | string, `"Polly"` | Unused / legacy | No / local only | Template suggests engine selection, but no production consumer was found; Polly is hard-wired. | Not startup-validated. Changing it does not select another engine. |
@@ -160,7 +162,7 @@ These values select JSON data files used by repositories. The path strings are s
 | `TTS:Voices:WatchStreak` | string, `"Matthew"` | Required | No / local only | Polly voice for watch-streak alerts. | Same validation and failure behavior as other event voices. |
 | `TTS:Voices:ChannelPoints` | string, `"Matthew"` | Required | No / local only | Polly voice for channel-point speech. | Same validation and failure behavior as other event voices. |
 
-AWS credentials are not application JSON keys. `TtsService` delegates credential discovery to the AWS SDK's `DefaultAWSCredentialsIdentityResolver`, then constructs `AmazonPollyClient` with the configured region. Repository evidence explicitly identifies `AWS_ACCESS_KEY_ID` plus `AWS_SECRET_ACCESS_KEY`, or the shared AWS credentials file (normally `%USERPROFILE%\.aws\credentials` on Windows), as credential sources. The repository does not define or document the AWS SDK's entire resolution chain. If credentials cannot be resolved, TTS requests are skipped and resolution is retried periodically; the rest of the application can continue.
+AWS credentials are not application JSON keys. `TtsService` delegates credential discovery to the AWS SDK's `DefaultAWSCredentialsIdentityResolver`, then constructs `AmazonPollyClient` with the configured region. The AWS SDK for .NET v4 default chain supports complete session or basic credential environment variables, web-identity environment variables, configured profiles including `AWS_PROFILE` and `[default]`, container credentials, and EC2 instance metadata in its documented order. TwitchChatBot supplies no explicit credentials or profile selection. If credentials cannot be resolved, TTS requests are skipped and resolution is retried periodically; the rest of the application can continue.
 
 ### TTS templates
 
@@ -175,7 +177,7 @@ All template values are startup-required nonblank strings. There is no general t
 | `TTS:Templates:CheerNoMessage` | string, `"{username} cheered {bits} bits."` | Required | No / local only | Cheer speech when no chat message is present; replaces `{username}` and `{bits}`. | Nonblank only. |
 | `TTS:Templates:SubNoMessage` | string, `"{username} subscribed at Tier {tier}."` | Required | No / local only | New-subscription speech; replaces `{username}` and `{tier}`. | Nonblank only. |
 | `TTS:Templates:ReSub` | string, `"{username} resubscribed for {months} months at Tier {tier}."` | Required | No / local only | Resubscription fallback speech; replaces `{username}`, `{months}`, and `{tier}`. | Nonblank only. |
-| `TTS:Templates:WatchStreak` | string, `"{username} has a {streakCount}-stream streak."` | Required | No / local only | Watch-streak fallback speech; replaces `{username}` and `{streakCount}`. | Nonblank only. |
+| `TTS:Templates:WatchStreak` | string, `"{username} has a {streak}-stream streak."` | Required | No / local only | Watch-streak fallback speech; current source replaces `{username}` and `{streak}`. | Nonblank only. The tracked example currently uses `{streakCount}`, which is not replaced by the current handler; use `{streak}` in local configuration. |
 
 ### Twitch Helix command endpoints
 
@@ -197,6 +199,8 @@ All template values are startup-required nonblank strings. There is no general t
 
 Streamlabs is enabled only when both settings are nonblank. There is no separate enabled flag.
 
+See [Streamlabs Donation Setup](STREAMLABS_SETUP.md) for the external socket-token flow, donation event processing, media selection, connectivity verification, Polly dependency, and provider limitations.
+
 | Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
 | --- | --- | --- | --- | --- | --- |
 | `Streamlabs:SocketUrl` | string URI, `"https://streamlabs.example.invalid"` | Conditional | No / local only | Socket.IO provider endpoint. | Not startup-validated. Missing/blank with either setting disables Streamlabs; malformed/unreachable values fail the provider without stopping core application startup. |
@@ -206,15 +210,17 @@ Streamlabs is enabled only when both settings are nonblank. There is no separate
 
 OpenAI-generated text is optional because the API key may be blank. Supporting OpenAI behavior settings are nevertheless startup-required by the current validator.
 
+See [OpenAI Alert-Text Setup](OPENAI_SETUP.md) for API-key and billing setup, the data included in prompts, event-specific speech fallback behavior, safe verification, and troubleshooting.
+
 | Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
 | --- | --- | --- | --- | --- | --- |
 | `OpenAI:BaseUrl` | string URI, `"https://api.openai.com/v1/"` | Required | No / local only | Base address for the named OpenAI HTTP client. | Nonblank only. `new Uri(...)` runs during service setup; malformed values can terminate startup after validation. Retain a trailing slash so relative `responses` requests resolve as intended. |
-| `OpenAI:ApiKey` | string, `""` or `"YOUR_OPENAI_API_KEY"` | Optional | Yes / never commit | Bearer credential for optional AI alert generation. | Missing/blank becomes an empty string. Requests then fail and AI generation returns no line; normal alert handling continues. |
+| `OpenAI:ApiKey` | string, `""` or `"YOUR_OPENAI_API_KEY"` | Optional | Yes / never commit | Bearer credential for optional AI alert generation. | Missing/blank becomes an empty string. Requests then fail and AI generation returns no line. The visual alert continues; speech fallback depends on the event path. |
 | `OpenAI:Model` | string, `"gpt-4o-mini"` | Required | No / local only | Model value sent to the configured `responses` endpoint. | Nonblank only. Unsupported values cause generation requests to return no generated line. |
 | `OpenAI:DefaultAlertTone` | string, `"hype"` | Required | No / local only | Default tone stored in alert contexts. | Nonblank only. The current prompt builders do not read the `Tone` property, so changing it has no confirmed prompt effect. |
 | `OpenAI:DefaultAlertMaxWords` | integer, `14` | Required, minimum 1 | No / local only | Maximum generated words requested and enforced by local truncation. | Must be an integer at least 1; otherwise startup exits. |
-| `OpenAI:WatchStreakThreshold` | integer, `20` | Required, minimum 0 | No / local only | Minimum watch streak at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. A blank API key still causes generation to fall back. |
-| `OpenAI:GiftSubThreshold` | integer, `5` | Required, minimum 0 | No / local only | Minimum gift count at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. A blank API key still causes generation to fall back. |
+| `OpenAI:WatchStreakThreshold` | integer, `20` | Required, minimum 0 | No / local only | Minimum watch streak at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation leaves the visual alert intact but has no speech fallback. |
+| `OpenAI:GiftSubThreshold` | integer, `5` | Required, minimum 0 | No / local only | Minimum gift count at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation leaves the visual alert intact but has no speech fallback. |
 
 ### Alert queue behavior
 
@@ -336,7 +342,7 @@ Do not treat these keys as active feature controls:
 ### Optional providers do not run
 
 - Streamlabs requires both `Streamlabs:SocketUrl` and `Streamlabs:SocketToken`; either blank disables it.
-- OpenAI accepts a blank API key, but generation calls then return no generated line and alerts use their normal path.
+- OpenAI accepts a blank API key, but qualifying paths still attempt generation and receive no generated line. Raid speech uses its template fallback; qualifying watch streaks, gift bundles, and annual resubscription milestones retain their visual alerts but produce no fallback speech.
 
 ## Security Guidance
 
