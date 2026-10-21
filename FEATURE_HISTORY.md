@@ -354,3 +354,51 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - Applied Phase C developer-review corrections: fixed the Release executable name, separated intended Stop Bot operations from source-confirmed lifecycle gaps and developer-observed Stop/Start unreliability, and updated manual acceptance guidance without claiming a lifecycle fix or established root cause.
 - Documentation links, project references, package versions, commands, lifecycle descriptions, integration responsibilities, workflow behavior, private-path/credential safety, version, and changed-file scope were checked without running builds, automated tests, the application, or live integrations.
 - Changes are documentation-only. No application code, automated tests, project files, dependencies, configuration schemas, workflows, or runtime behavior changed. Application version remains 3.0.0.
+
+## Story 1.10 — Public Repository Hardening and Developer Onboarding Acceptance
+
+- **Status:** DOCUMENTATION CORRECTIONS IMPLEMENTED — Awaiting Developer Validation and PR.
+- Completed an independent clean-clone acceptance review and applied the approved final documentation and example-configuration corrections in the original development repository.
+- Updated automated-test onboarding to recommend a filtered clean-setup command that excludes the four `TtsServiceTests` and two `WheelRepositoryTests`, documents their AWS/media/file side effects, and preserves the complete suite as a controlled-environment option.
+- Added active Fluent Assertions licensing guidance, documented the Utilities and Logging tab locations and session-only Alert History replay behavior, added a no-synthesis Polly verification path, and corrected the example watch-streak placeholder from `{streakCount}` to `{streak}`.
+
+### Acceptance Evidence
+
+- Independent clean clone completed successfully.
+- NuGet restore completed successfully.
+- Debug and Release solution builds completed successfully.
+- Twitch connection and incoming/outgoing chat were verified.
+- EventSub subscription registration was verified.
+- Browser and OBS overlays were verified with GIF, MP4, and MP3 playback.
+- Alert playback cleanup was verified.
+- Wheel loading, spinning, result popup, and persistence were verified.
+- Alert History recording and replay were verified during the running session.
+- Clean application shutdown was verified.
+- The filtered automated-test selection completed with 158 passed, 0 failed, and 0 skipped.
+- The acceptance-clone Git working tree was clean.
+- PR #108 Build and Version bump checks passed.
+- All required Story 1.10 documentation files were present.
+
+### Acceptance Limitations
+
+- Six automated tests were excluded: four `TtsServiceTests` and two `WheelRepositoryTests`.
+- Live Streamlabs donation delivery was not tested.
+- Live OpenAI generation and fallback behavior were not tested.
+- Controlled missing-credential AWS Polly behavior was not tested.
+- Complete AWS Polly synthesis acceptance was not performed.
+- Wheel-triggered alert integration was not tested.
+- Twitch event coverage was not exhaustive.
+- Configuration-error user experience was not tested.
+- No main-branch CI run was available; the confirmed checks were for PR #108.
+
+### Known Follow-Up Findings
+
+- Eight existing CS8602 warnings remain assigned to Story 1.11.
+- A blank OpenAI API key can still result in failed outbound requests on qualifying paths.
+- Some qualifying AI speech paths lack fallback text when generation fails.
+- TTS automated-test isolation remains a concern because tests construct the real service and can discover AWS credentials.
+- Missing mapped media can suppress an entire alert.
+- Streamlabs amount parsing remains a potential follow-up concern.
+- Logging tab usability improvements remain future work.
+
+The final corrections are documentation and sanitized example-configuration changes only. They do not fix the follow-up findings or change production application behavior. No full unfiltered test pass is claimed for Story 1.10.

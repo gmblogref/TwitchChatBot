@@ -26,6 +26,8 @@ Twitch Chat Bot is a Windows desktop application for running Twitch chat automat
 - Twitch moderator/VIP lookup and viewer-list functionality.
 - Gift-sub bundle suppression that prevents related individual gift alerts from duplicating a community-gift alert.
 
+In the current UI, the **Utilities Tab** contains Alert History and its replay controls, while the **Logging Tab** contains diagnostic logging. Alert History is session-only: entries can be replayed while the application is running and are cleared when the application closes.
+
 The existing EventSub and Streamlabs functionality is accepted, but the .NET 10 modernization validation did not exercise every supported live EventSub type or independently revalidate the optional live Streamlabs provider. Gift-sub bundle suppression is implemented but still awaits live Twitch validation. See [FEATURE_HISTORY.md](FEATURE_HISTORY.md) for implementation history and validation boundaries.
 
 ## Windows Development Prerequisites
@@ -231,13 +233,15 @@ The source-verified project graph, composition root, runtime lifecycle, integrat
 
 See [docs/TESTING.md](docs/TESTING.md) for framework versions, focused test commands, coverage boundaries, known test side effects, safe manual acceptance procedures, Testing-tab risks, and CI behavior.
 
-Run the solution's automated unit tests from the repository root:
+After a successful Release build, run the recommended clean-setup-safe automated test selection from the repository root:
 
 ```powershell
-dotnet test TwitchChatBot.sln --configuration Debug
+dotnet test .\TwitchChatBot.Tests\TwitchChatBot.Tests.csproj --configuration Release --no-build --no-restore --filter "FullyQualifiedName!~TwitchChatBot.Tests.Core.TtsServiceTests&FullyQualifiedName!~TwitchChatBot.Tests.Data.WheelRepositoryTests"
 ```
 
-The automated test project uses xUnit, Moq, and FluentAssertions. UI and live-provider behavior requires separate manual validation. The current GitHub Actions Build workflow restores and builds the solution but does **not** run the automated test suite.
+This selection excludes four `TtsServiceTests` and two `WheelRepositoryTests`. Run the full suite only in a controlled environment after reviewing AWS credential discovery, potential Polly usage, generated media files, and relative `wheel-media.json` file side effects. See [docs/TESTING.md](docs/TESTING.md) for the excluded coverage, full-suite command, side effects, and limitations.
+
+The automated test project uses xUnit, Moq, and FluentAssertions. Fluent Assertions displays licensing information; developers must evaluate the applicable license for their intended use, particularly commercial use. UI and live-provider behavior requires separate manual validation. The current GitHub Actions Build workflow restores and builds the solution but does **not** run the automated test suite.
 
 ## Contribution and Pull Requests
 
