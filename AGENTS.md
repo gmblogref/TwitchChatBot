@@ -1,5 +1,12 @@
 # AGENTS.md
 
+PROJECT_ID: TWITCH-CHATBOT
+
+## Project Identity Guard v1.0
+
+- Before modifying the repository for a formal handoff, verify that the handoff's `PROJECT_ID` exactly matches `TWITCH-CHATBOT`.
+- If the project identity is missing or does not match, stop before modifying files and report the mismatch to the developer.
+
 ## General Rules
 
 - Do not modify production code unless explicitly instructed.
