@@ -73,15 +73,17 @@ The complete precedence, validation, and commit-policy rules are in [Configurati
 
 ```json
 {
-  "default": "C:\\TwitchChatBotMedia\\donations\\default.mp4",
+  "default": "donation_alerts/donation-default.mp4",
   "tiers": [
     {
       "Min": 10.00,
-      "Media": "C:\\TwitchChatBotMedia\\donations\\tier-10.mp4"
+      "Media": "donation_alerts/donation-10.mp4"
     }
   ]
 }
 ```
+
+Media values are relative to `MediaBase:TwitchAlertsFolder`. Do not place ordinary absolute filesystem paths in these fields: the alert pipeline exposes them as browser `/media` URLs. A complete sanitized file is available at [`donationMediaMap.example.json`](examples/media/donationMediaMap.example.json), and the path behavior is documented in [Media, Mapping, Overlay, and Windows Environment Setup](MEDIA_ENVIRONMENT_SETUP.md).
 
 For a donation, the application selects the qualifying tier with the highest `Min` value. If none qualifies, it uses `default`. If no media path is available, the text-only visual alert is still enqueued.
 

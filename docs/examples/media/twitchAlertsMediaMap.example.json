@@ -1,0 +1,78 @@
+{
+  "channel_points": {
+    "tiers": [
+      {
+        "title": "Victory Dance",
+        "media": "channel_points/victory-dance.mp4"
+      },
+      {
+        "title": "Stadium Horn",
+        "media": "channel_points/stadium-horn.mp3"
+      }
+    ],
+    "default": ""
+  },
+  "channel_points_text": {
+    "tiers": [
+      {
+        "title": "Welcome Message",
+        "message": "Welcome to the ballpark, [userName]!",
+        "ttsMessage": "Welcome to the ballpark, [userName]!"
+      },
+      {
+        "title": "Text Only",
+        "message": "[userName] redeemed a text-only reward."
+      }
+    ]
+  },
+  "cheer": {
+    "tiers": [
+      {
+        "min": 100,
+        "media": "twitch_alerts/cheer-100.mp4"
+      },
+      {
+        "min": 1000,
+        "media": "twitch_alerts/cheer-1000.mp4"
+      }
+    ],
+    "default": "twitch_alerts/cheer-default.mp4"
+  },
+  "follow": [
+    "twitch_alerts/follow-01.mp4",
+    "twitch_alerts/follow-02.gif"
+  ],
+  "hype_train": [
+    "twitch_alerts/hype-train.mp4"
+  ],
+  "raid": [
+    "twitch_alerts/raid-01.mp4"
+  ],
+  "resub": [
+    "twitch_alerts/resub-01.mp4"
+  ],
+  "subgift": [
+    "twitch_alerts/gift-sub-01.mp4"
+  ],
+  "submysterygift": {
+    "tiers": [
+      {
+        "match": "eq",
+        "value": 5,
+        "media": "twitch_alerts/gift-bundle-five.mp4"
+      },
+      {
+        "match": "gte",
+        "value": 10,
+        "media": "twitch_alerts/gift-bundle-ten-plus.mp4"
+      }
+    ],
+    "default": "twitch_alerts/gift-bundle-default.mp4"
+  },
+  "subscription": [
+    "twitch_alerts/subscription-01.mp4"
+  ],
+  "watch_streak": [
+    "twitch_alerts/watch-streak-01.mp4"
+  ]
+}

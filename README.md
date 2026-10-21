@@ -77,6 +77,8 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete key inventor
 
 See [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) for Twitch account ownership, developer-application registration, OAuth token and scope setup, EventSub/Helix behavior, and first-run verification.
 
+See [docs/MEDIA_ENVIRONMENT_SETUP.md](docs/MEDIA_ENVIRONMENT_SETUP.md) for the Windows runtime, private media layout, all seven JSON files, supported formats, browser/OBS overlays, Wheel integration, failure behavior, and sanitized templates. The seven starter JSON files are also available directly in [docs/examples/media](docs/examples/media/).
+
 Both local configuration files are ignored by Git. At build time they are copied beside the executable because configuration is loaded from the application directory. Placeholder values satisfy only part of the configuration shape and do not authenticate with external services.
 
 ## AI-Assisted Setup
@@ -208,6 +210,8 @@ The configured web-host base URL exposes:
 
 These pages can be opened in a local browser or configured as OBS Browser Sources. The actual host address and media location come from local configuration; the application is not deployed as a hosted website.
 
+Normal alerts use `/alerts`. The `/fullscreen` page exists, but current production handlers do not enqueue `fullscreen` alert payloads. See the [Media, Mapping, Overlay, and Windows Environment Setup Guide](docs/MEDIA_ENVIRONMENT_SETUP.md) for supported media, OBS behavior, and queue/offline limitations.
+
 ## Repository Structure
 
 The solution contains six projects:
@@ -277,6 +281,7 @@ This repository provides source code for developer-led local builds; it does not
 - [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
 - [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) — Twitch accounts, developer application, OAuth scopes and tokens, EventSub, Helix, and first-run verification.
+- [docs/MEDIA_ENVIRONMENT_SETUP.md](docs/MEDIA_ENVIRONMENT_SETUP.md) — Windows environment, media directories, JSON mappings, supported formats, overlays, failure behavior, Testing-tab safety, and example templates.
 - [docs/STREAMLABS_SETUP.md](docs/STREAMLABS_SETUP.md) — optional Streamlabs Socket.IO donation setup, media, validation, and limitations.
 - [docs/OPENAI_SETUP.md](docs/OPENAI_SETUP.md) — optional OpenAI Responses API setup, supported alerts, fallbacks, security, and costs.
 - [docs/AWS_POLLY_SETUP.md](docs/AWS_POLLY_SETUP.md) — AWS credentials, least-privilege Polly access, voices, speech output, and billing precautions.

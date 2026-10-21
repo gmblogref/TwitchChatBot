@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "example-prize-wheel",
+    "Name": "Example Prize Wheel",
+    "Items": [
+      {
+        "Id": "example-entry-1",
+        "Position": 0,
+        "DisplayName": "Victory Dance",
+        "AlertType": "channelpoints",
+        "AlertKey": "Victory Dance",
+        "Weight": 3,
+        "IsHidden": false
+      },
+      {
+        "Id": "example-entry-2",
+        "Position": 1,
+        "DisplayName": "Celebrate Command",
+        "AlertType": "commands",
+        "AlertKey": "!celebrate",
+        "Weight": 1,
+        "IsHidden": false
+      },
+      {
+        "Id": "example-entry-3",
+        "Position": 2,
+        "DisplayName": "Text-Only Result",
+        "AlertType": null,
+        "AlertKey": null,
+        "Weight": 1,
+        "IsHidden": true
+      }
+    ]
+  }
+]

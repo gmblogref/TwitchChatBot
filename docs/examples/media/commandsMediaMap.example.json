@@ -1,0 +1,17 @@
+{
+  "commandMediaItems": [
+    {
+      "Command": "!celebrate",
+      "Text": "Thanks for celebrating with us!",
+      "Media": "commands/celebrate.mp4"
+    },
+    {
+      "Command": "!horn",
+      "Media": "commands/stadium-horn.mp3"
+    },
+    {
+      "Command": "!schedule",
+      "Text": "The next stream schedule is posted on the channel page."
+    }
+  ]
+}

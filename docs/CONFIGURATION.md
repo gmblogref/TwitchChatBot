@@ -114,16 +114,16 @@ Client IDs identify an application but are not treated as secrets. Tokens and cl
 
 ### Runtime JSON paths
 
-These values select JSON data files used by repositories. The path strings are startup-required, but the files are not checked during startup. `Path.GetFullPath` resolves relative values against the process working directory, not the application configuration base path. Absolute paths are safest.
+These values select JSON data files used by repositories. The path strings are startup-required, but the files are not checked during startup. `Path.GetFullPath` resolves relative values against the process working directory, not the application configuration base path. Absolute paths are safest for these seven JSON settings. Media values stored inside the JSON should instead be relative to `MediaBase:TwitchAlertsFolder`; ordinary absolute media values do not map correctly to browser `/media` URLs. See [Media, Mapping, Overlay, and Windows Environment Setup](MEDIA_ENVIRONMENT_SETUP.md).
 
 | Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
 | --- | --- | --- | --- | --- | --- |
 | `MediaMapFiles:TwitchAlertMedia` | string path, `"C:\\TwitchChatBotData\\twitchAlertsMediaMap.json"` | Required | No / local only | Alert media map repository. | Must be nonblank. Missing/malformed data is logged and replaced in memory with an empty map; alerts may have no playable media. |
 | `MediaMapFiles:ExcludedUsersMedia` | string path, `"C:\\TwitchChatBotData\\excludedUsers.json"` | Required | No / local only | Excluded-user set. | Must be nonblank. Missing/malformed data becomes an empty set, so no users are excluded. |
-| `MediaMapFiles:FirstChattersMedia` | string path, `"C:\\TwitchChatBotData\\firstChatMediaMap.json"` | Required | No / local only | First-chatter media map and migration target. | Must be nonblank. Missing/malformed data becomes an empty map; legacy-format migration is described below. |
+| `MediaMapFiles:FirstChattersMedia` | string path, `"C:\\TwitchChatBotData\\firstChatMediaMap_v2.json"` | Required | No / local only | First-chatter media map and migration target. | Must be nonblank. Missing/malformed data becomes an empty map; legacy-format migration is described below. |
 | `MediaMapFiles:CommandAlertMedia` | string path, `"C:\\TwitchChatBotData\\commandsMediaMap.json"` | Required | No / local only | Chat-command text/media definitions. | Must be nonblank. Missing/malformed data becomes an empty map, leaving no configured media commands. |
-| `MediaMapFiles:UserWatchStreakMedia` | string path, `"C:\\TwitchChatBotData\\watch_streaks.json"` | Required | No / local only | Mutable watch-streak state. | Must be nonblank. Missing/malformed data becomes a new empty state; later saves create directories/files. |
-| `MediaMapFiles:WheelMedia` | string path, `"C:\\TwitchChatBotData\\wheels.json"` | Required | No / local only | Mutable wheel definitions and items. | Must be nonblank. Missing/malformed data becomes an empty wheel list; UI saves create directories/files. |
+| `MediaMapFiles:UserWatchStreakMedia` | string path, `"C:\\TwitchChatBotData\\watch_streaks_v2.json"` | Required | No / local only | Mutable watch-streak state. | Must be nonblank. Missing/malformed data becomes a new empty state; later saves create directories/files. |
+| `MediaMapFiles:WheelMedia` | string path, `"C:\\TwitchChatBotData\\wheelsMediaMap.json"` | Required | No / local only | Mutable wheel definitions and items. | Must be nonblank. Missing/malformed data becomes an empty wheel list; UI saves create directories/files. |
 | `MediaMapFiles:DonationMedia` | string path, `"C:\\TwitchChatBotData\\donationMediaMap.json"` | Required | No / local only | Streamlabs donation tier/default media map. | Must be nonblank even when Streamlabs is disabled. Missing/malformed data becomes an empty donation map. |
 
 ### Media base
@@ -352,6 +352,8 @@ Do not treat these keys as active feature controls:
 - Do not paste secrets into issues, logs, screenshots, documentation, tests, or chat transcripts.
 - Inspect copied Debug/Release output before sharing it. Private configuration is copied beside local build executables.
 - Persisted media maps can contain usernames, local paths, or operational details. Review them before sharing even when they contain no authentication secret.
+
+Sanitized schemas and copyable examples for all seven files are maintained in the [media and environment guide](MEDIA_ENVIRONMENT_SETUP.md#template-index). The tracked examples are documentation artifacts and are not automatically loaded or copied into private runtime data.
 
 ## Source of Truth
 
