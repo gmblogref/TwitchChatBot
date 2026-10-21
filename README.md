@@ -225,9 +225,11 @@ The solution contains six projects:
 | [`TwitchChatBot.Testing`](TwitchChatBot.Testing/TwitchChatBot.Testing.csproj) | Manual utilities used by the application's Testing tab; this is not the automated test project. |
 | [`TwitchChatBot.Tests`](TwitchChatBot.Tests/TwitchChatBot.Tests.csproj) | xUnit unit tests for Core, Data, and Models behavior. |
 
-Architecture and repository-working rules are maintained in [AGENTS.md](AGENTS.md).
+The source-verified project graph, composition root, runtime lifecycle, integration boundaries, persistence, and known limitations are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Durable repository-working rules remain in [AGENTS.md](AGENTS.md).
 
 ## Automated Tests
+
+See [docs/TESTING.md](docs/TESTING.md) for framework versions, focused test commands, coverage boundaries, known test side effects, safe manual acceptance procedures, Testing-tab risks, and CI behavior.
 
 Run the solution's automated unit tests from the repository root:
 
@@ -257,7 +259,7 @@ The application version is stored in `TwitchChatBot/TwitchChatBot.UI.csproj` and
 - A justified minor or major increase is allowed.
 - Documentation-only and workflow-only pull requests may retain the current application version when no `.cs` or `.csproj` files changed.
 
-Story 1.4 is documentation-only and retains version `3.0.0`.
+The current application version remains `3.0.0`; documentation-only changes do not require a bump when no `.cs` or `.csproj` files change.
 
 ## Security and Secrets
 
@@ -279,6 +281,8 @@ This repository provides source code for developer-led local builds; it does not
 
 - [AGENTS.md](AGENTS.md) — durable architecture, process, testing, security, and contribution rules.
 - [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — project references, dependency composition, lifecycle, Twitch/EventSub boundaries, alerts, persistence, Wheel behavior, and architectural limitations.
+- [docs/TESTING.md](docs/TESTING.md) — automated-test stack, commands, coverage gaps, side effects, live acceptance safety, CI, and developer-owned workflow.
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
 - [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) — Twitch accounts, developer application, OAuth scopes and tokens, EventSub, Helix, and first-run verification.
 - [docs/MEDIA_ENVIRONMENT_SETUP.md](docs/MEDIA_ENVIRONMENT_SETUP.md) — Windows environment, media directories, JSON mappings, supported formats, overlays, failure behavior, Testing-tab safety, and example templates.

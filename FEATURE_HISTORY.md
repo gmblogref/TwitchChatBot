@@ -340,3 +340,17 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - Reconciled Story 1.7 with the developer-confirmed PR #105 merge already present on `main`.
 - Changes are documentation and sanitized example data only. No application code, project files, configuration schema, dependency, workflow, or runtime behavior changed. Application version remains 3.0.0.
 - JSON syntax, Markdown links, model properties, media descriptions, alert categories, Wheel integration, secret safety, and changed-file scope were checked without running builds or automated tests. Developer acceptance is complete; pull request and merge remain pending.
+
+## Story 1.9 — Architecture and Testing Documentation
+
+- **Status:** IMPLEMENTED — Pending Developer Acceptance.
+- Added `docs/ARCHITECTURE.md` as the source-verified guide to all six projects and their references, dependency compromises, WinForms/DI composition, configuration initialization, start/stop/shutdown order, background-provider readiness, TwitchLib/IRC and EventSub responsibilities, Helix, alert/WebSocket/overlay flow, Polly/OpenAI/Streamlabs integrations, JSON persistence, Wheel behavior, failure boundaries, and current limitations.
+- Added `docs/TESTING.md` with exact test-package versions, repository test organization, static test inventory, verified coverage and gaps, restore/build/test/launch commands, mocks and isolation boundaries, automated-test side effects, manual acceptance procedures, Testing-tab production risks, CI behavior, and the protected-`main` developer workflow.
+- Documented that `TestUtilityService.TriggerFirstChatTestAsync` supplies the configured `TWITCH_BOT_ID` as the simulated chatter user ID and that Testing-tab actions can send real Twitch messages, persist state, invoke providers, or incur external charges.
+- Documented that EventSub and Streamlabs startup schedules background work and does not establish external readiness when `StartAsync` returns, and recorded the subscribed EventSub notification types that currently lack handlers.
+- Recorded the Build workflow's plural `tasks/**` push trigger versus the repository's documented singular `task/...` implementation branches without changing the workflow. Confirmed that pull requests targeting `main` still trigger Build and that the version check skips its bump requirement when no `.cs` or `.csproj` files changed.
+- Added `PROJECT_ID: TWITCH-CHATBOT` and Project Identity Guard v1.0 to `AGENTS.md`, requiring formal handoffs to match the repository identity before modifications.
+- Updated README navigation to the new architecture and testing guides.
+- Applied Phase C developer-review corrections: fixed the Release executable name, separated intended Stop Bot operations from source-confirmed lifecycle gaps and developer-observed Stop/Start unreliability, and updated manual acceptance guidance without claiming a lifecycle fix or established root cause.
+- Documentation links, project references, package versions, commands, lifecycle descriptions, integration responsibilities, workflow behavior, private-path/credential safety, version, and changed-file scope were checked without running builds, automated tests, the application, or live integrations.
+- Changes are documentation-only. No application code, automated tests, project files, dependencies, configuration schemas, workflows, or runtime behavior changed. Application version remains 3.0.0.
