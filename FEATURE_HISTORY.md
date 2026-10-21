@@ -330,11 +330,13 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 
 ## Story 1.8 — Media, Assets, and Environment Setup Documentation
 
-- **Status:** IN PROGRESS — Documentation implementation complete; awaiting developer review and acceptance.
-- Added `docs/MEDIA_ENVIRONMENT_SETUP.md` as the source-backed guide for Windows/.NET requirements, private media layout, path resolution, all seven JSON files, alert mappings, supported formats, codec boundaries, Wheel dispatch, browser/OBS behavior, queue/offline behavior, first-run setup, failure handling, and Testing-tab safety.
+- **Status:** DEVELOPER ACCEPTED — PR/MERGE PENDING.
+- **Developer acceptance:** Granted on October 21, 2026.
+- **Source control:** Developer acceptance complete; pull request and merge to protected `main` remain pending.
+- Added `docs/MEDIA_ENVIRONMENT_SETUP.md` as the source-backed guide for Windows/.NET requirements, private media layout, path resolution, all seven JSON files, alert mappings, supported formats, codec boundaries, Wheel Spinner dispatch, browser/OBS behavior, queue/offline behavior, first-run setup, missing-file and failure behavior, Testing-tab production side effects, and troubleshooting.
 - Added seven sanitized valid-JSON templates under `docs/examples/media` for Twitch alerts, excluded users, First Chatter, commands, watch-streak state, Wheel definitions, and donation media.
 - Documented that the example filenames are configurable through `MediaMapFiles:*`, remain documentation-only, contain no real media, and are not automatically copied or seeded into runtime data.
-- Corrected donation media examples to use paths relative to `MediaBase:TwitchAlertsFolder` and linked the README and configuration reference to the new guide and templates.
+- Corrected donation media examples in the Streamlabs documentation to use paths relative to `MediaBase:TwitchAlertsFolder` and linked the README and configuration reference to the new guide and templates.
 - Reconciled Story 1.7 with the developer-confirmed PR #105 merge already present on `main`.
 - Changes are documentation and sanitized example data only. No application code, project files, configuration schema, dependency, workflow, or runtime behavior changed. Application version remains 3.0.0.
-- JSON, links, model properties, media descriptions, alert categories, Wheel integration, secret safety, and changed-file scope were checked without running builds or automated tests. Developer review and acceptance remain pending.
+- JSON syntax, Markdown links, model properties, media descriptions, alert categories, Wheel integration, secret safety, and changed-file scope were checked without running builds or automated tests. Developer acceptance is complete; pull request and merge remain pending.
