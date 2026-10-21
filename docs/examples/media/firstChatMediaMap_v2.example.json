@@ -1,0 +1,19 @@
+{
+  "FirstChatterMediaItems": [
+    {
+      "UserId": "100000001",
+      "CurrentUserName": "example_viewer",
+      "Media": "first_chat_vods/example-viewer.mp4",
+      "AllowedDaysOfWeek": []
+    },
+    {
+      "UserId": "100000002",
+      "CurrentUserName": "weekend_viewer",
+      "Media": "first_chat_vods/weekend-viewer.gif",
+      "AllowedDaysOfWeek": [
+        "Saturday",
+        "Sunday"
+      ]
+    }
+  ]
+}

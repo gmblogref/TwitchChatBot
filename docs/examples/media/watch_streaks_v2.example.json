@@ -1,0 +1,16 @@
+{
+  "Version": 1,
+  "CurrentStreamIndex": 12,
+  "Users": {
+    "100000003": {
+      "UserId": "100000003",
+      "UserName": "sample_regular",
+      "FailedUserIdLookups": 0,
+      "TotalStreams": 8,
+      "Consecutive": 3,
+      "LastAttendedIndex": 12,
+      "LastSeenUtc": "2026-01-15T02:30:00+00:00",
+      "FirstSeenUtc": "2025-11-01T01:00:00+00:00"
+    }
+  }
+}

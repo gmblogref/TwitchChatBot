@@ -1,0 +1,13 @@
+{
+  "default": "donation_alerts/donation-default.mp4",
+  "tiers": [
+    {
+      "Min": 10.0,
+      "Media": "donation_alerts/donation-10.mp4"
+    },
+    {
+      "Min": 50.0,
+      "Media": "donation_alerts/donation-50.mp4"
+    }
+  ]
+}
