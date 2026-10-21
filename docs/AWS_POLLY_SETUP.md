@@ -117,6 +117,23 @@ The queue can be skipped or reset from the UI. Disposal cancels the runner and r
 
 ## Safe Verification
 
+### No-Synthesis Verification Without AWS Credentials
+
+Use this option to confirm that missing AWS credentials do not prevent the application from operating, without intentionally making a billable Polly synthesis request:
+
+1. Use a controlled Windows account or launch environment in which no AWS credentials are intentionally available.
+2. Check for AWS credential environment variables, `AWS_PROFILE`, shared `[default]` or selected profiles, web-identity settings, container credentials, and EC2 instance metadata. Do not display or copy credential values while checking.
+3. Keep all required TTS settings present and confirm `MediaBase:TwitchAlertsFolder` exists or can be created and is writable.
+4. Start the application and bot runtime without pressing a Testing-tab TTS action or deliberately triggering an event that requests speech.
+5. Confirm the logs report unavailable AWS credentials without exposing values, and confirm unrelated configured bot features continue to operate.
+6. Shut down the application normally.
+
+The absence of AWS credentials from `appsettings.json` is not proof that credentials are unavailable: TwitchChatBot does not store AWS credentials there, and the AWS SDK credential chain can discover credentials from environment variables, shared profiles, web identity, container credentials, or EC2 instance metadata. If credentials might be discoverable, do not trigger TTS as part of this check. Any intentional synthesis verification can call Polly and may incur AWS charges.
+
+### Intentional Synthesis Verification
+
+Use the following procedure only when live synthesis is explicitly intended and the developer accepts possible AWS charges:
+
 1. Confirm the AWS identity has only `polly:SynthesizeSpeech` plus any permissions required by its external credential mechanism.
 2. Confirm the AWS SDK can discover credentials in the environment that launches TwitchChatBot.
 3. Confirm `TTS:PollyRegion` is a current Polly region.

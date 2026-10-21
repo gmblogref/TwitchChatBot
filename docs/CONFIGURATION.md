@@ -177,7 +177,7 @@ All template values are startup-required nonblank strings. There is no general t
 | `TTS:Templates:CheerNoMessage` | string, `"{username} cheered {bits} bits."` | Required | No / local only | Cheer speech when no chat message is present; replaces `{username}` and `{bits}`. | Nonblank only. |
 | `TTS:Templates:SubNoMessage` | string, `"{username} subscribed at Tier {tier}."` | Required | No / local only | New-subscription speech; replaces `{username}` and `{tier}`. | Nonblank only. |
 | `TTS:Templates:ReSub` | string, `"{username} resubscribed for {months} months at Tier {tier}."` | Required | No / local only | Resubscription fallback speech; replaces `{username}`, `{months}`, and `{tier}`. | Nonblank only. |
-| `TTS:Templates:WatchStreak` | string, `"{username} has a {streak}-stream streak."` | Required | No / local only | Watch-streak fallback speech; current source replaces `{username}` and `{streak}`. | Nonblank only. The tracked example currently uses `{streakCount}`, which is not replaced by the current handler; use `{streak}` in local configuration. |
+| `TTS:Templates:WatchStreak` | string, `"{username} has a {streak}-stream streak."` | Required | No / local only | Watch-streak fallback speech; current source replaces `{username}` and `{streak}`. | Nonblank only. Use `{streak}`; `{streakCount}` is not replaced by the current handler. |
 
 ### Twitch Helix command endpoints
 

@@ -19,6 +19,8 @@ Package versions in `TwitchChatBot.Tests.csproj` are:
 | `FluentAssertions` | 8.9.0 | Readable assertions |
 | `coverlet.collector` | 10.0.0 | Optional coverage collection |
 
+Fluent Assertions displays licensing information. Each developer or organization must evaluate the applicable Fluent Assertions license for its intended use, particularly commercial use. This repository does not make that licensing determination for adopters.
+
 The project contains 164 `[Fact]` methods and no `[Theory]` methods at the time of this source review. This is a static inventory, not a test-execution result. Assembly-level configuration disables parallel execution because tests share static `AppSettings.Configuration` and other process-level state.
 
 ## Organization and Conventions
@@ -51,7 +53,20 @@ Build Release after restore:
 dotnet build TwitchChatBot.sln --configuration Release --no-restore
 ```
 
-Run all unit tests after a Release build:
+Run the recommended clean-setup-safe selection after a Release build:
+
+```powershell
+dotnet test .\TwitchChatBot.Tests\TwitchChatBot.Tests.csproj --configuration Release --no-build --no-restore --filter "FullyQualifiedName!~TwitchChatBot.Tests.Core.TtsServiceTests&FullyQualifiedName!~TwitchChatBot.Tests.Data.WheelRepositoryTests"
+```
+
+This selection excludes six tests: all four tests in `TwitchChatBot.Tests.Core.TtsServiceTests` and both tests in `TwitchChatBot.Tests.Data.WheelRepositoryTests`.
+
+- `TtsServiceTests` construct the real TTS service. They can discover AWS credentials outside application configuration, potentially invoke Polly, and create media files.
+- `WheelRepositoryTests` use the relative `wheel-media.json` path. They can read that file, and `SaveAllAsync_Should_SetCurrentState` can create or replace it in the test process working directory.
+
+The independent Story 1.10 clean-acceptance run of this filtered selection completed with **158 passed, 0 failed, and 0 skipped**. Filtered execution does not provide `TtsService` or `WheelRepository` test coverage, does not prove live-provider behavior, and does not replace controlled testing of those components.
+
+Run all unit tests only in a controlled environment after reviewing AWS credentials and test-file side effects:
 
 ```powershell
 dotnet test TwitchChatBot.Tests\TwitchChatBot.Tests.csproj --configuration Release --no-build
