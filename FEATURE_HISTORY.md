@@ -402,3 +402,14 @@ Modernize the solution from .NET 8 to .NET 10 LTS, align approved dependencies w
 - Logging tab usability improvements remain future work.
 
 The final corrections are documentation and sanitized example-configuration changes only. They do not fix the follow-up findings or change production application behavior. No full unfiltered test pass is claimed for Story 1.10.
+
+## Story 1.11 — Compiler Warning Cleanup
+
+- **Status:** IMPLEMENTED — Pending Developer Validation.
+- **Implementation branch:** `task/fixing-warnings` (developer managed).
+- Corrected the eight previously reported CS8602 warnings in `ConfigureEntriesGrid()` caused by repeated nullable WinForms string-keyed column lookups.
+- Cached the `Label`, `Weight`, `Hidden`, `Position`, and `Id` lookups in nullable `DataGridViewColumn?` local variables and guarded all property access through those cached references.
+- Preserved the existing column formatting, sizing, visibility, and missing-column behavior. No intentional application behavior changes were made.
+- Modified `TwitchChatBot/TwitchChatBot.cs`, `TwitchChatBot/TwitchChatBot.UI.csproj`, and `FEATURE_HISTORY.md` only.
+- Increased the application version from 3.0.0 to 3.0.1 under the repository's source-change version policy.
+- Developer Debug and Release builds and automated tests remain pending; the warning cleanup is not yet compiler-verified.

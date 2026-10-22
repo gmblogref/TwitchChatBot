@@ -890,33 +890,43 @@ namespace TwitchChatBot
 			dataGridViewEntries.RowHeadersVisible = false;
 
 			// Column naming
-			if (dataGridViewEntries.Columns["Label"] != null)
+			DataGridViewColumn? labelColumn = dataGridViewEntries.Columns["Label"];
+
+			if (labelColumn != null)
 			{
-				dataGridViewEntries.Columns["Label"].HeaderText = "Name";
-				dataGridViewEntries.Columns["Label"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+				labelColumn.HeaderText = "Name";
+				labelColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 			}
 
-			if (dataGridViewEntries.Columns["Weight"] != null)
+			DataGridViewColumn? weightColumn = dataGridViewEntries.Columns["Weight"];
+
+			if (weightColumn != null)
 			{
-				dataGridViewEntries.Columns["Weight"].HeaderText = "Weight";
-				dataGridViewEntries.Columns["Weight"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+				weightColumn.HeaderText = "Weight";
+				weightColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
 			}
 
-			if (dataGridViewEntries.Columns["Hidden"] != null)
+			DataGridViewColumn? hiddenColumn = dataGridViewEntries.Columns["Hidden"];
+
+			if (hiddenColumn != null)
 			{
-				dataGridViewEntries.Columns["Hidden"].HeaderText = "Hidden";
-				dataGridViewEntries.Columns["Hidden"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+				hiddenColumn.HeaderText = "Hidden";
+				hiddenColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
 			}
 
 			// Hide non-user fields
-			if (dataGridViewEntries.Columns["Position"] != null)
+			DataGridViewColumn? positionColumn = dataGridViewEntries.Columns["Position"];
+
+			if (positionColumn != null)
 			{
-				dataGridViewEntries.Columns["Position"].Visible = false;
+				positionColumn.Visible = false;
 			}
 
-			if (dataGridViewEntries.Columns["Id"] != null)
+			DataGridViewColumn? idColumn = dataGridViewEntries.Columns["Id"];
+
+			if (idColumn != null)
 			{
-				dataGridViewEntries.Columns["Id"].Visible = false;
+				idColumn.Visible = false;
 			}
 
 			// Optional: improve header height if text wraps
