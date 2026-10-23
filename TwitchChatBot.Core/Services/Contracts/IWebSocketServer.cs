@@ -11,6 +11,8 @@ namespace TwitchChatBot.Core.Services.Contracts
         event Action<string?>? OnClientAck;
 
         bool HasClientsConnected { get; }
+		IReadOnlyList<string> ActiveTtsAlertIds { get; }
+		void ClearActiveTtsAlertIds(IReadOnlyCollection<string> alertIds);
         void Start();
         void Stop();
         Task BroadcastAsync(object payload);

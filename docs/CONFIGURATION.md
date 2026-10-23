@@ -1,6 +1,8 @@
 # Configuration Reference
 
-This reference describes the configuration behavior implemented by the current TwitchChatBot source. TwitchChatBot is a Windows-only application, and these instructions apply to application version 3.0.0.
+This reference describes the configuration behavior implemented by the current TwitchChatBot source. TwitchChatBot is a Windows-only application, and these instructions apply to application version 3.0.2.
+
+For application controls and day-to-day workflows, see the [User Guide in Markdown](USER_GUIDE.md) or the downloadable [Word User Guide](USER_GUIDE.docx).
 
 ## Quick Start
 
@@ -132,6 +134,12 @@ These values select JSON data files used by repositories. The path strings are s
 | --- | --- | --- | --- | --- | --- |
 | `MediaBase:TwitchAlertsFolder` | string directory, `"C:\\TwitchChatBotMedia"` | Required | No / local only | Physical `/media` root, alert path resolution, and `text_to_speech` output directory. | Only nonblank validation. The TTS service creates its subdirectory, but the embedded host requires a valid physical root; missing, inaccessible, or mismatched paths break media serving and can prevent host/TTS startup. |
 
+### UI media
+
+| Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
+| --- | --- | --- | --- | --- | --- |
+| `UiMedia:WheelCenterBranding` | optional PNG/JPG/JPEG path, `"Wheel/branding.png"` | Optional | No / local only | One global image rendered at the stationary center of every populated wheel. Place relative-path images beneath `MediaBase:TwitchAlertsFolder`; absolute paths are also supported. GIF is not supported. | Empty or missing disables the image. Missing, unsupported, or corrupt images are logged and leave the wheel center empty. Restart after changing the path; recompilation is not required. |
+
 ### Twitch Helix role endpoints
 
 | Key | Type / safe example | Status | Secret / commit | Purpose and consumer | Validation, fallback, and failure behavior |
@@ -219,8 +227,8 @@ See [OpenAI Alert-Text Setup](OPENAI_SETUP.md) for API-key and billing setup, th
 | `OpenAI:Model` | string, `"gpt-4o-mini"` | Required | No / local only | Model value sent to the configured `responses` endpoint. | Nonblank only. Unsupported values cause generation requests to return no generated line. |
 | `OpenAI:DefaultAlertTone` | string, `"hype"` | Required | No / local only | Default tone stored in alert contexts. | Nonblank only. The current prompt builders do not read the `Tone` property, so changing it has no confirmed prompt effect. |
 | `OpenAI:DefaultAlertMaxWords` | integer, `14` | Required, minimum 1 | No / local only | Maximum generated words requested and enforced by local truncation. | Must be an integer at least 1; otherwise startup exits. |
-| `OpenAI:WatchStreakThreshold` | integer, `20` | Required, minimum 0 | No / local only | Minimum watch streak at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation leaves the visual alert intact but has no speech fallback. |
-| `OpenAI:GiftSubThreshold` | integer, `5` | Required, minimum 0 | No / local only | Minimum gift count at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation leaves the visual alert intact but has no speech fallback. |
+| `OpenAI:WatchStreakThreshold` | integer, `20` | Required, minimum 0 | No / local only | Minimum watch streak at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation uses the existing sanitized user-message or watch-streak template fallback. |
+| `OpenAI:GiftSubThreshold` | integer, `5` | Required, minimum 0 | No / local only | Minimum gift count at which AI text is attempted. | Must be an integer at least 0; otherwise startup exits. At or above the threshold, unsuccessful generation uses the existing gift-sub template fallback. |
 
 ### Alert queue behavior
 
@@ -306,7 +314,6 @@ Do not treat these keys as active feature controls:
 - Webhook-era EventSub accessors: `EventSub:Secret` and `EventSub:CallbackUrl`.
 - Unused chatter timing accessors: `Chatters:InitialDelay` and `Chatters:ContinuousDelay`.
 - Unused engine selector: `TTS:Engine`; Polly remains the implemented engine.
-- `UiMedia:SpinButton` has an accessor in `AppSettings` but is absent from the tracked template and has no production consumer. It is not a supported active setting.
 - `OpenAI:DefaultAlertTone` is required and placed on alert contexts, but the current AI prompt builders do not consume the tone value.
 - First Chatter legacy-dictionary migration code exists, but current new-format deserialization can return an empty initialized model before the legacy fallback is attempted. Back up legacy data and verify conversion rather than assuming it will migrate automatically.
 
@@ -342,7 +349,7 @@ Do not treat these keys as active feature controls:
 ### Optional providers do not run
 
 - Streamlabs requires both `Streamlabs:SocketUrl` and `Streamlabs:SocketToken`; either blank disables it.
-- OpenAI accepts a blank API key, but qualifying paths still attempt generation and receive no generated line. Raid speech uses its template fallback; qualifying watch streaks, gift bundles, and annual resubscription milestones retain their visual alerts but produce no fallback speech.
+- OpenAI accepts a blank API key, but qualifying paths still attempt generation and receive no generated line. Raid, watch-streak, gift-bundle, and annual-resubscription paths retain their existing template or sanitized user-message speech fallback when generation is unsuccessful.
 
 ## Security Guidance
 

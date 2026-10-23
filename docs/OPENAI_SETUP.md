@@ -68,9 +68,9 @@ There is no independent OpenAI `Enabled` Boolean. Leaving `OpenAI:ApiKey` blank 
 | Alert path | When AI is attempted | Data sent in the generated prompt | Speech fallback if generation fails |
 | --- | --- | --- | --- |
 | Raid | Every raid | Raider username, viewer count, maximum-word rule | **Yes.** Uses `TTS:Templates:Raid`. |
-| Watch streak | Streak at or above `OpenAI:WatchStreakThreshold` | Viewer username, streak count, maximum-word rule | **No** for qualifying streaks. The visual alert still continues. |
-| Gift-sub bundle | Count at or above `OpenAI:GiftSubThreshold` | Gifter username, gift count, tier, maximum-word rule | **No** for qualifying bundles. The visual alert still continues. |
-| Annual resubscription milestone | At least 12 months and evenly divisible by 12 | Username, years calculated as months divided by 12, tier, maximum-word rule | **No.** The visual alert still continues. |
+| Watch streak | Streak at or above `OpenAI:WatchStreakThreshold` | Viewer username, streak count, maximum-word rule | **Yes.** Uses the sanitized user message when present, otherwise `TTS:Templates:WatchStreak`. |
+| Gift-sub bundle | Count at or above `OpenAI:GiftSubThreshold` | Gifter username, gift count, tier, maximum-word rule | **Yes.** Uses `TTS:Templates:MysteryGift`. |
+| Annual resubscription milestone | At least 12 months and evenly divisible by 12 | Username, years calculated as months divided by 12, tier, maximum-word rule | **Yes.** Uses the sanitized user message when present, otherwise `TTS:Templates:ReSub`. |
 
 The current prompts do not send OAuth tokens, Twitch IDs, OpenAI credentials, or local file paths. They do send public-facing event information such as usernames, counts, and subscription tier. Review this data flow against the channel's privacy expectations before enabling the integration.
 
@@ -108,7 +108,7 @@ OpenAI-generated speech also requires working [AWS Polly setup](AWS_POLLY_SETUP.
 | Unsupported model | Select a current Responses-compatible model; unsupported values return no generated line. |
 | Timeout or provider outage | The request times out after 30 seconds, is not retried, and returns no generated line. |
 | Raid still speaks template text | This is the implemented raid fallback. |
-| Qualifying streak/gift/annual resub has visual alert but no speech | This is the current no-speech-fallback limitation after unsuccessful AI generation. |
+| Qualifying streak/gift/annual resub has visual alert but no speech | Confirm the corresponding TTS template, AWS Polly configuration, voice, and writable media output directory; unsuccessful AI generation now uses the existing event fallback. |
 | AI succeeds but there is no audio | Troubleshoot AWS credentials, Polly region/voice support, and the media output directory. |
 | Tone changes do nothing | `OpenAI:DefaultAlertTone` is not read by the current prompt builders. |
 
@@ -127,7 +127,7 @@ OpenAI-generated speech also requires working [AWS Polly setup](AWS_POLLY_SETUP.
 - All supporting OpenAI settings except the API key remain startup-required.
 - `OpenAI:DefaultAlertTone` has no current prompt effect.
 - There is no application retry, response-body error logging, or user-visible provider health indicator.
-- Failed qualifying watch-streak, gift-bundle, and annual-resub generation has no speech fallback.
+- Unsuccessful qualifying watch-streak, gift-bundle, and annual-resub generation uses the existing event speech fallback.
 - The model is not checked for existence or Responses API support during startup.
 - OpenAI output is used for TTS only, not for the visual alert text.
 - OpenAI-generated speech still depends on AWS Polly.

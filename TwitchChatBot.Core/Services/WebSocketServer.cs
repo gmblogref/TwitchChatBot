@@ -13,6 +13,7 @@ namespace TwitchChatBot.Core.Services
         private sealed class SocketState
         {
             public DateTime LastPongUtc { get; set; } = DateTime.UtcNow;
+			public string? ActiveTtsAlertId { get; set; }
         }
 
         private readonly ConcurrentDictionary<WebSocket, SocketState> _sockets = new();
@@ -24,11 +25,37 @@ namespace TwitchChatBot.Core.Services
         public event Action<string?>? OnClientDone;
         public event Action<string?>? OnClientAck;
         public bool HasClientsConnected => _sockets.Any(kvp => kvp.Key.State == WebSocketState.Open);
+		public IReadOnlyList<string> ActiveTtsAlertIds => _sockets
+			.Where(kvp => kvp.Key.State == WebSocketState.Open)
+			.Select(kvp => kvp.Value.ActiveTtsAlertId)
+			.Where(alertId => !string.IsNullOrWhiteSpace(alertId))
+			.Cast<string>()
+			.Distinct(StringComparer.Ordinal)
+			.ToList();
         
         public WebSocketServer(ILogger<WebSocketServer> logger)
         {
             _logger = logger;
         }
+
+		public void ClearActiveTtsAlertIds(IReadOnlyCollection<string> alertIds)
+		{
+			if (alertIds.Count == 0)
+			{
+				return;
+			}
+
+			var alertIdSet = alertIds.ToHashSet(StringComparer.Ordinal);
+
+			foreach (SocketState state in _sockets.Values)
+			{
+				if (!string.IsNullOrWhiteSpace(state.ActiveTtsAlertId) &&
+					alertIdSet.Contains(state.ActiveTtsAlertId))
+				{
+					state.ActiveTtsAlertId = null;
+				}
+			}
+		}
 
         public void Start()
         {
@@ -271,8 +298,24 @@ namespace TwitchChatBot.Core.Services
                     return true;
                 }
 
+				if (string.Equals(type, "ttsStarted", StringComparison.OrdinalIgnoreCase))
+				{
+					if (_sockets.TryGetValue(webSocket, out var ttsState))
+					{
+						ttsState.ActiveTtsAlertId = alertId;
+					}
+
+					return true;
+				}
+
                 if (string.Equals(type, "done", StringComparison.OrdinalIgnoreCase))
                 {
+					if (_sockets.TryGetValue(webSocket, out var doneState) &&
+						string.Equals(doneState.ActiveTtsAlertId, alertId, StringComparison.Ordinal))
+					{
+						doneState.ActiveTtsAlertId = null;
+					}
+
                     OnClientDone?.Invoke(alertId);
                     return true;
                 }

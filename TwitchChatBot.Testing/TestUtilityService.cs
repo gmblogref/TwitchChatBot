@@ -29,8 +29,8 @@ public class TestUtilityService : ITestUtilityService
     public async Task TriggerCheerTestAsync(int bits) =>
         await _twitchAlertTypesService.HandleCheerAsync("TestUser", bits, "Test cheer message");
 
-    public void TriggerFollowTest(string userName) =>
-        _twitchAlertTypesService.HandleFollowAsync(userName);
+    public async Task TriggerFollowTest(string userName) =>
+        await _twitchAlertTypesService.HandleFollowAsync(userName);
     public async Task TriggerHypeTrainTestAsync() =>
         await _twitchAlertTypesService.HandleHypeTrainAsync();
 

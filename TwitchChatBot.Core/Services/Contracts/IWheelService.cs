@@ -12,6 +12,8 @@ namespace TwitchChatBot.Core.Services.Contracts
 
 		Task AddItemAsync(string wheelId, WheelItem item);
 
+		Task<bool> SaveItemsAsync(string wheelId, IReadOnlyCollection<WheelItem> items);
+
 		Task RemoveItemAsync(string wheelId, string itemId);
 
 		Task ToggleHiddenAsync(string wheelId, string itemId);

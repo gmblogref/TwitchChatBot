@@ -139,7 +139,7 @@ namespace TwitchChatBot.Models
 
 		public static class UiMedia
 		{
-			public static string SpinButton => GetStringSetting("UiMedia:SpinButton");
+			public static string? WheelCenterBranding => GetOptionalStringSetting("UiMedia:WheelCenterBranding");
 		}
 
         public static class Chatters

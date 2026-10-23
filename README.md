@@ -2,7 +2,7 @@
 
 Twitch Chat Bot is a Windows desktop application for running Twitch chat automation, stream alerts, text-to-speech, browser overlays, and related interaction tools from a Windows Forms control panel. The application runs locally and connects to configured external services; it is not a hosted web application.
 
-- **Current application version:** 3.0.0
+- **Current application version:** 3.0.2
 - **Framework:** .NET 10 LTS
 - **Platform:** Windows only (`net10.0-windows`)
 - **Supported development baseline:** Windows 11 and Visual Studio 2026 Community
@@ -76,6 +76,18 @@ Replace placeholders with local values and valid local paths. The application lo
 At a high level, configuration covers Twitch identities and authentication, EventSub endpoints, local media-map and media-folder paths, the embedded web host, AWS Polly voices and region, alert behavior, and optional Streamlabs and OpenAI settings. Detailed provider, OAuth, media, and environment setup is intentionally outside this onboarding guide.
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete key inventory, precedence rules, validation behavior, persisted runtime data, safe examples, and troubleshooting guidance.
+
+### Optional Wheel Center Branding
+
+To display one branding image in the center of every wheel, place a PNG, JPG, or JPEG file beneath the directory configured by `MediaBase:TwitchAlertsFolder` and set a relative path in your ignored local configuration. For example, a file stored as `Wheel/branding.png` beneath that media folder uses:
+
+```json
+"UiMedia": {
+  "WheelCenterBranding": "Wheel/branding.png"
+}
+```
+
+An absolute image path is also supported. GIF is not supported. Leave `WheelCenterBranding` empty to disable center branding. After changing the setting, restart the application to reload the image; recompilation is not required. See the [UI media configuration reference](docs/CONFIGURATION.md#ui-media) for the authoritative setting details and failure behavior.
 
 See [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) for Twitch account ownership, developer-application registration, OAuth token and scope setup, EventSub/Helix behavior, and first-run verification.
 
@@ -197,7 +209,7 @@ Follow the [Streamlabs Donation Setup Guide](docs/STREAMLABS_SETUP.md) for the e
 
 ### OpenAI
 
-AI-generated alert text is optional and uses the configured OpenAI Responses API endpoint, model, and API key. The visual alert continues when generation fails, but qualifying watch-streak, gift-bundle, and annual-resub paths currently have no speech fallback. Keep the API key only in ignored local configuration.
+AI-generated alert text is optional and uses the configured OpenAI Responses API endpoint, model, and API key. If generation does not return usable text for a qualifying raid, watch streak, gift-sub bundle, or annual resubscription, the application retains that event's existing template or user-message speech fallback. Keep the API key only in ignored local configuration.
 
 Follow the [OpenAI Alert-Text Setup Guide](docs/OPENAI_SETUP.md) for API-key and billing setup, the data sent for each supported alert type, event-specific speech fallbacks, costs, and troubleshooting.
 
@@ -263,7 +275,7 @@ The application version is stored in `TwitchChatBot/TwitchChatBot.UI.csproj` and
 - A justified minor or major increase is allowed.
 - Documentation-only and workflow-only pull requests may retain the current application version when no `.cs` or `.csproj` files changed.
 
-The current application version remains `3.0.0`; documentation-only changes do not require a bump when no `.cs` or `.csproj` files change.
+The current application version is `3.0.2`. Documentation-only changes do not require a bump when no `.cs` or `.csproj` files change.
 
 ## Security and Secrets
 
@@ -281,15 +293,31 @@ TwitchChatBot is licensed under the [MIT License](LICENSE). Under its terms, dev
 
 This repository provides source code for developer-led local builds; it does not provide a packaged application or installer. Dependencies and any third-party materials remain subject to their respective license terms.
 
-## Additional Repository Documentation
+## Documentation
 
-- [AGENTS.md](AGENTS.md) — durable architecture, process, testing, security, and contribution rules.
-- [FEATURE_HISTORY.md](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — project references, dependency composition, lifecycle, Twitch/EventSub boundaries, alerts, persistence, Wheel behavior, and architectural limitations.
-- [docs/TESTING.md](docs/TESTING.md) — automated-test stack, commands, coverage gaps, side effects, live acceptance safety, CI, and developer-owned workflow.
-- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — complete application configuration and runtime-settings reference.
-- [docs/TWITCH_SETUP.md](docs/TWITCH_SETUP.md) — Twitch accounts, developer application, OAuth scopes and tokens, EventSub, Helix, and first-run verification.
-- [docs/MEDIA_ENVIRONMENT_SETUP.md](docs/MEDIA_ENVIRONMENT_SETUP.md) — Windows environment, media directories, JSON mappings, supported formats, overlays, failure behavior, Testing-tab safety, and example templates.
-- [docs/STREAMLABS_SETUP.md](docs/STREAMLABS_SETUP.md) — optional Streamlabs Socket.IO donation setup, media, validation, and limitations.
-- [docs/OPENAI_SETUP.md](docs/OPENAI_SETUP.md) — optional OpenAI Responses API setup, supported alerts, fallbacks, security, and costs.
-- [docs/AWS_POLLY_SETUP.md](docs/AWS_POLLY_SETUP.md) — AWS credentials, least-privilege Polly access, voices, speech output, and billing precautions.
+### Getting started and installation
+
+This README covers prerequisites, cloning, local configuration, building, and running TwitchChatBot. For the required media folders, runtime JSON files, browser overlays, and sanitized templates, see [Media and Environment Setup](docs/MEDIA_ENVIRONMENT_SETUP.md).
+
+### Using the application
+
+- [User Guide — Markdown](docs/USER_GUIDE.md) — GitHub-friendly guide to the desktop controls, Wheel workflow, Testing tab, logging, and troubleshooting.
+- [User Guide — Word](docs/USER_GUIDE.docx) — downloadable version of the same guide with all five screenshots embedded.
+
+### Application configuration
+
+- [Configuration Reference](docs/CONFIGURATION.md) — complete key inventory, precedence, validation, persistence paths, and safe examples.
+
+### Optional external integrations
+
+- [Twitch Developer and OAuth Setup](docs/TWITCH_SETUP.md) — Twitch accounts, application registration, scopes, tokens, EventSub, and Helix.
+- [OpenAI Alert-Text Setup](docs/OPENAI_SETUP.md) — Responses API setup, supported alerts, fallbacks, security, and costs.
+- [Streamlabs Donation Setup](docs/STREAMLABS_SETUP.md) — Socket.IO donation setup, media, validation, and limitations.
+- [AWS Polly Text-to-Speech Setup](docs/AWS_POLLY_SETUP.md) — credentials, least-privilege access, voices, speech output, and billing precautions.
+
+### Developer information
+
+- [Architecture](docs/ARCHITECTURE.md) — project references, composition, lifecycle, integration boundaries, persistence, and known limitations.
+- [Testing](docs/TESTING.md) — automated-test commands, coverage boundaries, side effects, live acceptance safety, and CI.
+- [Feature History](FEATURE_HISTORY.md) — implemented capabilities, story outcomes, validation evidence, and known limitations.
+- [Repository Instructions](AGENTS.md) — architecture, process, testing, security, and contribution rules.

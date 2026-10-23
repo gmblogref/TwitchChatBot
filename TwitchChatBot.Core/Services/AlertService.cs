@@ -13,11 +13,13 @@ namespace TwitchChatBot.Core.Services
         private readonly object _sync = new();
 
         private readonly SemaphoreSlim _queueSignal = new(0, int.MaxValue);
+		private readonly SemaphoreSlim _broadcastGate = new(1, 1);
         private readonly CancellationTokenSource _processorCts = new();
         private readonly Task _processorTask;
 
         private TaskCompletionSource<bool>? _currentAlertTcs;
         private TaskCompletionSource<bool>? _currentAckTcs;
+		private AlertItem? _currentAlert;
         private bool _isProcessing = false;
         private string? _currentAlertId;
 
@@ -92,6 +94,116 @@ namespace TwitchChatBot.Core.Services
 			SignalQueue();
 		}
 
+		public async Task<bool> TryCancelActiveTtsAsync()
+		{
+			TaskCompletionSource<bool>? currentAlertTcs = null;
+			TaskCompletionSource<bool>? currentAckTcs = null;
+			var alertIds = _webSocketServer.ActiveTtsAlertIds.ToHashSet(StringComparer.Ordinal);
+
+			lock (_sync)
+			{
+				if (_currentAlert?.IsTts == true &&
+					!_currentAlert.IsCanceled &&
+					!string.IsNullOrWhiteSpace(_currentAlertId))
+				{
+					_currentAlert.IsCanceled = true;
+					alertIds.Add(_currentAlertId);
+					currentAlertTcs = _currentAlertTcs;
+					currentAckTcs = _currentAckTcs;
+				}
+			}
+
+			if (alertIds.Count == 0)
+			{
+				return false;
+			}
+
+			await BroadcastTtsCancellationAsync("skipTts", alertIds, null).ConfigureAwait(false);
+			_webSocketServer.ClearActiveTtsAlertIds(alertIds);
+			currentAckTcs?.TrySetResult(false);
+			currentAlertTcs?.TrySetResult(false);
+
+			_logger.LogInformation("⏭️ Active TTS playback canceled on connected overlays.");
+			return true;
+		}
+
+		public async Task<IReadOnlyList<string>> CancelTtsAsync(long ttsSequence)
+		{
+			var mediaPaths = new List<string>();
+			TaskCompletionSource<bool>? currentAlertTcs = null;
+			TaskCompletionSource<bool>? currentAckTcs = null;
+			string? currentAlertId = null;
+
+			lock (_sync)
+			{
+				RemovePendingTtsAlerts(
+					alert => alert.TtsSequence == ttsSequence,
+					mediaPaths);
+
+				if (_currentAlert?.IsTts == true &&
+					_currentAlert.TtsSequence == ttsSequence &&
+					!_currentAlert.IsCanceled)
+				{
+					_currentAlert.IsCanceled = true;
+					currentAlertId = _currentAlertId;
+					currentAlertTcs = _currentAlertTcs;
+					currentAckTcs = _currentAckTcs;
+					AddMediaPath(mediaPaths, _currentAlert.MediaPath);
+				}
+			}
+
+			if (!string.IsNullOrWhiteSpace(currentAlertId))
+			{
+				var alertIds = new[] { currentAlertId! };
+
+				await BroadcastTtsCancellationAsync(
+					"skipTts",
+					alertIds,
+					null).ConfigureAwait(false);
+
+				_webSocketServer.ClearActiveTtsAlertIds(alertIds);
+				currentAckTcs?.TrySetResult(false);
+				currentAlertTcs?.TrySetResult(false);
+			}
+
+			return mediaPaths;
+		}
+
+		public async Task<IReadOnlyList<string>> ResetTtsAsync(long throughTtsSequence)
+		{
+			var mediaPaths = new List<string>();
+			TaskCompletionSource<bool>? currentAlertTcs = null;
+			TaskCompletionSource<bool>? currentAckTcs = null;
+
+			lock (_sync)
+			{
+				RemovePendingTtsAlerts(
+					alert => alert.TtsSequence.HasValue &&
+						alert.TtsSequence.Value <= throughTtsSequence,
+					mediaPaths);
+
+				if (_currentAlert?.IsTts == true &&
+					_currentAlert.TtsSequence.HasValue &&
+					_currentAlert.TtsSequence.Value <= throughTtsSequence)
+				{
+					_currentAlert.IsCanceled = true;
+					currentAlertTcs = _currentAlertTcs;
+					currentAckTcs = _currentAckTcs;
+					AddMediaPath(mediaPaths, _currentAlert.MediaPath);
+				}
+			}
+
+			await BroadcastTtsCancellationAsync(
+				"resetTts",
+				null,
+				throughTtsSequence).ConfigureAwait(false);
+			currentAckTcs?.TrySetResult(false);
+			currentAlertTcs?.TrySetResult(false);
+
+			_logger.LogInformation("♻️ Active and pending TTS alerts reset without changing non-TTS alerts.");
+			return mediaPaths;
+		}
+
 		private void SignalQueue()
         {
             try
@@ -158,6 +270,7 @@ namespace TwitchChatBot.Core.Services
                     alert = _alertQueue.Dequeue();
 
                     alertId = Guid.NewGuid().ToString("N");
+					_currentAlert = alert;
                     _currentAlertId = alertId;
 
                     _currentAckTcs = new TaskCompletionSource<bool>(
@@ -178,8 +291,15 @@ namespace TwitchChatBot.Core.Services
                         alertId,
                         message = alert.Message,
                         media = alert.MediaPath,
+						isTts = alert.IsTts,
+						ttsSequence = alert.TtsSequence,
 						extraData = alert.ExtraData
 					};
+
+					if (alert.IsCanceled)
+					{
+						continue;
+					}
 
                     if (!_webSocketServer.HasClientsConnected)
                     {
@@ -204,7 +324,10 @@ namespace TwitchChatBot.Core.Services
 
                         lock (_sync)
                         {
-                            RequeueAtFront(alert);
+							if (!alert.IsCanceled)
+							{
+								RequeueAtFront(alert);
+							}
                         }
 
                         // IMPORTANT: Stop processing now.
@@ -212,7 +335,20 @@ namespace TwitchChatBot.Core.Services
                         return;
                     }
 
-                    await _webSocketServer.BroadcastAsync(payload).ConfigureAwait(false);
+					await _broadcastGate.WaitAsync(token).ConfigureAwait(false);
+					try
+					{
+						if (alert.IsCanceled)
+						{
+							continue;
+						}
+
+						await _webSocketServer.BroadcastAsync(payload).ConfigureAwait(false);
+					}
+					finally
+					{
+						_broadcastGate.Release();
+					}
 
                     _logger.LogInformation(
                         "📤 Alert sent: {Type}, {Message}, Media: {Media}",
@@ -247,7 +383,10 @@ namespace TwitchChatBot.Core.Services
 
                         ackTcs.TrySetResult(false);
 
-                        RequeueAtFront(alert);
+						if (!alert.IsCanceled)
+						{
+							RequeueAtFront(alert);
+						}
 
                         await Task.Delay(RetryDelay, token).ConfigureAwait(false);
                         continue;
@@ -275,7 +414,7 @@ namespace TwitchChatBot.Core.Services
                 {
                     _logger.LogError(ex, "❌ Failed to process alert. Re-queueing last alert.");
 
-                    if (alert != null)
+                    if (alert != null && !alert.IsCanceled)
                     {
                         RequeueAtFront(alert);
                     }
@@ -309,6 +448,7 @@ namespace TwitchChatBot.Core.Services
 
                         if (string.Equals(_currentAlertId, alertId, StringComparison.Ordinal))
                         {
+							_currentAlert = null;
                             _currentAlertId = null;
                         }
                     }
@@ -396,6 +536,61 @@ namespace TwitchChatBot.Core.Services
                 }
             }
         }
+
+		private async Task BroadcastTtsCancellationAsync(
+			string controlType,
+			IReadOnlyCollection<string>? alertIds,
+			long? throughTtsSequence)
+		{
+			await _broadcastGate.WaitAsync().ConfigureAwait(false);
+			try
+			{
+				await _webSocketServer.BroadcastAsync(new
+				{
+					type = controlType,
+					alertIds,
+					throughTtsSequence
+				}).ConfigureAwait(false);
+			}
+			finally
+			{
+				_broadcastGate.Release();
+			}
+		}
+
+		private void RemovePendingTtsAlerts(
+			Func<AlertItem, bool> predicate,
+			List<string> mediaPaths)
+		{
+			var retainedAlerts = new Queue<AlertItem>(_alertQueue.Count);
+
+			while (_alertQueue.Count > 0)
+			{
+				AlertItem alert = _alertQueue.Dequeue();
+
+				if (alert.IsTts && predicate(alert))
+				{
+					alert.IsCanceled = true;
+					AddMediaPath(mediaPaths, alert.MediaPath);
+					continue;
+				}
+
+				retainedAlerts.Enqueue(alert);
+			}
+
+			while (retainedAlerts.Count > 0)
+			{
+				_alertQueue.Enqueue(retainedAlerts.Dequeue());
+			}
+		}
+
+		private static void AddMediaPath(List<string> mediaPaths, string? mediaPath)
+		{
+			if (!string.IsNullOrWhiteSpace(mediaPath) && !mediaPaths.Contains(mediaPath))
+			{
+				mediaPaths.Add(mediaPath);
+			}
+		}
 
         private void HandleClientConnected()
         {

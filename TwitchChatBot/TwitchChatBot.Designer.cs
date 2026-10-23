@@ -30,6 +30,7 @@ namespace TwitchChatBot
 		/// </summary>
 		private void InitializeComponent()
 		{
+			components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TwitchChatBot));
 			DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
 			buttonStartBot = new Button();
@@ -93,9 +94,12 @@ namespace TwitchChatBot
 			tabPageLogging = new TabPage();
 			textBoxLogging = new TextBox();
 			labelLogging = new Label();
+			buttonClearLog = new Button();
+			buttonCopyAllLog = new Button();
 			buttonTestBot = new Button();
 			buttonStopBot = new Button();
 			buttonTestDonation = new Button();
+			toolTipMain = new ToolTip(components);
 			tabControlChatBot.SuspendLayout();
 			tabPageMainChat.SuspendLayout();
 			tabPageUtilities.SuspendLayout();
@@ -156,7 +160,7 @@ namespace TwitchChatBot
 			tabPageMainChat.Padding = new Padding(3);
 			tabPageMainChat.Size = new Size(1262, 457);
 			tabPageMainChat.TabIndex = 0;
-			tabPageMainChat.Text = "Main Chat Bot Tab";
+			tabPageMainChat.Text = "Main Chat";
 			tabPageMainChat.UseVisualStyleBackColor = true;
 			// 
 			// richTextBoxViewers
@@ -168,6 +172,7 @@ namespace TwitchChatBot
 			richTextBoxViewers.Location = new Point(953, 37);
 			richTextBoxViewers.MinimumSize = new Size(303, 363);
 			richTextBoxViewers.Name = "richTextBoxViewers";
+			richTextBoxViewers.ReadOnly = true;
 			richTextBoxViewers.Size = new Size(303, 363);
 			richTextBoxViewers.TabIndex = 6;
 			richTextBoxViewers.Text = "";
@@ -192,6 +197,7 @@ namespace TwitchChatBot
 			richTextBoxStreamChat.Location = new Point(6, 37);
 			richTextBoxStreamChat.MinimumSize = new Size(719, 363);
 			richTextBoxStreamChat.Name = "richTextBoxStreamChat";
+			richTextBoxStreamChat.ReadOnly = true;
 			richTextBoxStreamChat.Size = new Size(926, 363);
 			richTextBoxStreamChat.TabIndex = 4;
 			richTextBoxStreamChat.Text = "";
@@ -215,7 +221,7 @@ namespace TwitchChatBot
 			tabPageUtilities.Name = "tabPageUtilities";
 			tabPageUtilities.Size = new Size(1262, 457);
 			tabPageUtilities.TabIndex = 3;
-			tabPageUtilities.Text = "Utilities Tab";
+			tabPageUtilities.Text = "Utilities";
 			tabPageUtilities.UseVisualStyleBackColor = true;
 			// 
 			// groupBoxAlertHistory
@@ -256,9 +262,9 @@ namespace TwitchChatBot
 			buttonClearFirst.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
 			buttonClearFirst.Location = new Point(33, 180);
 			buttonClearFirst.Name = "buttonClearFirst";
-			buttonClearFirst.Size = new Size(163, 40);
+			buttonClearFirst.Size = new Size(220, 40);
 			buttonClearFirst.TabIndex = 17;
-			buttonClearFirst.Text = "Clear First";
+			buttonClearFirst.Text = "Reset First Chatters";
 			buttonClearFirst.UseVisualStyleBackColor = true;
 			buttonClearFirst.Click += buttonClearFirst_Click;
 			// 
@@ -372,7 +378,6 @@ namespace TwitchChatBot
 			buttonDeleteWheel.Text = "Delete Wheel";
 			buttonDeleteWheel.UseVisualStyleBackColor = true;
 			buttonDeleteWheel.Click += buttonDeleteWheel_Click;
-			// 
 			// buttonShuffleEntries
 			// 
 			buttonShuffleEntries.Location = new Point(836, 15);
@@ -395,21 +400,21 @@ namespace TwitchChatBot
 			// 
 			// buttonRemoveEntry
 			// 
-			buttonRemoveEntry.Location = new Point(942, 17);
+			buttonRemoveEntry.Location = new Point(873, 17);
 			buttonRemoveEntry.Name = "buttonRemoveEntry";
-			buttonRemoveEntry.Size = new Size(105, 34);
+			buttonRemoveEntry.Size = new Size(143, 34);
 			buttonRemoveEntry.TabIndex = 8;
-			buttonRemoveEntry.Text = "Remove";
+			buttonRemoveEntry.Text = "Remove Entry";
 			buttonRemoveEntry.UseVisualStyleBackColor = true;
 			buttonRemoveEntry.Click += buttonRemoveEntry_Click;
 			// 
 			// buttonAddEntry
 			// 
-			buttonAddEntry.Location = new Point(1053, 16);
+			buttonAddEntry.Location = new Point(1022, 16);
 			buttonAddEntry.Name = "buttonAddEntry";
-			buttonAddEntry.Size = new Size(93, 36);
+			buttonAddEntry.Size = new Size(124, 36);
 			buttonAddEntry.TabIndex = 7;
-			buttonAddEntry.Text = "Add";
+			buttonAddEntry.Text = "Add Entry";
 			buttonAddEntry.UseVisualStyleBackColor = true;
 			buttonAddEntry.Click += buttonAddEntry_Click;
 			// 
@@ -499,7 +504,7 @@ namespace TwitchChatBot
 			tabTesting.Padding = new Padding(3);
 			tabTesting.Size = new Size(1262, 457);
 			tabTesting.TabIndex = 2;
-			tabTesting.Text = "Testing Tab";
+			tabTesting.Text = "Testing";
 			// 
 			// groupBoxButtonTests
 			// 
@@ -705,7 +710,7 @@ namespace TwitchChatBot
 			buttonTestTts.Name = "buttonTestTts";
 			buttonTestTts.Size = new Size(163, 40);
 			buttonTestTts.TabIndex = 15;
-			buttonTestTts.Text = "Text 2 Speech";
+			buttonTestTts.Text = "Text to Speech";
 			buttonTestTts.UseVisualStyleBackColor = true;
 			buttonTestTts.Click += buttonTestTts_Click;
 			// 
@@ -788,6 +793,8 @@ namespace TwitchChatBot
 			// tabPageLogging
 			// 
 			tabPageLogging.BorderStyle = BorderStyle.Fixed3D;
+			tabPageLogging.Controls.Add(buttonCopyAllLog);
+			tabPageLogging.Controls.Add(buttonClearLog);
 			tabPageLogging.Controls.Add(textBoxLogging);
 			tabPageLogging.Controls.Add(labelLogging);
 			tabPageLogging.Font = new Font("Arial Black", 13.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
@@ -796,7 +803,7 @@ namespace TwitchChatBot
 			tabPageLogging.Padding = new Padding(3);
 			tabPageLogging.Size = new Size(1262, 457);
 			tabPageLogging.TabIndex = 1;
-			tabPageLogging.Text = "Logging Tab";
+			tabPageLogging.Text = "Logging";
 			tabPageLogging.UseVisualStyleBackColor = true;
 			// 
 			// textBoxLogging
@@ -822,7 +829,31 @@ namespace TwitchChatBot
 			labelLogging.Name = "labelLogging";
 			labelLogging.Size = new Size(265, 32);
 			labelLogging.TabIndex = 0;
-			labelLogging.Text = "Logging Information";
+			labelLogging.Text = "Application Log";
+			// 
+			// buttonClearLog
+			// 
+			buttonClearLog.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+			buttonClearLog.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+			buttonClearLog.Location = new Point(6, 410);
+			buttonClearLog.Name = "buttonClearLog";
+			buttonClearLog.Size = new Size(140, 37);
+			buttonClearLog.TabIndex = 2;
+			buttonClearLog.Text = "Clear Log";
+			buttonClearLog.UseVisualStyleBackColor = true;
+			buttonClearLog.Click += buttonClearLog_Click;
+			// 
+			// buttonCopyAllLog
+			// 
+			buttonCopyAllLog.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+			buttonCopyAllLog.Font = new Font("Arial Black", 10.2F, FontStyle.Bold);
+			buttonCopyAllLog.Location = new Point(152, 410);
+			buttonCopyAllLog.Name = "buttonCopyAllLog";
+			buttonCopyAllLog.Size = new Size(140, 37);
+			buttonCopyAllLog.TabIndex = 3;
+			buttonCopyAllLog.Text = "Copy All";
+			buttonCopyAllLog.UseVisualStyleBackColor = true;
+			buttonCopyAllLog.Click += buttonCopyAllLog_Click;
 			// 
 			// buttonTestBot
 			// 
@@ -840,6 +871,7 @@ namespace TwitchChatBot
 			// 
 			buttonStopBot.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
 			buttonStopBot.BackColor = Color.Crimson;
+			buttonStopBot.Enabled = false;
 			buttonStopBot.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
 			buttonStopBot.Location = new Point(1018, 517);
 			buttonStopBot.Name = "buttonStopBot";
@@ -859,6 +891,45 @@ namespace TwitchChatBot
 			buttonTestDonation.Text = "Donations";
 			buttonTestDonation.UseVisualStyleBackColor = true;
 			buttonTestDonation.Click += buttonTestDonation_Click;
+			// 
+			// toolTipMain
+			// 
+			toolTipMain.SetToolTip(buttonTtsSkip, "Stops the current speech during generation or active playback; later speech remains queued.");
+			toolTipMain.SetToolTip(buttonTtsReset, "Stops current speech and clears all pending speech without affecting other alerts.");
+			toolTipMain.SetToolTip(buttonClearFirst, "Clears the current first-chatter tracking.");
+			toolTipMain.SetToolTip(buttonReplayAlert, "Replays the selected alert.");
+			toolTipMain.SetToolTip(buttonShuffleEntries, "Randomizes the displayed entry order.");
+			toolTipMain.SetToolTip(buttonSaveEntries, "Persists changes to wheel entries.");
+			toolTipMain.SetToolTip(buttonSpin, "Selects a winner using the configured weights.");
+			toolTipMain.SetToolTip(buttonDeleteWheel, "Permanently deletes the selected wheel.");
+			toolTipMain.SetToolTip(comboBoxWheels, "Selects the wheel to view, edit, or spin.");
+			toolTipMain.SetToolTip(buttonAddWheel, "Creates a new wheel with one default entry.");
+			toolTipMain.SetToolTip(buttonAddEntry, "Adds a new unsaved entry to the selected wheel.");
+			toolTipMain.SetToolTip(buttonRemoveEntry, "Removes the selected entry from the edit list; use Save to persist the removal.");
+			toolTipMain.SetToolTip(dataGridViewEntries, "Edit wheel entries here; use Save to persist changes.");
+			toolTipMain.SetToolTip(buttonSpinResultOk, "Confirms the winner and dispatches its configured wheel result.");
+			toolTipMain.SetToolTip(buttonTestFollow, "Simulates a follow through production alert services; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestSub, "Simulates a subscription using User Name; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestReSub, "Simulates a resubscription using User Name and Amount as months; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestSubGift, "Simulates a gifted subscription using User Name as the gifter and Amount as the recipient; may trigger alerts or TTS.");
+			toolTipMain.SetToolTip(buttonTestRaid, "Simulates a raid using User Name and Amount as viewer count; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestMysteryGift, "Simulates a mystery gift bundle using Amount as the subscription count; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestHypeTrain, "Simulates a Hype Train start through production alert services; may trigger alerts or TTS.");
+			toolTipMain.SetToolTip(buttonTestHypeTrainEnd, "Simulates a Hype Train end with predefined test statistics; may trigger alerts or TTS.");
+			toolTipMain.SetToolTip(buttonTestWatchStreak, "Simulates a watch-streak notice using User Name and Amount as the streak count; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestDonation, "Simulates a donation using User Name and Amount through production donation services; may trigger alerts, TTS, or external API usage.");
+			toolTipMain.SetToolTip(buttonTestCheer, "Simulates a cheer using the entered Bits value; may trigger alerts or TTS.");
+			toolTipMain.SetToolTip(buttonTestChannelPoint, "Simulates the entered reward through production channel-point alert handling; may trigger configured alerts or services.");
+			toolTipMain.SetToolTip(buttonTestCommand, "Runs the entered command through production command handling; may send real chat or invoke alerts and external services.");
+			toolTipMain.SetToolTip(buttonTestFirstChat, "Simulates first chat through production handling; may update first-chatter data, send chat, or trigger alerts.");
+			toolTipMain.SetToolTip(buttonTestTts, "Sends the entered text and selected voice to production TTS; may call AWS Polly and incur usage.");
+			toolTipMain.SetToolTip(textUserName, "Used as the simulated username or donor name by applicable tests; blank uses TestUser.");
+			toolTipMain.SetToolTip(textAmount, "Used as raid viewers, resub months, gift recipient, mystery-gift count, watch-streak count, or donation amount, depending on the test.");
+			toolTipMain.SetToolTip(buttonStartBot, "Starts live mode and begins the configured bot, overlay, Twitch, EventSub, and optional provider services.");
+			toolTipMain.SetToolTip(buttonTestBot, "Starts Test Bot mode using production services; it can still connect externally, send chat, trigger alerts, and incur API usage.");
+			toolTipMain.SetToolTip(buttonStopBot, "Attempts to stop the current bot session, disconnect integrations, and flush pending state.");
+			toolTipMain.SetToolTip(buttonClearLog, "Clears the displayed log without disabling logging or deleting log files.");
+			toolTipMain.SetToolTip(buttonCopyAllLog, "Copies all displayed log text to the clipboard.");
 			// 
 			// TwitchChatBot
 			// 
@@ -905,6 +976,8 @@ namespace TwitchChatBot
         private Label labelChatBox;
         private TextBox textBoxLogging;
         private Label labelLogging;
+		private Button buttonClearLog;
+		private Button buttonCopyAllLog;
         private TabPage tabTesting;
         private RichTextBox richTextBoxStreamChat;
         private Button buttonTestHypeTrain;
@@ -962,5 +1035,6 @@ namespace TwitchChatBot
 		private Button buttonSpinResultOk;
 		private Label labelSpinResult;
 		private Button buttonTestDonation;
+		private ToolTip toolTipMain;
 	}
 }

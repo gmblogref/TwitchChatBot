@@ -1,6 +1,6 @@
 # Twitch Developer and OAuth Setup
 
-This guide explains how to connect TwitchChatBot 3.0.0 to Twitch using the integration behavior implemented in this repository. It covers account ownership, developer application registration, OAuth scopes and tokens, configuration, EventSub, Helix, first-run verification, and troubleshooting.
+This guide explains how to connect TwitchChatBot 3.0.2 to Twitch using the integration behavior implemented in this repository. It covers account ownership, developer application registration, OAuth scopes and tokens, configuration, EventSub, Helix, first-run verification, and troubleshooting.
 
 For every application setting, including validation and fallback behavior, see the [Configuration Reference](CONFIGURATION.md). Keep Twitch's official documentation open while provisioning credentials because Twitch may change its developer-console and authorization procedures.
 

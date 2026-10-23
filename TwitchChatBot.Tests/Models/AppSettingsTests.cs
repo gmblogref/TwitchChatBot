@@ -99,6 +99,36 @@ namespace TwitchChatBot.Tests.Models
         }
 
         [Fact]
+        public void WheelCenterBranding_Should_ReturnNull_When_SettingIsMissing()
+        {
+            // Arrange
+            AppSettings.Configuration = CreateConfiguration(new Dictionary<string, string?>());
+
+            // Act
+            string? result = AppSettings.UiMedia.WheelCenterBranding;
+
+            // Assert
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public void WheelCenterBranding_Should_ReturnConfiguredPath_When_SettingIsPresent()
+        {
+            // Arrange
+            AppSettings.Configuration = CreateConfiguration(
+                new Dictionary<string, string?>
+                {
+                    ["UiMedia:WheelCenterBranding"] = "Wheel/branding.png"
+                });
+
+            // Act
+            string? result = AppSettings.UiMedia.WheelCenterBranding;
+
+            // Assert
+            result.Should().Be("Wheel/branding.png");
+        }
+
+        [Fact]
         public void GetIntSetting_Should_ThrowFormatException_When_IntegerIsMalformed()
         {
             // Arrange
@@ -195,6 +225,19 @@ namespace TwitchChatBot.Tests.Models
 
             // Assert
             settings.Keys.Should().Contain(requiredKeys);
+        }
+
+        [Fact]
+        public void LoadExampleSettings_Should_ContainWheelCenterBrandingKey_When_TemplateIsRead()
+        {
+            // Arrange
+            Dictionary<string, string?> settings = LoadExampleSettings();
+
+            // Act
+            bool containsKey = settings.ContainsKey("UiMedia:WheelCenterBranding");
+
+            // Assert
+            containsKey.Should().BeTrue();
         }
 
         [Fact]
