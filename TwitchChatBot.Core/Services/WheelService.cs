@@ -116,6 +116,62 @@ namespace TwitchChatBot.Core.Services
 			await _wheelRepository.SaveAllAsync(wheels);
 		}
 
+		public async Task<bool> SaveItemsAsync(string wheelId, IReadOnlyCollection<WheelItem> items)
+		{
+			if (string.IsNullOrWhiteSpace(wheelId) || items == null)
+			{
+				return false;
+			}
+
+			var normalizedItems = new List<WheelItem>();
+			var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var item in items)
+			{
+				if (item == null)
+				{
+					return false;
+				}
+
+				var name = item.DisplayName?.Trim();
+
+				if (string.IsNullOrWhiteSpace(name) || item.Weight <= 0 || !names.Add(name))
+				{
+					return false;
+				}
+
+				normalizedItems.Add(new WheelItem
+				{
+					Id = item.Id,
+					Position = normalizedItems.Count,
+					DisplayName = name,
+					AlertType = item.AlertType,
+					AlertKey = item.AlertKey,
+					Weight = item.Weight,
+					IsHidden = item.IsHidden
+				});
+			}
+
+			var wheels = await _wheelRepository.GetAllAsync();
+			var wheelIndex = wheels.FindIndex(x => x.Id == wheelId);
+
+			if (wheelIndex < 0)
+			{
+				return false;
+			}
+
+			var replacementWheels = wheels
+				.Select(CloneWheel)
+				.ToList();
+
+			Wheel replacementWheel = replacementWheels[wheelIndex];
+			replacementWheel.Items = normalizedItems;
+
+			await _wheelRepository.SaveAllAsync(replacementWheels);
+
+			return true;
+		}
+
 		public async Task RemoveItemAsync(string wheelId, string itemId)
 		{
 			var wheels = await _wheelRepository.GetAllAsync();
@@ -413,6 +469,27 @@ namespace TwitchChatBot.Core.Services
 			existing.IsHidden = updatedItem.IsHidden;
 
 			await _wheelRepository.SaveAllAsync(wheels);
+		}
+
+		private static Wheel CloneWheel(Wheel wheel)
+		{
+			return new Wheel
+			{
+				Id = wheel.Id,
+				Name = wheel.Name,
+				Items = wheel.Items
+					.Select(item => new WheelItem
+					{
+						Id = item.Id,
+						Position = item.Position,
+						DisplayName = item.DisplayName,
+						AlertType = item.AlertType,
+						AlertKey = item.AlertKey,
+						Weight = item.Weight,
+						IsHidden = item.IsHidden
+					})
+					.ToList()
+			};
 		}
 	}
 }

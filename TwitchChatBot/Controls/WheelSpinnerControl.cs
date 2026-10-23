@@ -7,7 +7,25 @@ namespace TwitchChatBot.Controls
 	public class WheelSpinnerControl : Control
 	{
 		private List<WheelItem> _items = new List<WheelItem>();
+		private Image? _centerImage;
 		private float _rotationAngle = 0f;
+
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Image? CenterImage
+		{
+			get { return _centerImage; }
+			set
+			{
+				if (ReferenceEquals(_centerImage, value))
+				{
+					return;
+				}
+
+				_centerImage?.Dispose();
+				_centerImage = value;
+				Invalidate();
+			}
+		}
 
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public List<WheelItem> Items
@@ -107,7 +125,19 @@ namespace TwitchChatBot.Controls
 
 			e.Graphics.ResetTransform();
 
+			DrawCenterImage(e.Graphics, wheelRect);
 			DrawPointer(e.Graphics);
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_centerImage?.Dispose();
+				_centerImage = null;
+			}
+
+			base.Dispose(disposing);
 		}
 
 		private Rectangle GetWheelBounds()
@@ -147,6 +177,42 @@ namespace TwitchChatBot.Controls
 
 			g.FillPolygon(Brushes.Red, points);
 			g.DrawPolygon(Pens.Black, points);
+		}
+
+		private void DrawCenterImage(Graphics g, Rectangle wheelRect)
+		{
+			if (_centerImage == null)
+			{
+				return;
+			}
+
+			float imageDiameter = wheelRect.Width * 0.20f;
+			float left = wheelRect.Left + ((wheelRect.Width - imageDiameter) / 2f);
+			float top = wheelRect.Top + ((wheelRect.Height - imageDiameter) / 2f);
+			var clipBounds = new RectangleF(left, top, imageDiameter, imageDiameter);
+			float scale = Math.Min(
+				imageDiameter / _centerImage.Width,
+				imageDiameter / _centerImage.Height);
+			float drawWidth = _centerImage.Width * scale;
+			float drawHeight = _centerImage.Height * scale;
+			var imageBounds = new RectangleF(
+				wheelRect.Left + ((wheelRect.Width - drawWidth) / 2f),
+				wheelRect.Top + ((wheelRect.Height - drawHeight) / 2f),
+				drawWidth,
+				drawHeight);
+
+			GraphicsState state = g.Save();
+
+			using (var clipPath = new GraphicsPath())
+			{
+				clipPath.AddEllipse(clipBounds);
+				g.SetClip(clipPath);
+				g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+				g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+				g.DrawImage(_centerImage, imageBounds);
+			}
+
+			g.Restore(state);
 		}
 
 		private void DrawLabel(

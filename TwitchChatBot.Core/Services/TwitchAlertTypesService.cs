@@ -299,6 +299,7 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.SubscriptionMessage ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+            var useFallbackText = true;
 
             if (months >= 12 && months % 12 == 0)
             {
@@ -319,7 +320,12 @@ namespace TwitchChatBot.Core.Services
                     if (!string.IsNullOrWhiteSpace(aiText))
                     {
                         _logger.LogInformation("TTS ResubMilestone AI text: {Text}", aiText);
+                        useFallbackText = false;
                         await _tsService.SpeakAsync(aiText, voice);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AI resub milestone text generation returned no usable text. Using user message/template fallback.");
                     }
                 }
                 catch (Exception ex)
@@ -327,7 +333,8 @@ namespace TwitchChatBot.Core.Services
                     _logger.LogWarning(ex, "AI resub milestone text generation failed. Continuing with user message/template.");
                 }
             }
-            else
+
+            if (useFallbackText)
             {
                 var text = !string.IsNullOrWhiteSpace(userMessage)
                     ? CoreHelperMethods.ForTts(userMessage)
@@ -368,6 +375,7 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, tier?.Media ?? giftSubMedia.Default);
 
             var voice = AppSettings.Voices.GiftSubs ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+            var useFallbackText = true;
 
             // AI first for big drops (threshold configurable)
             if (numOfSubs >= AppSettings.OpenAI.GiftSubThreshold)
@@ -389,7 +397,12 @@ namespace TwitchChatBot.Core.Services
                     if (!string.IsNullOrWhiteSpace(aiText))
                     {
                         _logger.LogInformation("TTS GiftSubBomb AI text: {Text}", aiText);
+                        useFallbackText = false;
                         await _tsService.SpeakAsync(aiText, voice);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AI gift subs text generation returned no usable text. Using template fallback.");
                     }
                 }
                 catch (Exception ex)
@@ -397,7 +410,8 @@ namespace TwitchChatBot.Core.Services
                     _logger.LogWarning(ex, "AI gift subs text generation failed. Continuing with template.");
                 }
             }
-            else
+
+            if (useFallbackText)
             {
                 var template = AppSettings.Templates.MysteryGift ?? "{username} just dropped {numOfSubs} tier {tier} gift subs! Thank your gift sub daddy!";
                 var text = CoreHelperMethods.RenderTemplate(template, new Dictionary<string, string?>
@@ -478,6 +492,7 @@ namespace TwitchChatBot.Core.Services
             EnqueueAlertWithMedia(msg, media![CoreHelperMethods.GetRandomNumberForMediaSelection(media!.Count)]);
 
             var voice = AppSettings.Voices.WatchStreak ?? AppSettings.TTS.DefaultSpeaker ?? "Matthew";
+            var useFallbackText = true;
 
             if (streakCount >= AppSettings.OpenAI.WatchStreakThreshold)
             {
@@ -497,7 +512,12 @@ namespace TwitchChatBot.Core.Services
                     if (!string.IsNullOrWhiteSpace(aiText))
                     {
                         _logger.LogInformation("TTS WatchStreak AI text: {Text}", aiText);
+                        useFallbackText = false;
                         await _tsService.SpeakAsync(aiText, voice);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AI watch streak text generation returned no usable text. Using user message/template fallback.");
                     }
                 }
                 catch (Exception ex)
@@ -505,7 +525,8 @@ namespace TwitchChatBot.Core.Services
                     _logger.LogWarning(ex, "AI watch streak text generation failed. Continuing with user message/template.");
                 }
             }
-            else
+
+            if (useFallbackText)
             {
                 var text = !string.IsNullOrWhiteSpace(userMessage)
                     ? CoreHelperMethods.ForTts(userMessage)

@@ -26,15 +26,15 @@ namespace TwitchChatBot.Data
 
 		public async Task SaveAllAsync(List<Wheel> wheels, CancellationToken cancellationToken = default)
 		{
-			_wheels = wheels;
-
 			await DataHelperMethods.SaveAsync(
 				_filePath,
-				_wheels,
+				wheels,
 				_logger,
 				AppSettings.MediaMapFiles.WheelMedia,
 				cancellationToken
 			);
+
+			_wheels = wheels;
 		}
 
 		private async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)

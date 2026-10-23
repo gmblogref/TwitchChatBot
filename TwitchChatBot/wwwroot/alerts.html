@@ -15,6 +15,11 @@
         let playing = false;
         let ws;
         let currentAlertId = null;
+        let currentIsTts = false;
+        let currentTtsSequence = null;
+        let currentTtsStopRequested = false;
+        let currentMediaElement = null;
+        let currentMediaFinish = null;
         let pending = null;
 
         function connectWebSocket() {
@@ -28,6 +33,31 @@
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({ type: "pong" }));
                     }
+                    return;
+                }
+
+                if (data.type === "skipTts") {
+                    const alertIds = Array.isArray(data.alertIds) ? data.alertIds : [];
+
+                    if (currentIsTts && alertIds.includes(currentAlertId)) {
+                        stopCurrentTts();
+                    }
+
+                    return;
+                }
+
+                if (data.type === "resetTts") {
+					const throughTtsSequence = Number(data.throughTtsSequence);
+
+                    if (pending?.isTts === true &&
+						Number(pending.ttsSequence) <= throughTtsSequence) {
+                        pending = null;
+                    }
+
+					if (currentIsTts && currentTtsSequence <= throughTtsSequence) {
+						stopCurrentTts();
+					}
+
                     return;
                 }
 
@@ -51,15 +81,22 @@
             };
 
             ws.onclose = () => {
+                stopCurrentTts();
                 playing = false;
                 pending = null;
                 currentAlertId = null;
+                currentIsTts = false;
+				currentTtsSequence = null;
+				currentTtsStopRequested = false;
                 setTimeout(connectWebSocket, 3000);  // auto-reconnect
             };
         }
 
 		function startAlert(data) {
 			currentAlertId = data.alertId || null;
+			currentIsTts = data.isTts === true;
+			currentTtsSequence = currentIsTts ? Number(data.ttsSequence) : null;
+			currentTtsStopRequested = false;
 
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 pending = data;
@@ -68,6 +105,10 @@
 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "ack", alertId: currentAlertId }));
+
+				if (currentIsTts) {
+					ws.send(JSON.stringify({ type: "ttsStarted", alertId: currentAlertId }));
+				}
             }
 
             playAlert(data);
@@ -84,8 +125,14 @@
 					mediaEl.onended = null;
 					mediaEl.onerror = null;
 
+					if (currentMediaFinish === finish) {
+						currentMediaFinish = null;
+					}
+
 					resolve();
 				};
+
+				currentMediaFinish = finish;
 
 				// End events
 				mediaEl.onended = finish;
@@ -97,6 +144,28 @@
 					finish();
 				}, timeoutMs);
 			});
+		}
+
+		function stopCurrentTts() {
+			if (!playing || !currentIsTts) {
+				return;
+			}
+
+			currentTtsStopRequested = true;
+
+			if (currentMediaElement) {
+				try {
+					currentMediaElement.pause();
+					currentMediaElement.removeAttribute("src");
+					currentMediaElement.load();
+				} catch (err) {
+					console.warn("Unable to stop TTS media cleanly:", err);
+				}
+			}
+
+			if (currentMediaFinish) {
+				currentMediaFinish();
+			}
 		}
 
         connectWebSocket();
@@ -117,6 +186,7 @@
 				// --- PLAY MEDIA ---
 				if (media && media.toLowerCase().includes(".mp4")) {
 					const video = document.createElement("video");
+					currentMediaElement = video;
 					video.src = media;
 					video.autoplay = true;
 					video.playsInline = true;
@@ -136,8 +206,12 @@
 
 				} else if (media && media.toLowerCase().includes(".mp3")) {
 					const audio = new Audio(media);
+					currentMediaElement = audio;
 					await audio.play().catch(() => null);
-					await waitForEndOrTimeout(audio, 30000);
+
+					if (!currentTtsStopRequested) {
+						await waitForEndOrTimeout(audio, 30000);
+					}
 
 				} else {
 					await sleep(3000);
@@ -176,6 +250,8 @@
 			alertBox.style.opacity = 0;
 			alertBox.innerHTML = "";
 			mediaBox.innerHTML = "";
+			currentMediaElement = null;
+			currentMediaFinish = null;
 
 			playing = false;
 
@@ -184,6 +260,9 @@
 			}
 
 			currentAlertId = null;
+			currentIsTts = false;
+			currentTtsSequence = null;
+			currentTtsStopRequested = false;
 
 			if (pending) {
 				const next = pending;

@@ -413,3 +413,143 @@ The final corrections are documentation and sanitized example-configuration chan
 - Modified `TwitchChatBot/TwitchChatBot.cs`, `TwitchChatBot/TwitchChatBot.UI.csproj`, and `FEATURE_HISTORY.md` only.
 - Increased the application version from 3.0.0 to 3.0.1 under the repository's source-change version policy.
 - Developer Debug and Release builds and automated tests remain pending; the warning cleanup is not yet compiler-verified.
+
+## Story 1.12 — UI Labels and Readability Cleanup
+
+- **Status:** COMPLETE.
+- Developer validation confirmed that the Release build and automated tests passed, and the Story 1.12 UI work was accepted. Application version 3.0.2 includes the completed Story 1.12 and Story 1.13 changes.
+
+### Slice A — Labels and Readability Cleanup
+
+- **Status:** COMPLETE.
+- Simplified the visible Main Chat, Utilities, Testing, and Logging tab captions while leaving the Wheel caption unchanged.
+- Clarified the Reset First Chatters, Text to Speech, Add Entry, Remove Entry, and Application Log labels.
+- Made the stream-chat and viewer-list displays read-only so displayed runtime information cannot be edited manually.
+- Adjusted only the affected button dimensions and positions needed to accommodate the longer captions without overlap.
+- Modified `TwitchChatBot/TwitchChatBot.Designer.cs` and `FEATURE_HISTORY.md` only. No identifiers, event handlers, services, logging behavior, Testing-tab behavior, or application logic were changed.
+
+### Slice B — UI Tooltips
+
+- **Status:** COMPLETE.
+- Added one shared WinForms `ToolTip` component to the main form and concise guidance for the Utilities, Wheel, Testing, and main bot-lifecycle controls whose effects are not fully apparent from their labels.
+- Added header tooltips to the generated Weight and Hidden Wheel columns to explain weighted selection and hidden-entry behavior.
+- Documented Testing-tab inputs and actions without describing them as isolated; relevant tooltips warn that production services can send chat, update data, trigger alerts or TTS, call external APIs, or incur usage.
+- Modified `TwitchChatBot/TwitchChatBot.Designer.cs`, `TwitchChatBot/TwitchChatBot.cs`, and `FEATURE_HISTORY.md` only. No captions, layouts, event handlers, services, logging behavior, Testing-tab behavior, or other application logic were changed.
+- Follow-up developer validation identified missing Wheel coverage; added tooltips for wheel selection, New Wheel, Add Entry, Remove Entry, the editable entry grid and Name column, and winner confirmation.
+- Preserved the existing Delete Wheel, Shuffle, Save, Spin, Weight, and Hidden tooltip descriptions without changing Wheel behavior, persistence, captions, or layout.
+
+### Slice C — Logging Improvements
+
+- **Status:** COMPLETE.
+- Added Clear Log to clear only the text currently displayed on the Logging tab; the logger provider, UI bridge, persistent data, and delivery of subsequent log messages are unchanged.
+- Added Copy All to copy the displayed log text without modifying it, return safely for an empty log, and show a nonfatal warning if clipboard access fails.
+- Added concise tooltips for both controls and positioned them in the existing space beneath the log display without changing other tabs.
+- Modified `TwitchChatBot/TwitchChatBot.Designer.cs`, `TwitchChatBot/TwitchChatBot.cs`, and `FEATURE_HISTORY.md` only. Logging configuration, levels, categories, formatting, generation, and forwarding were not changed.
+
+### Slice D1 — New Wheel Entry Grid Fix
+
+- **Status:** COMPLETE.
+- Corrected the New Wheel handler to locate the bound `Label` column, displayed as Name, instead of checking for the nonexistent `DisplayName` grid column.
+- The first new entry's Name cell is now assigned as the current cell and placed into edit mode after the new wheel is loaded.
+- Modified `TwitchChatBot/TwitchChatBot.cs` and `FEATURE_HISTORY.md` only. Wheel creation, selection, persistence, weighted spinning, labels, layout, and tooltips were unchanged.
+
+### Slice D2 — Unsaved Changes on Window Close
+
+- **Status:** COMPLETE.
+- Corrected the form-closing path to cancel and return immediately when the user declines to discard unsaved Wheel changes, preserving the current entries and editing state without beginning shutdown.
+- Added shutdown-in-progress and shutdown-complete guards so asynchronous shutdown runs only once and the final scheduled close does not repeat the confirmation or shutdown sequence.
+- Preserved normal shutdown when no unsaved changes exist or the user confirms discarding them. Wheel save and persistence logic, confirmation wording, and Start Bot and Stop Bot behavior were unchanged.
+- Modified `TwitchChatBot/TwitchChatBot.cs` and `FEATURE_HISTORY.md` only.
+
+### Slice D3 — Start/Test Bot Button State Fix
+
+- **Status:** COMPLETE.
+- Updated the Start Bot, Test Bot, and Stop Bot enabled states from `ChatBotController.IsStarted` after each start or stop attempt, including startup failures handled internally by the controller.
+- Start Bot and Test Bot now remain enabled and Stop Bot remains disabled when startup fails; successful startup disables both start options and enables Stop Bot. Stop Bot is also disabled in the form's initial stopped state.
+- Reset testing mode when Test Bot startup does not reach the started state, preventing a failed test startup from leaving `IAppFlags.IsTesting` enabled.
+- Modified `TwitchChatBot/TwitchChatBot.cs`, `TwitchChatBot/TwitchChatBot.Designer.cs`, and `FEATURE_HISTORY.md` only. Startup and shutdown orchestration and all integration behavior were unchanged.
+
+### Slice D4A — End-to-End Skip and Reset TTS
+
+- **Status:** COMPLETE.
+- Tagged generated TTS alerts with sequence metadata so speech can be canceled independently across synthesis, the shared alert queue, WebSocket delivery, and browser or OBS playback.
+- Skip TTS now stops the TTS item actively playing on connected overlays; when no overlay is playing speech, it cancels only the synthesis item that was current when Skip was requested. Later queued speech remains available, and a no-speech request is a safe no-op.
+- Reset TTS now cancels current synthesis, clears queued synthesis jobs, removes matching pending TTS alerts, stops matching active or browser-pending TTS through a sequence cutoff, and preserves speech submitted after the reset request.
+- Added targeted `skipTts` and `resetTts` control messages to the existing WebSocket transport. Each alert overlay tracks its active TTS media element, stops and unloads only matching TTS audio, and reports active TTS alert IDs to the server.
+- Preserved non-TTS alerts and their queue order. Ordinary MP3, video, GIF, fullscreen, and text alerts are not tagged as TTS and are not stopped or removed by these controls.
+- Added synchronization around TTS queue/current-item cancellation, guarded alert/cancellation broadcast ordering, and best-effort deletion of partial or removed temporary TTS files.
+- Updated the Skip and Reset tooltips to describe generation, playback, and pending-speech behavior accurately.
+- Modified `TwitchChatBot.Models/AlertItem.cs`, `TwitchChatBot.Core/Services/Contracts/IAlertService.cs`, `TwitchChatBot.Core/Services/Contracts/IWebSocketServer.cs`, `TwitchChatBot.Core/Services/TtsService.cs`, `TwitchChatBot.Core/Services/AlertService.cs`, `TwitchChatBot.Core/Services/WebSocketServer.cs`, `TwitchChatBot/TwitchChatBot.Designer.cs`, `TwitchChatBot/wwwroot/alerts.html`, and `FEATURE_HISTORY.md` only.
+
+### Slice D4B — Wheel Save Atomicity
+
+- **Status:** COMPLETE.
+- Wheel entry saves now validate the complete staged grid before persistence, rejecting empty names, nonpositive weights, and duplicate trimmed names without deleting or updating existing stored entries.
+- Replaced the previous per-entry remove, add, and update sequence with one validated whole-item-list save. Existing alert mappings are preserved for retained entries, and saved positions follow the displayed grid order.
+- `SaveEntriesAsync()` and the new `IWheelService.SaveItemsAsync()` return explicit success or failure results. A rejected or failed save leaves the grid, unsaved-change state, and Save button available for correction; the Save-before-Shuffle path no longer continues when saving fails.
+- The service builds a detached wheel snapshot and the repository publishes that snapshot in memory only after its existing temporary-file write and file replacement succeeds. This provides one atomic file-replacement boundary, but it is not a database transaction or a multi-process concurrency guarantee.
+- Modified `TwitchChatBot/TwitchChatBot.cs`, `TwitchChatBot.Core/Services/Contracts/IWheelService.cs`, `TwitchChatBot.Core/Services/WheelService.cs`, `TwitchChatBot.Data/WheelRepository.cs`, and `FEATURE_HISTORY.md` only. Weighted selection, Spin, Shuffle implementation, Wheel layout, captions, and tooltips were unchanged.
+
+### Slice D4C — Wheel Shuffle and Spin State Handling
+
+- **Status:** COMPLETE.
+- Added one shared Save, Discard, or Cancel decision flow for Spin and Shuffle when the entry grid contains unsaved changes. Save proceeds only after D4B reports success, Discard reloads persisted entries before continuing, and Cancel preserves the staged grid without running the requested action.
+- Failed validation or persistence prevents Spin and Shuffle and leaves staged edits available for correction. The two handlers do not issue duplicate unsaved-change prompts.
+- Spin now reacquires the persisted wheel after resolving unsaved changes, ensuring weighted selection and animation use the same saved or reloaded entry set rather than a stale combo-box snapshot.
+- Spin is enabled only when a wheel is selected, the displayed grid contains at least one non-hidden entry, and a spin is not already running. Its state is refreshed during initialization, wheel and entry loading, wheel selection, grid edits, entry additions and removals, saving, discarding, shuffling, and spin completion; unsaved changes alone do not disable it.
+- Empty-wheel loading now clears the spinner control and resets the save state, preventing entries from a previously selected wheel from remaining displayed.
+- Modified `TwitchChatBot/TwitchChatBot.cs` and `FEATURE_HISTORY.md` only. Weighted selection, spin animation, winner confirmation, persisted Shuffle implementation, Wheel persistence architecture, layouts, captions, and tooltips were unchanged.
+
+### Slice D4D — Testing Tab Async Fixes
+
+- **Status:** COMPLETE.
+- Changed the Testing-service Follow contract from `void` to `Task` and now await the production `HandleFollowAsync()` operation through `TestUtilityService` and the WinForms Follow handler.
+- Updated the Watch Streak WinForms handler to await the existing asynchronous Testing-service operation through completion.
+- Consolidated all 15 Testing-tab actions—Follow, Subscription, ReSub, Raid, Gift Subs, Mystery Gifts, Hype Train, Hype Train End, Watch Streak, Donations, Cheer, Channel Points, Commands, First Chat, and Text to Speech—through one shared asynchronous runner.
+- Every submitted Testing action now observes propagated failures, logs the exception, displays a nonfatal test-failure warning, and restores its button state through nested `finally` cleanup. Existing blank or invalid-input no-op behavior remains unchanged and does not submit work.
+- The shared runner tracks active operations by button, preventing overlapping submissions for the same action while allowing unrelated Testing buttons to remain independent.
+- Developer validation found that queue-only production tasks can complete before WinForms repaints a disabled button. Each Testing action now measures from its accepted click and retains its independent guard and disabled state until both the operation has completed or failed and the Windows-configured `SystemInformation.DoubleClickTime` interval has elapsed.
+- The repeat-click wait uses `Task.Delay` only for the remaining portion of the system interval, does not block the UI thread, and does not wait for alert dispatch, browser acknowledgement, playback, or `DONE`.
+- Modified `TwitchChatBot.Testing/ITestUtilityService.cs`, `TwitchChatBot.Testing/TestUtilityService.cs`, `TwitchChatBot/TwitchChatBot.cs`, and `FEATURE_HISTORY.md` across Slice D4D. Production alert, command, donation, First Chatter, and TTS behavior; test inputs and payloads; AI/TTS fallback behavior; layouts; captions; and tooltips were unchanged.
+
+### Slice D4E — AI TTS Fallback Fixes
+
+- **Status:** COMPLETE.
+- ReSub milestone, Mystery Gift, and Watch Streak alerts now retain their existing non-AI user-message or configured-template path whenever eligible AI generation does not return usable text, while successful AI text continues to be spoken exactly once.
+- Null, empty, and whitespace AI responses now produce a warning and use the fallback. Unexpected AI-generation exceptions are logged as warnings and also use the fallback without stopping alert processing.
+- ReSub and Watch Streak use their sanitized user message when present, otherwise their existing configured template and hard-coded template default. Mystery Gifts use the existing configured template and hard-coded template default.
+- Existing ReSub milestone, Mystery Gift count, and Watch Streak threshold eligibility rules are unchanged. Alert enqueueing, gift-sub bundle suppression, voice selection, TTS service behavior, and graceful degradation when speech synthesis is unavailable are unchanged.
+- Modified `TwitchChatBot.Core/Services/TwitchAlertTypesService.cs` and `FEATURE_HISTORY.md` only. Follow and Testing protections, TTS Skip/Reset, Wheel, Logging, and unrelated alert behavior were unchanged.
+
+### Slice D4F — Final UI Hardening
+
+- **Status:** COMPLETE.
+- Added one shared Start Bot/Test Bot startup-in-progress guard. An accepted startup immediately disables both startup buttons, rejects rapid repeat and cross-button startup attempts, and restores all three bot button states from `ChatBotController.IsStarted` when startup completes or fails.
+- Test Bot mode is enabled only for its accepted startup path and is reset when that startup does not reach the started state. Startup service orchestration and integration behavior were unchanged.
+- Reviewed the D4C Spin enabled-state flow across wheel selection, empty wheels, entry addition/removal, Hidden edits, save/discard reloads, and spin start/completion. Existing refresh coverage handles those paths. Corrected the confirmed decline-selection mismatch by restoring the previously selected wheel and refreshing Spin when the user refuses to discard staged edits.
+- Added consistent, nonmodal Testing-tab validation feedback through the existing shared tooltip. Invalid input is focused and retained for correction instead of silently doing nothing or substituting a default value.
+- Cheer bits, raid viewers, ReSub months, Mystery Gift count, and Watch Streak count now require positive whole numbers. Donation amount requires a positive decimal. Channel Points reward, Commands input, First Chat username, and TTS text now require nonblank text. Invalid submissions do not reach production services.
+- Preserved valid Testing payloads, the D4D per-button repeat-click policy, all available tests, shared-field meanings, production alert eligibility, AI TTS fallback behavior, TTS Skip/Reset, Wheel persistence, and weighted selection.
+- Remaining limitations: bot startup completion still reflects `ChatBotController.IsStarted`, not confirmed readiness of every external provider, and Testing actions remain connected to production services.
+- Modified `TwitchChatBot/TwitchChatBot.cs` and `FEATURE_HISTORY.md` only.
+
+### Phase C/D — User Guide Integration and PR Preparation
+
+- **Status:** COMPLETE.
+- Added matching Markdown and Word User Guides as operator-facing documentation for Getting Started, the persistent bot controls, all five application tabs, TTS controls, Alert History, Wheel management and editing, Testing-tab behavior, Logging controls, and troubleshooting.
+- Integrated five supplied screenshots under `docs/images/` for Main Chat, Utilities, Wheel, Testing, and Logging, and embedded the same five images directly in the Word guide. The accepted Wheel screenshot retains its minor button-edge clipping from resizing.
+- Documented the final Story 1.13 global Wheel center-branding behavior and linked to `docs/CONFIGURATION.md` for authoritative configuration details.
+- Organized the README documentation map by installation, application use, configuration, optional integrations, and developer information; added cross-links among the guides; and corrected stale OpenAI fallback descriptions in existing setup documentation to match Slice D4E.
+- This documentation phase did not change runtime behavior. Final review confirmed that the Markdown guide's five screenshot references are portable and resolve, the Word guide embeds all five images, and both formats describe version 3.0.2 consistently.
+
+## Story 1.13 — Optional Wheel Center Brand Image
+
+- **Status:** COMPLETE.
+- Renamed and repurposed the unfinished `UiMedia:SpinButton` setting as the active optional `UiMedia:WheelCenterBranding` setting. It supplies one global center-branding image shared by every wheel; the actual text SPIN button and its behavior remain unchanged.
+- Relative image paths resolve under `MediaBase:TwitchAlertsFolder`, and absolute image paths are also supported. PNG, JPG, and JPEG files are accepted. An empty or missing setting displays no image, while a missing, unsupported, invalid, or corrupt file leaves the wheel usable with an empty center.
+- The renderer keeps the branding image centered and stationary while the wheel spins, preserves aspect ratio and PNG transparency, applies circular clipping, and uses an image diameter equal to 20% of the wheel diameter. GIF support is deferred.
+- Weighted selection, spin animation, and winner calculation remain unchanged. Story 1.12 wheel-entry atomic saves, detached snapshots, empty-wheel handling, and spin-state handling are also preserved.
+- The earlier per-wheel image-management implementation was removed. Branding is not stored in individual wheel records, and the runtime `wheelsMediaMap.json` file and its existing wheel records were not modified.
+- Changing the configured image path does not require recompilation; application restart is required to reload the image.
+- Modified `TwitchChatBot.Models/AppSettings.cs`, `TwitchChatBot.Models/Wheel.cs`, `TwitchChatBot.Data/Contracts/IWheelRepository.cs`, `TwitchChatBot.Data/WheelRepository.cs`, `TwitchChatBot.Core/Services/Contracts/IWheelService.cs`, `TwitchChatBot.Core/Services/WheelService.cs`, `TwitchChatBot/Controls/WheelSpinnerControl.cs`, `TwitchChatBot/TwitchChatBot.cs`, `TwitchChatBot/TwitchChatBot.Designer.cs`, `TwitchChatBot/appsettings.example.json`, `TwitchChatBot.Tests/Models/AppSettingsTests.cs`, `TwitchChatBot.Tests/Core/WheelServiceTests.cs`, `TwitchChatBot.Tests/Data/WheelRepositoryTests.cs`, `docs/CONFIGURATION.md`, and `FEATURE_HISTORY.md`. The local ignored `TwitchChatBot/appsettings.Development.json` was also renamed to the new setting while preserving its configured path.
+- Developer validation confirmed that the Release build and automated tests passed, the global wheel branding rendered correctly, and the 20% center-image size was accepted.

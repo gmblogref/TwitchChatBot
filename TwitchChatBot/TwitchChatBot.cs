@@ -18,11 +18,15 @@ namespace TwitchChatBot
 		private readonly IWheelService _wheelService;
 		private readonly IAppFlags _appFlags;
 		private readonly IDonationAlertService _donationAlertService;
+		private readonly HashSet<Button> _runningTestingButtons = new();
 
 		private bool _isSpinning = false;
 		private bool _hasUnsavedChanges = false;
 		private bool _isLoadingWheels = false;
 		private bool _isLoadingEntries = false;
+		private bool _isShutdownInProgress = false;
+		private bool _isShutdownComplete = false;
+		private bool _isStartupInProgress = false;
 		private string? _currentSelectedWheelId;
 
 		public TwitchChatBot(ChatBotController chatBotController,
@@ -49,6 +53,8 @@ namespace TwitchChatBot
 			InitializeAlertHistoryUi();
 			ConfigureWinnerLabel();
 			ConfigureSpinButtonImage();
+			ConfigureWheelCenterBranding();
+			UpdateSpinButtonState();
 		}
 
 		public void AppendChat(string username, string message, Color nameColor)
@@ -88,6 +94,34 @@ namespace TwitchChatBot
 			else
 			{
 				textBoxLogging.AppendText(message + Environment.NewLine);
+			}
+		}
+
+		private void buttonClearLog_Click(object sender, EventArgs e)
+		{
+			textBoxLogging.Clear();
+		}
+
+		private void buttonCopyAllLog_Click(object sender, EventArgs e)
+		{
+			string logText = textBoxLogging.Text;
+
+			if (string.IsNullOrEmpty(logText))
+			{
+				return;
+			}
+
+			try
+			{
+				Clipboard.SetText(logText);
+			}
+			catch (Exception)
+			{
+				MessageBox.Show(
+					"Unable to copy the application log to the clipboard.",
+					"Copy Log",
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Warning);
 			}
 		}
 
@@ -240,6 +274,7 @@ namespace TwitchChatBot
 			finally
 			{
 				_isLoadingWheels = false;
+				UpdateSpinButtonState();
 			}
 
 			if (comboBoxWheels.SelectedItem is Wheel wheel)
@@ -256,9 +291,19 @@ namespace TwitchChatBot
 
 				var wheel = await _wheelService.GetWheelAsync(wheelId);
 
-				if (wheel == null || wheel.Items == null || wheel.Items.Count == 0)
+				if (wheel == null)
 				{
 					dataGridViewEntries.DataSource = null;
+					return;
+				}
+
+				if (wheel.Items == null || wheel.Items.Count == 0)
+				{
+					dataGridViewEntries.DataSource = null;
+					wheelSpinnerControl.Items = new List<WheelItem>();
+					wheelSpinnerControl.Invalidate();
+					_hasUnsavedChanges = false;
+					buttonSaveEntries.Enabled = false;
 					return;
 				}
 
@@ -292,6 +337,7 @@ namespace TwitchChatBot
 			finally
 			{
 				_isLoadingEntries = false;
+				UpdateSpinButtonState();
 			}
 		}
 
@@ -304,11 +350,28 @@ namespace TwitchChatBot
 
 			if (!ConfirmDiscardChanges())
 			{
+				_isLoadingWheels = true;
+
+				try
+				{
+					var previousWheel = comboBoxWheels.Items
+						.OfType<Wheel>()
+						.FirstOrDefault(x => x.Id == _currentSelectedWheelId);
+
+					comboBoxWheels.SelectedItem = previousWheel;
+				}
+				finally
+				{
+					_isLoadingWheels = false;
+				}
+
+				UpdateSpinButtonState();
 				return;
 			}
 
 			if (comboBoxWheels.SelectedItem is not Wheel selectedWheel)
 			{
+				UpdateSpinButtonState();
 				return;
 			}
 
@@ -349,68 +412,125 @@ namespace TwitchChatBot
 		private async void buttonTestSub_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-			await _testUtilityService.TriggerSubTestAsync(userName);
+			await RunTestingActionAsync(
+				buttonTestSub,
+				"Subscription",
+				() => _testUtilityService.TriggerSubTestAsync(userName));
 		}
 
 		private async void buttonTestRaid_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-			int viewers = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 123;
 
-			await _testUtilityService.TriggerRaidTestAsync(userName, viewers);
+			if (!TryGetPositiveTestingInteger(textAmount, "Amount must be a positive whole number of raid viewers.", out int viewers))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestRaid,
+				"Raid",
+				() => _testUtilityService.TriggerRaidTestAsync(userName, viewers));
 		}
 
 		private async void buttonTestReSub_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-			int months = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 12;
 
-			await _testUtilityService.TriggerReSubTestAsync(userName, months);
+			if (!TryGetPositiveTestingInteger(textAmount, "Amount must be a positive whole number of months.", out int months))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestReSub,
+				"ReSub",
+				() => _testUtilityService.TriggerReSubTestAsync(userName, months));
 		}
 
 		private async void buttonTestSubGift_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
 			string recipient = string.IsNullOrWhiteSpace(textAmount.Text) ? "RecipientUser" : textAmount.Text.Trim();
-			await _testUtilityService.TriggerSubGiftTestAsync(userName, recipient);
+			await RunTestingActionAsync(
+				buttonTestSubGift,
+				"Gift Subs",
+				() => _testUtilityService.TriggerSubGiftTestAsync(userName, recipient));
 		}
 
-		private async void buttonTestHypeTrain_Click(object sender, EventArgs e) =>
-			await _testUtilityService.TriggerHypeTrainTestAsync();
+		private async void buttonTestHypeTrain_Click(object sender, EventArgs e)
+		{
+			await RunTestingActionAsync(
+				buttonTestHypeTrain,
+				"Hype Train",
+				() => _testUtilityService.TriggerHypeTrainTestAsync());
+		}
 
 		private async void buttonTestCheer_Click(object sender, EventArgs e)
 		{
-			if (int.TryParse(textBits.Text, out var bits))
-				await _testUtilityService.TriggerCheerTestAsync(bits);
+			if (!TryGetPositiveTestingInteger(textBits, "Bits must be a positive whole number.", out int bits))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestCheer,
+				"Cheer",
+				() => _testUtilityService.TriggerCheerTestAsync(bits));
 		}
 
 		private async void buttonTestMysteryGift_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-			int subs = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 12;
 
-			await _testUtilityService.TriggerSubMysteryGiftTestAsync(userName, subs);
+			if (!TryGetPositiveTestingInteger(textAmount, "Amount must be a positive whole number of subscriptions.", out int subs))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestMysteryGift,
+				"Mystery Gifts",
+				() => _testUtilityService.TriggerSubMysteryGiftTestAsync(userName, subs));
 		}
 
 		private async void buttonTestChannelPoint_Click(object sender, EventArgs e)
 		{
-			var redemption = textChannelPoint.Text.Trim();
-			if (!string.IsNullOrEmpty(redemption))
-				await _testUtilityService.TriggerChannelPointTestAsync(redemption);
+			if (!TryGetRequiredTestingText(textChannelPoint, "Enter a channel-points reward name.", out string redemption))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestChannelPoint,
+				"Channel Points",
+				() => _testUtilityService.TriggerChannelPointTestAsync(redemption));
 		}
 
 		private async void buttonTestCommand_Click(object sender, EventArgs e)
 		{
-			var command = textCommand.Text.Trim();
-			if (!string.IsNullOrEmpty(command))
-				await _testUtilityService.TriggerCommandTestAsync(command);
+			if (!TryGetRequiredTestingText(textCommand, "Enter a command to test.", out string command))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestCommand,
+				"Commands",
+				() => _testUtilityService.TriggerCommandTestAsync(command));
 		}
 
 		private async void buttonTestFirstChat_Click(object sender, EventArgs e)
 		{
-			var user = textFirstChatter.Text.Trim();
-			if (!string.IsNullOrEmpty(user))
-				await _testUtilityService.TriggerFirstChatTestAsync(user);
+			if (!TryGetRequiredTestingText(textFirstChatter, "Enter a username for the First Chat test.", out string user))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestFirstChat,
+				"First Chat",
+				() => _testUtilityService.TriggerFirstChatTestAsync(user));
 		}
 
 		private async void buttonSpinResultOk_Click(object sender, EventArgs e)
@@ -423,19 +543,121 @@ namespace TwitchChatBot
 			panelSpinResultOverlay.Visible = false;
 		}
 
-		private void buttonTestFollow_Click(object sender, EventArgs e)
+		private async void buttonTestFollow_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-
-			_testUtilityService.TriggerFollowTest(userName);
+			await RunTestingActionAsync(
+				buttonTestFollow,
+				"Follow",
+				() => _testUtilityService.TriggerFollowTest(userName));
 		}
 
-		private void buttonTestWatchStreak_Click(object sender, EventArgs e)
+		private async void buttonTestWatchStreak_Click(object sender, EventArgs e)
 		{
 			string userName = string.IsNullOrWhiteSpace(textUserName.Text) ? "TestUser" : textUserName.Text.Trim();
-			int streak = int.TryParse(textAmount.Text?.Trim(), out var parsed) ? parsed : 5;
 
-			_testUtilityService.TriggerWatchStreakUserNoticeTestAsync(userName, streak);
+			if (!TryGetPositiveTestingInteger(textAmount, "Amount must be a positive whole number of streams.", out int streak))
+			{
+				return;
+			}
+
+			await RunTestingActionAsync(
+				buttonTestWatchStreak,
+				"Watch Streak",
+				() => _testUtilityService.TriggerWatchStreakUserNoticeTestAsync(userName, streak));
+		}
+
+		private async Task RunTestingActionAsync(Button button, string testName, Func<Task> action)
+		{
+			if (!_runningTestingButtons.Add(button))
+			{
+				return;
+			}
+
+			long acceptedClickStarted = Environment.TickCount64;
+			button.Enabled = false;
+
+			try
+			{
+				await action();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{TestName} test failed.", testName);
+				MessageBox.Show(
+					this,
+					$"{testName} test failed: {ex.Message}",
+					"Test Failed",
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Warning);
+			}
+			finally
+			{
+				try
+				{
+					long elapsedMilliseconds = Environment.TickCount64 - acceptedClickStarted;
+					long remainingMilliseconds = SystemInformation.DoubleClickTime - elapsedMilliseconds;
+
+					if (remainingMilliseconds > 0)
+					{
+						await Task.Delay(TimeSpan.FromMilliseconds(remainingMilliseconds));
+					}
+				}
+				finally
+				{
+					_runningTestingButtons.Remove(button);
+
+					if (!button.IsDisposed && !button.Disposing)
+					{
+						button.Enabled = true;
+					}
+				}
+			}
+		}
+
+		private bool TryGetPositiveTestingInteger(TextBox input, string message, out int value)
+		{
+			if (int.TryParse(input.Text.Trim(), out value) && value > 0)
+			{
+				toolTipMain.Hide(input);
+				return true;
+			}
+
+			ShowTestingValidationFeedback(input, message);
+			return false;
+		}
+
+		private bool TryGetPositiveTestingDecimal(TextBox input, string message, out decimal value)
+		{
+			if (decimal.TryParse(input.Text.Trim(), out value) && value > 0)
+			{
+				toolTipMain.Hide(input);
+				return true;
+			}
+
+			ShowTestingValidationFeedback(input, message);
+			return false;
+		}
+
+		private bool TryGetRequiredTestingText(TextBox input, string message, out string value)
+		{
+			value = input.Text.Trim();
+
+			if (!string.IsNullOrWhiteSpace(value))
+			{
+				toolTipMain.Hide(input);
+				return true;
+			}
+
+			ShowTestingValidationFeedback(input, message);
+			return false;
+		}
+
+		private void ShowTestingValidationFeedback(TextBox input, string message)
+		{
+			input.Focus();
+			input.SelectAll();
+			toolTipMain.Show(message, input, toolTipMain.AutoPopDelay);
 		}
 
 		private void buttonClearFirst_Click(object sender, EventArgs e)
@@ -448,7 +670,11 @@ namespace TwitchChatBot
 			if (e.KeyCode == Keys.Enter)
 			{
 				buttonTestCheer.PerformClick();
-				textBits.Text = string.Empty;
+
+				if (int.TryParse(textBits.Text.Trim(), out int bits) && bits > 0)
+				{
+					textBits.Text = string.Empty;
+				}
 			}
 		}
 
@@ -457,7 +683,11 @@ namespace TwitchChatBot
 			if (e.KeyCode == Keys.Enter)
 			{
 				buttonTestChannelPoint.PerformClick();
-				textChannelPoint.Text = string.Empty;
+
+				if (!string.IsNullOrWhiteSpace(textChannelPoint.Text))
+				{
+					textChannelPoint.Text = string.Empty;
+				}
 			}
 		}
 
@@ -466,7 +696,11 @@ namespace TwitchChatBot
 			if (e.KeyCode == Keys.Enter)
 			{
 				buttonTestCommand.PerformClick();
-				textCommand.Text = string.Empty;
+
+				if (!string.IsNullOrWhiteSpace(textCommand.Text))
+				{
+					textCommand.Text = string.Empty;
+				}
 			}
 		}
 
@@ -475,7 +709,11 @@ namespace TwitchChatBot
 			if (e.KeyCode == Keys.Enter)
 			{
 				buttonTestFirstChat.PerformClick();
-				textFirstChatter.Text = string.Empty;
+
+				if (!string.IsNullOrWhiteSpace(textFirstChatter.Text))
+				{
+					textFirstChatter.Text = string.Empty;
+				}
 			}
 		}
 
@@ -504,13 +742,17 @@ namespace TwitchChatBot
 
 		private async void buttonTestTts_Click(object sender, EventArgs e)
 		{
-			string text = textBoxTtsText.Text.Trim();
+			if (!TryGetRequiredTestingText(textBoxTtsText, "Enter text to speak.", out string text))
+			{
+				return;
+			}
+
 			string speaker = comboBoxTtsSpeaker.Text.Trim();
 
-			if (text != string.Empty)
-			{
-				await _testUtilityService.TriggerTextToSpeech(text, speaker);
-			}
+			await RunTestingActionAsync(
+				buttonTestTts,
+				"Text to Speech",
+				() => _testUtilityService.TriggerTextToSpeech(text, speaker));
 		}
 
 		private void textBoxTtsText_KeyDown(object sender, KeyEventArgs e)
@@ -518,37 +760,52 @@ namespace TwitchChatBot
 			if (e.KeyCode == Keys.Enter)
 			{
 				buttonTestTts.PerformClick();
-				textBoxTtsText.Text = string.Empty;
+
+				if (!string.IsNullOrWhiteSpace(textBoxTtsText.Text))
+				{
+					textBoxTtsText.Text = string.Empty;
+				}
 			}
 		}
 
 		private async void buttonTestBot_Click(object sender, EventArgs e)
 		{
-			try
-			{
-				_appFlags.IsTesting = true;
-				await _chatBotController.StartAsync();
-				buttonStartBot.Enabled = false;
-				buttonTestBot.Enabled = false;
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show($"Error starting bot: {ex.Message}");
-			}
+			await StartBotAsync(true);
 		}
 
 		private async void buttonStartBot_Click(object sender, EventArgs e)
 		{
+			await StartBotAsync(false);
+		}
+
+		private async Task StartBotAsync(bool isTesting)
+		{
+			if (_isStartupInProgress || _chatBotController.IsStarted)
+			{
+				return;
+			}
+
+			_isStartupInProgress = true;
+			_appFlags.IsTesting = isTesting;
+			UpdateBotButtonState();
+
 			try
 			{
-				_appFlags.IsTesting = false;
 				await _chatBotController.StartAsync();
-				buttonStartBot.Enabled = false;
-				buttonTestBot.Enabled = false;
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Error starting bot: {ex.Message}");
+			}
+			finally
+			{
+				if (isTesting && !_chatBotController.IsStarted)
+				{
+					_appFlags.IsTesting = false;
+				}
+
+				_isStartupInProgress = false;
+				UpdateBotButtonState();
 			}
 		}
 
@@ -557,29 +814,51 @@ namespace TwitchChatBot
 			try
 			{
 				await _chatBotController.StopBotAsync();
-				buttonStartBot.Enabled = true;
-				buttonTestBot.Enabled = true;
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Error stopping bot: {ex.Message}");
 			}
+			finally
+			{
+				UpdateBotButtonState();
+			}
+		}
+
+		private void UpdateBotButtonState()
+		{
+			bool isStarted = _chatBotController.IsStarted;
+			buttonStartBot.Enabled = !isStarted && !_isStartupInProgress;
+			buttonTestBot.Enabled = !isStarted && !_isStartupInProgress;
+			buttonStopBot.Enabled = isStarted;
 		}
 
 		private async void TwitchChatBot_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			if (_isShutdownComplete)
+			{
+				return;
+			}
+
+			if (_isShutdownInProgress)
+			{
+				e.Cancel = true;
+				return;
+			}
+
 			if (!ConfirmDiscardChanges())
 			{
 				e.Cancel = true;
+				return;
 			}
 
-			// Prevent re-entrancy (FormClosing can fire more than once)
 			if (e.CloseReason == CloseReason.None)
 			{
 				return;
 			}
 
 			e.Cancel = true;
+			_isShutdownInProgress = true;
 
 			try
 			{
@@ -591,9 +870,9 @@ namespace TwitchChatBot
 			}
 			finally
 			{
-				e.Cancel = false;
+				_isShutdownInProgress = false;
+				_isShutdownComplete = true;
 
-				// Now actually close
 				BeginInvoke(new Action(Close));
 			}
 		}
@@ -620,7 +899,10 @@ namespace TwitchChatBot
 
 		private async void buttonTestHypeTrainEnd_Click(object sender, EventArgs e)
 		{
-			await _testUtilityService.TriggerHypeTrainEndTestAsync();
+			await RunTestingActionAsync(
+				buttonTestHypeTrainEnd,
+				"Hype Train End",
+				() => _testUtilityService.TriggerHypeTrainEndTestAsync());
 		}
 
 		private async void buttonSpin_Click(object sender, EventArgs e)
@@ -638,7 +920,23 @@ namespace TwitchChatBot
 					return;
 				}
 
-				var visibleItems = selectedWheel.Items
+				var wheelId = selectedWheel.Id;
+
+				if (!await ResolveUnsavedChangesBeforeWheelActionAsync("spinning"))
+				{
+					return;
+				}
+
+				var persistedWheel = await _wheelService.GetWheelAsync(wheelId);
+
+				if (persistedWheel == null)
+				{
+					MessageBox.Show("The selected wheel is no longer available.");
+					UpdateSpinButtonState();
+					return;
+				}
+
+				var visibleItems = persistedWheel.Items
 					.Where(x => !x.IsHidden)
 					.OrderBy(x => x.Position)
 					.ToList();
@@ -654,7 +952,7 @@ namespace TwitchChatBot
 				UpdateSpinButtonState();
 				labelWheelWarning.Visible = false;
 
-				var result = await _wheelService.SpinAsync(selectedWheel.Id);
+				var result = await _wheelService.SpinAsync(wheelId);
 
 				if (result == null)
 				{
@@ -727,90 +1025,79 @@ namespace TwitchChatBot
 			await SaveEntriesAsync();
 		}
 
-		private async Task SaveEntriesAsync()
+		private async Task<bool> SaveEntriesAsync()
 		{
 			if (comboBoxWheels.SelectedItem is not Wheel wheel)
 			{
-				return;
+				return false;
 			}
 
 			dataGridViewEntries.EndEdit();
 
-			var rows = dataGridViewEntries.DataSource as List<WheelItemRow>;
+			var rows = dataGridViewEntries.DataSource as List<WheelItemRow>
+				?? new List<WheelItemRow>();
 
-			if (rows == null)
-			{
-				return;
-			}
-
-			// Get IDs from UI
-			var rowIds = rows.Select(x => x.Id).ToHashSet();
-
-			// Find items that were removed in UI
-			var itemsToRemove = wheel.Items
-				.Where(x => !rowIds.Contains(x.Id))
-				.ToList();
-
-			foreach (var item in itemsToRemove)
-			{
-				await _wheelService.RemoveItemAsync(wheel.Id, item.Id);
-			}
+			var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (var row in rows)
 			{
 				if (string.IsNullOrWhiteSpace(row.Label))
 				{
 					MessageBox.Show("Name cannot be empty.");
-					return;
+					return false;
 				}
 
 				if (row.Weight <= 0)
 				{
 					MessageBox.Show("Weight must be greater than 0.");
-					return;
+					return false;
+				}
+
+				if (!names.Add(row.Label.Trim()))
+				{
+					MessageBox.Show("Entry names must be unique.");
+					return false;
 				}
 			}
 
 			try
 			{
-				foreach (var row in rows)
-				{
-					var existing = wheel.Items.FirstOrDefault(x => x.Id == row.Id);
-
-					if (existing == null)
+				var stagedItems = rows
+					.Select((row, index) =>
 					{
-						var newItem = new WheelItem
+						var existing = wheel.Items.FirstOrDefault(x => x.Id == row.Id);
+
+						return new WheelItem
 						{
 							Id = row.Id,
+							Position = index,
 							DisplayName = row.Label.Trim(),
+							AlertType = existing?.AlertType,
+							AlertKey = existing?.AlertKey,
 							Weight = row.Weight,
 							IsHidden = row.Hidden
 						};
+					})
+					.ToList();
 
-						await _wheelService.AddItemAsync(wheel.Id, newItem);
-					}
-					else
-					{
-						existing.DisplayName = row.Label.Trim();
-						existing.Weight = row.Weight > 0 ? row.Weight : 1;
-						existing.IsHidden = row.Hidden;
-					}
-				}
+				var saved = await _wheelService.SaveItemsAsync(wheel.Id, stagedItems);
 
-
-				foreach (var item in wheel.Items)
+				if (!saved)
 				{
-					await _wheelService.UpdateItemAsync(wheel.Id, item);
+					MessageBox.Show("Unable to save entries. Review the entry names and weights, then try again.");
+					return false;
 				}
 
 				_hasUnsavedChanges = false;
 				buttonSaveEntries.Enabled = false;
 
 				await LoadEntriesAsync(wheel.Id);
+				return true;
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Error saving entries: {ex.Message}");
+				return false;
 			}
 		}
 
@@ -823,6 +1110,7 @@ namespace TwitchChatBot
 
 			_hasUnsavedChanges = true;
 			buttonSaveEntries.Enabled = true;
+			UpdateSpinButtonState();
 		}
 
 		private void dataGridViewEntries_CurrentCellDirtyStateChanged(object sender, EventArgs e)
@@ -896,6 +1184,7 @@ namespace TwitchChatBot
 			{
 				labelColumn.HeaderText = "Name";
 				labelColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+				labelColumn.ToolTipText = "Sets the entry name shown on the wheel.";
 			}
 
 			DataGridViewColumn? weightColumn = dataGridViewEntries.Columns["Weight"];
@@ -904,6 +1193,7 @@ namespace TwitchChatBot
 			{
 				weightColumn.HeaderText = "Weight";
 				weightColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+				weightColumn.ToolTipText = "Higher weights increase an entry's selection probability.";
 			}
 
 			DataGridViewColumn? hiddenColumn = dataGridViewEntries.Columns["Hidden"];
@@ -912,6 +1202,7 @@ namespace TwitchChatBot
 			{
 				hiddenColumn.HeaderText = "Hidden";
 				hiddenColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+				hiddenColumn.ToolTipText = "Controls whether the entry appears on the wheel; hidden entries cannot be selected.";
 			}
 
 			// Hide non-user fields
@@ -957,6 +1248,7 @@ namespace TwitchChatBot
 
 			_hasUnsavedChanges = true;
 			buttonSaveEntries.Enabled = true;
+			UpdateSpinButtonState();
 		}
 
 		private void buttonRemoveEntry_Click(object sender, EventArgs e)
@@ -989,6 +1281,7 @@ namespace TwitchChatBot
 
 			_hasUnsavedChanges = true;
 			buttonSaveEntries.Enabled = true;
+			UpdateSpinButtonState();
 		}
 
 		private void UpdateSpinButtonState()
@@ -998,6 +1291,64 @@ namespace TwitchChatBot
 			var hasValidItems = rows != null && rows.Any(x => !x.Hidden);
 
 			buttonSpin.Enabled = comboBoxWheels.SelectedItem != null && hasValidItems && !_isSpinning;
+		}
+
+		private static bool TryCreateCenterImage(byte[] imageData, out Image? image)
+		{
+			image = null;
+
+			try
+			{
+				using var stream = new MemoryStream(imageData);
+				using var source = Image.FromStream(stream, true, true);
+				image = new Bitmap(source);
+				return true;
+			}
+			catch (ArgumentException)
+			{
+				return false;
+			}
+		}
+
+		private async Task<bool> ResolveUnsavedChangesBeforeWheelActionAsync(string action)
+		{
+			if (!dataGridViewEntries.EndEdit())
+			{
+				return false;
+			}
+
+			if (!_hasUnsavedChanges)
+			{
+				return true;
+			}
+
+			var result = MessageBox.Show(
+				$"You have unsaved changes. Save them before {action}?{Environment.NewLine}{Environment.NewLine}" +
+				"Yes = Save changes" + Environment.NewLine +
+				"No = Discard changes" + Environment.NewLine +
+				"Cancel = Keep editing",
+				"Unsaved Changes",
+				MessageBoxButtons.YesNoCancel,
+				MessageBoxIcon.Question);
+
+			if (result == DialogResult.Cancel)
+			{
+				return false;
+			}
+
+			if (result == DialogResult.Yes)
+			{
+				return await SaveEntriesAsync();
+			}
+
+			if (comboBoxWheels.SelectedItem is not Wheel selectedWheel)
+			{
+				UpdateSpinButtonState();
+				return false;
+			}
+
+			await LoadEntriesAsync(selectedWheel.Id);
+			return !_hasUnsavedChanges;
 		}
 
 		private async Task AnimateWheelToResultAsync(List<WheelItem> visibleItems, WheelItem winner)
@@ -1108,6 +1459,54 @@ namespace TwitchChatBot
 			buttonSpin.Font = new Font("Arial", 12F, FontStyle.Bold);
 			buttonSpin.ForeColor = Color.White;
 			buttonSpin.BackColor = Color.Black;
+		}
+
+		private void ConfigureWheelCenterBranding()
+		{
+			string? configuredPath = AppSettings.UiMedia.WheelCenterBranding;
+
+			if (string.IsNullOrWhiteSpace(configuredPath))
+			{
+				return;
+			}
+
+			try
+			{
+				string imagePath = Path.IsPathFullyQualified(configuredPath)
+					? Path.GetFullPath(configuredPath)
+					: Path.GetFullPath(Path.Combine(AppSettings.MediaBase.TwitchAlertsFolder, configuredPath));
+				string extension = Path.GetExtension(imagePath);
+
+				if (!string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase) &&
+					!string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) &&
+					!string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogWarning(
+						"Wheel center branding image {ImagePath} must be a PNG, JPG, or JPEG file.",
+						imagePath);
+					return;
+				}
+
+				if (!File.Exists(imagePath))
+				{
+					_logger.LogWarning("Wheel center branding image was not found at {ImagePath}.", imagePath);
+					return;
+				}
+
+				byte[] imageData = File.ReadAllBytes(imagePath);
+
+				if (!TryCreateCenterImage(imageData, out Image? image))
+				{
+					_logger.LogWarning("Wheel center branding image at {ImagePath} is invalid or corrupt.", imagePath);
+					return;
+				}
+
+				wheelSpinnerControl.CenterImage = image;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Unable to load the configured wheel center branding image.");
+			}
 		}
 
 		private async void buttonAddWheel_Click(object sender, EventArgs e)
@@ -1229,9 +1628,9 @@ namespace TwitchChatBot
 					dataGridViewEntries.Refresh();
 
 					if (dataGridViewEntries.Rows.Count > 0 &&
-						dataGridViewEntries.Columns.Contains("DisplayName"))
+						dataGridViewEntries.Columns.Contains("Label"))
 					{
-						dataGridViewEntries.CurrentCell = dataGridViewEntries.Rows[0].Cells["DisplayName"];
+						dataGridViewEntries.CurrentCell = dataGridViewEntries.Rows[0].Cells["Label"];
 						dataGridViewEntries.BeginEdit(true);
 					}
 				}
@@ -1260,26 +1659,14 @@ namespace TwitchChatBot
 					return;
 				}
 
-				if (_hasUnsavedChanges)
+				var wheelId = selectedWheel.Id;
+
+				if (!await ResolveUnsavedChangesBeforeWheelActionAsync("shuffling"))
 				{
-					var result = MessageBox.Show(
-						"You have unsaved changes. Save before shuffling?",
-						"Unsaved Changes",
-						MessageBoxButtons.YesNoCancel,
-						MessageBoxIcon.Question);
-
-					if (result == DialogResult.Cancel)
-					{
-						return;
-					}
-
-					if (result == DialogResult.Yes)
-					{
-						await SaveEntriesAsync();
-					}
+					return;
 				}
 
-				await _wheelService.ShuffleAsync(selectedWheel.Id);
+				await _wheelService.ShuffleAsync(wheelId);
 
 				_hasUnsavedChanges = false;
 
@@ -1377,33 +1764,27 @@ namespace TwitchChatBot
 
 		private async void buttonTestDonation_Click(object sender, EventArgs e)
 		{
-			try
+			string donorName = string.IsNullOrWhiteSpace(textUserName.Text)
+				? "TestUser"
+				: textUserName.Text.Trim();
+
+			if (!TryGetPositiveTestingDecimal(textAmount, "Amount must be a positive donation value.", out decimal amount))
 			{
-				var donorName = string.IsNullOrWhiteSpace(textUserName.Text)
-					? "TestUser"
-					: textUserName.Text.Trim();
-
-				decimal amount = 5.00m;
-
-				if (decimal.TryParse(textAmount.Text, out var parsedAmount))
-				{
-					amount = parsedAmount;
-				}
-
-				var donation = new DonationEvent
-				{
-					DonorName = donorName,
-					Amount = amount,
-					Message = "This is a test donation.",
-					Provider = "Test"
-				};
-
-				await _donationAlertService.HandleDonationAsync(donation);
+				return;
 			}
-			catch (Exception ex)
+
+			var donation = new DonationEvent
 			{
-				_logger.LogError(ex, "Failed test donation.");
-			}
+				DonorName = donorName,
+				Amount = amount,
+				Message = "This is a test donation.",
+				Provider = "Test"
+			};
+
+			await RunTestingActionAsync(
+				buttonTestDonation,
+				"Donations",
+				() => _donationAlertService.HandleDonationAsync(donation));
 		}
 	}
 }

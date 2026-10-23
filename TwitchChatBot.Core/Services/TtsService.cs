@@ -20,9 +20,15 @@ namespace TwitchChatBot.Core.Services
         private readonly RegionEndpoint _region;
         private readonly int _maxChars;
 
-        private readonly ConcurrentQueue<(string text, string? voice)> _queue = new();
+        private readonly ConcurrentQueue<(long sequence, string text, string? voice)> _queue = new();
+		private readonly object _queueSync = new();
+		private readonly object _currentItemSync = new();
+		private readonly SemaphoreSlim _cancellationGate = new(1, 1);
         private readonly CancellationTokenSource _runnerCts = new();
         private CancellationTokenSource? _currentItemCts;
+		private TaskCompletionSource<bool>? _currentItemCompletion;
+		private long? _currentItemSequence;
+		private long _lastTtsSequence;
         private Task? _runnerTask;
         private volatile bool _disposed;
 
@@ -75,39 +81,62 @@ namespace TwitchChatBot.Core.Services
 
         public async Task SpeakAsync(string text, string? speakerOverride = null, string? modelOverride = null)
         {
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrWhiteSpace(text))
+			{
+				return;
+			}
 
             if (!_hasAwsCreds)
             {
                 _logger.LogWarning("🛑 Skipping TTS enqueue: AWS credentials not available.");
                 // opportunistic re-check if it's been a while
-                if (DateTime.UtcNow - _lastCredCheckUtc > CredRecheckInterval)
+				if (DateTime.UtcNow - _lastCredCheckUtc > CredRecheckInterval)
+				{
                     await AwsCheckCredentialsAsync();
+				}
+
                 return;
             }
 
-            _queue.Enqueue((text, speakerOverride));
+			lock (_queueSync)
+			{
+				long sequence = ++_lastTtsSequence;
+				_queue.Enqueue((sequence, text, speakerOverride));
+			}
         }
 
         public void SkipCurrent()
         {
-            try
-            {
-                _currentItemCts?.Cancel();
-                _logger.LogInformation("⏭️ Polly TTS skip requested.");
-            }
-            catch { /* ignore */ }
+			_ = SkipCurrentAsync();
         }
 
         public void ResetQueue()
         {
-            try
-            {
-                while (_queue.TryDequeue(out _)) { }
-                _currentItemCts?.Cancel();
-                _logger.LogInformation("♻️ Polly TTS queue reset (cleared & canceled current).");
-            }
-            catch { /* ignore */ }
+			long throughSequence;
+			long? currentSequence = null;
+			Task? currentCompletion = null;
+
+			lock (_queueSync)
+			{
+				throughSequence = _lastTtsSequence;
+
+				while (_queue.TryDequeue(out _))
+				{
+				}
+
+				lock (_currentItemSync)
+				{
+					if (_currentItemSequence.HasValue &&
+						_currentItemSequence.Value <= throughSequence)
+					{
+						currentSequence = _currentItemSequence;
+						currentCompletion = _currentItemCompletion?.Task;
+						TryCancelCurrentItem();
+					}
+				}
+			}
+
+			_ = ResetQueueAsync(throughSequence, currentSequence, currentCompletion);
         }
 
         public void Dispose()
@@ -118,7 +147,11 @@ namespace TwitchChatBot.Core.Services
             try
             {
                 _runnerCts.Cancel();
-                _currentItemCts?.Cancel();
+
+				lock (_currentItemSync)
+				{
+					TryCancelCurrentItem();
+				}
             }
             catch { /* ignore */ }
 
@@ -163,16 +196,41 @@ namespace TwitchChatBot.Core.Services
                         await AwsCheckCredentialsAsync();
                     }
 
-                    if (!_queue.TryDequeue(out var job))
+					(long sequence, string text, string? voice) job = default;
+					CancellationTokenSource? itemCts = null;
+					TaskCompletionSource<bool>? itemCompletion = null;
+
+					lock (_queueSync)
+					{
+						if (_queue.TryDequeue(out job))
+						{
+							itemCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+							itemCompletion = new TaskCompletionSource<bool>(
+								TaskCreationOptions.RunContinuationsAsynchronously);
+
+							lock (_currentItemSync)
+							{
+								_currentItemCts = itemCts;
+								_currentItemCompletion = itemCompletion;
+								_currentItemSequence = job.sequence;
+							}
+						}
+					}
+
+					if (itemCts == null || itemCompletion == null)
                     {
                         await Task.Delay(50, token);
                         continue;
                     }
 
-                    _currentItemCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                     try
                     {
-                        await ProcessTextToSpeechAsync(polly, job.text, job.voice, _currentItemCts.Token);
+						await ProcessTextToSpeechAsync(
+							polly,
+							job.sequence,
+							job.text,
+							job.voice,
+							itemCts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -184,8 +242,18 @@ namespace TwitchChatBot.Core.Services
                     }
                     finally
                     {
-                        _currentItemCts.Dispose();
-                        _currentItemCts = null;
+						lock (_currentItemSync)
+						{
+							if (ReferenceEquals(_currentItemCts, itemCts))
+							{
+								_currentItemCts = null;
+								_currentItemCompletion = null;
+								_currentItemSequence = null;
+							}
+						}
+
+						itemCts.Dispose();
+						itemCompletion.TrySetResult(true);
                     }
                 }
                 catch (OperationCanceledException)
@@ -200,7 +268,12 @@ namespace TwitchChatBot.Core.Services
             }
         }
 
-        private async Task ProcessTextToSpeechAsync(AmazonPollyClient polly, string rawText, string? voiceOverride, CancellationToken ct)
+		private async Task ProcessTextToSpeechAsync(
+			AmazonPollyClient polly,
+			long ttsSequence,
+			string rawText,
+			string? voiceOverride,
+			CancellationToken ct)
         {
             var text = Sanitize(rawText, _maxChars);
             if (string.IsNullOrWhiteSpace(text))
@@ -212,6 +285,7 @@ namespace TwitchChatBot.Core.Services
             var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
             var mp3Path = Path.Combine(_ttsOutputDir, $"tts_{ts}.mp3");
             var publicPath = $"/media/text_to_speech/{Path.GetFileName(mp3Path)}";
+			bool alertEnqueued = false;
 
             // Prefer Neural if supported; fallback to Standard automatically.
             var req = new SynthesizeSpeechRequest
@@ -227,43 +301,197 @@ namespace TwitchChatBot.Core.Services
 
 			try
 			{
-				using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
+				try
 				{
-					await using (var fs = File.Create(mp3Path))
+					using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
 					{
-						await resp.AudioStream.CopyToAsync(fs, ct);
-						await fs.FlushAsync(ct);
+						await using (var fs = File.Create(mp3Path))
+						{
+							await resp.AudioStream.CopyToAsync(fs, ct);
+							await fs.FlushAsync(ct);
+						}
 					}
 				}
+				catch (AmazonPollyException ex) when (ex.Message.Contains("Neural", StringComparison.OrdinalIgnoreCase))
+				{
+					_logger.LogInformation(
+						"ℹ️ Voice {Voice} not Neural in {Region}. Retrying with Standard.",
+						voice,
+						_region.SystemName);
+
+					req.Engine = Engine.Standard;
+
+					using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
+					{
+						await using (var fs = File.Create(mp3Path))
+						{
+							await resp.AudioStream.CopyToAsync(fs, ct);
+							await fs.FlushAsync(ct);
+						}
+					}
+				}
+
+				await Task.Delay(100, ct);
+				ct.ThrowIfCancellationRequested();
+
+				// Log file size for diagnostics; can be useful to identify issues with Polly responses (e.g., very small files may indicate errors).
+				var fileInfo = new FileInfo(mp3Path);
+				_logger.LogInformation("TTS MP3 Size: {Bytes}", fileInfo.Length);
+
+				_alertService.EnqueueAlert(new AlertItem
+				{
+					Type = "alert",
+					Message = string.Empty,
+					MediaPath = publicPath,
+					IsTts = true,
+					TtsSequence = ttsSequence
+				});
+
+				alertEnqueued = true;
+				_logger.LogInformation("✅ Polly TTS ready: {File}", mp3Path);
 			}
-			catch (AmazonPollyException ex) when (ex.Message.Contains("Neural", StringComparison.OrdinalIgnoreCase))
+			finally
 			{
-				_logger.LogInformation(
-					"ℹ️ Voice {Voice} not Neural in {Region}. Retrying with Standard.",
-					voice,
-					_region.SystemName);
-
-				req.Engine = Engine.Standard;
-
-				using (var resp = await polly.SynthesizeSpeechAsync(req, ct))
+				if (!alertEnqueued)
 				{
-					await using (var fs = File.Create(mp3Path))
-					{
-						await resp.AudioStream.CopyToAsync(fs, ct);
-						await fs.FlushAsync(ct);
-					}
+					TryDeleteTtsFile(mp3Path);
 				}
 			}
-
-			await Task.Delay(100, ct);
-
-			// Log file size for diagnostics; can be useful to identify issues with Polly responses (e.g., very small files may indicate errors).
-			var fileInfo = new FileInfo(mp3Path);
-			_logger.LogInformation("TTS MP3 Size: {Bytes}", fileInfo.Length);
-
-			_alertService.EnqueueAlert("", publicPath);
-            _logger.LogInformation("✅ Polly TTS ready: {File}", mp3Path);
         }
+
+		private async Task SkipCurrentAsync()
+		{
+			await _cancellationGate.WaitAsync().ConfigureAwait(false);
+			try
+			{
+				if (await _alertService.TryCancelActiveTtsAsync().ConfigureAwait(false))
+				{
+					_logger.LogInformation("⏭️ TTS skip stopped active overlay playback.");
+					return;
+				}
+
+				long? currentSequence;
+				Task? currentCompletion;
+
+				lock (_currentItemSync)
+				{
+					currentSequence = _currentItemSequence;
+					currentCompletion = _currentItemCompletion?.Task;
+
+					if (currentSequence.HasValue)
+					{
+						TryCancelCurrentItem();
+					}
+				}
+
+				if (!currentSequence.HasValue)
+				{
+					_logger.LogInformation("⏭️ TTS skip requested with no active speech.");
+					return;
+				}
+
+				if (currentCompletion != null)
+				{
+					await currentCompletion.ConfigureAwait(false);
+				}
+
+				IReadOnlyList<string> mediaPaths = await _alertService
+					.CancelTtsAsync(currentSequence.Value)
+					.ConfigureAwait(false);
+
+				DeleteTtsFiles(mediaPaths);
+				_logger.LogInformation("⏭️ TTS skip canceled synthesis for item {Sequence}.", currentSequence.Value);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "TTS skip failed.");
+			}
+			finally
+			{
+				_cancellationGate.Release();
+			}
+		}
+
+		private async Task ResetQueueAsync(
+			long throughSequence,
+			long? currentSequence,
+			Task? currentCompletion)
+		{
+			await _cancellationGate.WaitAsync().ConfigureAwait(false);
+			try
+			{
+				var mediaPaths = new List<string>();
+				IReadOnlyList<string> resetPaths = await _alertService
+					.ResetTtsAsync(throughSequence)
+					.ConfigureAwait(false);
+
+				mediaPaths.AddRange(resetPaths);
+
+				if (currentCompletion != null)
+				{
+					await currentCompletion.ConfigureAwait(false);
+				}
+
+				if (currentSequence.HasValue)
+				{
+					IReadOnlyList<string> racedPaths = await _alertService
+						.CancelTtsAsync(currentSequence.Value)
+						.ConfigureAwait(false);
+
+					mediaPaths.AddRange(racedPaths);
+				}
+
+				DeleteTtsFiles(mediaPaths);
+				_logger.LogInformation(
+					"♻️ TTS reset completed through item {Sequence}; future speech remains available.",
+					throughSequence);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "TTS reset failed.");
+			}
+			finally
+			{
+				_cancellationGate.Release();
+			}
+		}
+
+		private void TryCancelCurrentItem()
+		{
+			try
+			{
+				_currentItemCts?.Cancel();
+			}
+			catch (ObjectDisposedException)
+			{
+				// The runner completed the item while cancellation was being requested.
+			}
+		}
+
+		private void DeleteTtsFiles(IEnumerable<string> mediaPaths)
+		{
+			foreach (string mediaPath in mediaPaths.Distinct(StringComparer.OrdinalIgnoreCase))
+			{
+				string absolutePath = CoreHelperMethods.ToAbsoluteMediaPath(mediaPath);
+				TryDeleteTtsFile(absolutePath);
+			}
+		}
+
+		private void TryDeleteTtsFile(string path)
+		{
+			try
+			{
+				if (File.Exists(path))
+				{
+					File.Delete(path);
+					_logger.LogInformation("🧹 Deleted canceled TTS file: {File}", path);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to delete canceled TTS file: {File}", path);
+			}
+		}
 
         private (string voice, string text) ResolveVoiceAndText(string? voiceOverride, string text)
         {

@@ -2,7 +2,7 @@
 {
     Task TriggerChannelPointTestAsync(string redemption);
     Task TriggerCheerTestAsync(int bits);
-    void TriggerFollowTest(string userName);
+    Task TriggerFollowTest(string userName);
     Task TriggerHypeTrainTestAsync();
     Task TriggerHypeTrainEndTestAsync();
     Task TriggerRaidTestAsync(string userName, int viewers);
